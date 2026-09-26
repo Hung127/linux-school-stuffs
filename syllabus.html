@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Operating System & Applications — Course Syllabus</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0f0f0f;
+    --white: #fafaf8;
+    --off: #f4f3ef;
+    --border: #e2e0d8;
+    --muted: #888580;
+    --text: #2a2825;
+
+    --mod1: #ddeeff;
+    --mod1t: #1a4a7a;
+    --mod2: #ede8fb;
+    --mod2t: #4a35a0;
+    --mod3: #fde8e0;
+    --mod3t: #8c3318;
+    --mod4: #dff2e8;
+    --mod4t: #1a6640;
+    --mod5: #fef3d8;
+    --mod5t: #7a4a08;
+
+    --theory-bg: #eef4fd;
+    --theory-border: #b8d0f0;
+    --theory-text: #1a4070;
+    --lab-bg: #e8f7ef;
+    --lab-border: #90d4b0;
+    --lab-text: #1a5535;
+    --quiz-bg: #fdf4e0;
+    --quiz-border: #e8c870;
+    --quiz-text: #6a4800;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Lora', Georgia, serif;
+    background: var(--white);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── TOP HEADER ── */
+  .page-header {
+    background: var(--black);
+    color: var(--white);
+    padding: 3rem 2.5rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .page-header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 320px; height: 320px;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 50%;
+  }
+  .page-header::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: 40%;
+    width: 200px; height: 200px;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+  .header-inner { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+  .course-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  .course-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: clamp(22px, 4vw, 34px);
+    font-weight: 500;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+  .course-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.06em;
+    margin-bottom: 1.75rem;
+  }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.6);
+  }
+  .pill.hi { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.9); }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+
+  /* ── ASSESSMENT ── */
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    margin-top: 2.5rem;
+  }
+  .assess-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 2.5rem;
+  }
+  .assess-card {
+    background: var(--off);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .assess-pct {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--black);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .assess-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .assess-desc { font-size: 11px; color: var(--muted); margin-top: 3px; font-family: 'IBM Plex Mono', monospace; }
+
+  /* ── MODULE HEADER ── */
+  .module-block { margin-bottom: 0.5rem; }
+  .module-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 1.5rem 0 0.75rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  .module-head:first-of-type { margin-top: 0; }
+  .mod-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.04em;
+  }
+  .mod-name { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; flex: 1; }
+  .mod-sessions { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  /* ── QUIZ BANNER ── */
+  .quiz-banner {
+    background: var(--quiz-bg);
+    border: 1px solid var(--quiz-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .quiz-icon { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--quiz-text); padding-top: 2px; flex-shrink: 0; }
+  .quiz-text { font-size: 13px; color: var(--quiz-text); line-height: 1.6; }
+  .quiz-text strong { font-weight: 600; }
+
+  /* ── SESSION CARD ── */
+  .session {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .session-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--white);
+    transition: background 0.15s;
+  }
+  .session-head:hover { background: var(--off); }
+  .session-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    min-width: 22px;
+  }
+  .session-info { flex: 1; }
+  .session-title { font-size: 14px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; color: var(--black); }
+  .session-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: 'Lora', serif; font-style: italic; }
+  .chevron {
+    font-size: 14px;
+    color: var(--muted);
+    transition: transform 0.2s;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .session.open .chevron { transform: rotate(180deg); }
+  .session.open .session-head { background: var(--off); border-bottom: 1px solid var(--border); }
+
+  .session-body { display: none; padding: 18px; background: var(--white); }
+  .session.open .session-body { display: block; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .col-head {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid;
+  }
+  .col-head.theory { color: var(--theory-text); border-color: var(--theory-border); }
+  .col-head.lab { color: var(--lab-text); border-color: var(--lab-border); }
+
+  .item-list { list-style: none; }
+  .item-list li {
+    font-size: 12.5px;
+    color: #444;
+    padding: 3.5px 0;
+    display: flex;
+    gap: 8px;
+    line-height: 1.55;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .item-list li:last-child { border-bottom: none; }
+  .item-list li::before { content: '—'; color: var(--muted); flex-shrink: 0; font-size: 11px; padding-top: 2px; }
+
+  /* ── CAPSTONE ── */
+  .track-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 12px 0 18px; }
+  .track-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: var(--off); }
+  .track-title { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--black); }
+  .track-desc { font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+  .grade-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .grade-card { background: var(--off); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .grade-pct { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; color: var(--black); }
+  .grade-name { font-size: 12px; font-weight: 500; margin-top: 2px; }
+  .grade-desc { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* ── SEMINAR SECTION ── */
+  .seminar-section { margin-top: 2.5rem; }
+  .seminar-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .seminar-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .seminar-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  .seminar-table tr:last-child td { border-bottom: none; }
+  .seminar-table tr:hover td { background: var(--off); }
+  .sem-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+  .sem-topic { font-weight: 500; color: var(--black); }
+  .sem-area {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .area-auto { background: #ede8fb; color: #4a35a0; }
+  .area-mon  { background: #ddeeff; color: #1a4a7a; }
+  .area-net  { background: #fde8e0; color: #8c3318; }
+  .area-app  { background: #dff2e8; color: #1a6640; }
+  .area-stor { background: #fef3d8; color: #7a4a08; }
+  .area-dev  { background: #f0e8fd; color: #5a2a9a; }
+  .area-perf { background: #e0f0f8; color: #1a5070; }
+
+  /* ── FOOTER NOTE ── */
+  .footer-note {
+    margin-top: 2.5rem;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.7;
+    background: var(--off);
+  }
+  .footer-note strong { color: var(--text); }
+
+  /* ── EXPAND CONTROL ── */
+  .controls { display: flex; gap: 10px; margin-bottom: 1.5rem; align-items: center; }
+  .ctrl-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { background: var(--off); color: var(--text); border-color: #c8c4bc; }
+
+  /* ── PRINT ── */
+  @media print {
+    .session-body { display: block !important; }
+    .chevron { display: none; }
+    .controls { display: none; }
+    .session-head { cursor: default; }
+    .page-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  @media (max-width: 600px) {
+    .page-header { padding: 2rem 1.25rem; }
+    .container { padding: 1.5rem 1.25rem 3rem; }
+    .course-title { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="header-inner">
+    <h1 class="course-title">Linux Operating System<br>&amp; Applications</h1>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ASSESSMENT -->
+  <p class="section-label">Assessment breakdown</p>
+  <div class="assess-grid">
+    <div class="assess-card"><div class="assess-pct">20%</div><div class="assess-name">Lab Work</div><div class="assess-desc">Submitted each session</div></div>
+    <div class="assess-card"><div class="assess-pct">20%</div><div class="assess-name">Seminar</div><div class="assess-desc">Presentation + Q&amp;A</div></div>
+    <div class="assess-card"><div class="assess-pct">20%</div><div class="assess-name">Project</div><div class="assess-desc">Demo + report</div></div>
+    <div class="assess-card"><div class="assess-pct">40%</div><div class="assess-name">Final Exam</div><div class="assess-desc">Comprehensive, end of term</div></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <button class="ctrl-btn" onclick="toggleAll(true)">expand all ↓</button>
+    <button class="ctrl-btn" onclick="toggleAll(false)">collapse all ↑</button>
+  </div>
+
+  <!-- MODULE 1 -->
+  <div class="module-block">
+    <div class="module-head">
+      <span class="mod-tag" style="background:var(--mod1);color:var(--mod1t);">Module 1</span>
+      <span class="mod-name">Linux Foundations</span>
+      <span class="mod-sessions">Sessions 1–2</span>
+    </div>
+
+    <div class="quiz-banner">
+      <span class="quiz-icon">✎</span>
+      <div class="quiz-text"><strong>Module quiz activity —</strong> Short written quiz covering Linux architecture, FHS, the boot process, CLI text-processing tools, and pipe composition. Administered at the start of Session 3.</div>
+    </div>
+
+    <div class="session" id="s1">
+      <div class="session-head" onclick="toggle('s1')">
+        <span class="session-num">01</span>
+        <div class="session-info">
+          <div class="session-title">Linux Architecture</div>
+          <div class="session-subtitle">Kernel, shell, filesystem hierarchy, boot process</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>Unix history → Linux and FOSS philosophy</li>
+              <li>Kernel space, user space, shell layer model</li>
+              <li>Popular distros and when to choose each</li>
+              <li>FHS: /, /etc, /bin, /var, /proc, /sys</li>
+              <li>Boot sequence: BIOS → GRUB → kernel → systemd</li>
+              <li>systemd: targets, unit files, dependency graph</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Install Ubuntu 22.04 Server on VirtualBox</li>
+              <li>Explore FHS — document each top-level directory</li>
+              <li>Read hardware info via /proc and /sys without external tools</li>
+              <li>Run systemd-analyze blame; identify the 3 slowest services</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="session" id="s2">
+      <div class="session-head" onclick="toggle('s2')">
+        <span class="session-num">02</span>
+        <div class="session-info">
+          <div class="session-title">CLI &amp; Text Processing</div>
+          <div class="session-subtitle">Shell, pipes, grep, awk, sed — the core toolkit</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>Navigation: ls, cd, find, locate</li>
+              <li>File operations: cp, mv, rm, ln (hard vs soft links)</li>
+              <li>Redirection: >, >>, 2>, 2>&1, /dev/null</li>
+              <li>Pipes and xargs — composing commands</li>
+              <li>Text tools: grep, sed, awk, sort, uniq, cut, wc, tr</li>
+              <li>vim basics, alias, .bashrc configuration</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Count top 10 IPs from access.log using awk + sort + uniq</li>
+              <li>Bulk-replace strings in a config file using sed</li>
+              <li>Create hard and soft links; compare inodes with ls -i</li>
+              <li>Configure .bashrc with useful aliases and environment variables</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE 2 -->
+  <div class="module-block">
+    <div class="module-head">
+      <span class="mod-tag" style="background:var(--mod2);color:var(--mod2t);">Module 2</span>
+      <span class="mod-name">System Administration</span>
+      <span class="mod-sessions">Sessions 3–4</span>
+    </div>
+
+    <div class="quiz-banner">
+      <span class="quiz-icon">✎</span>
+      <div class="quiz-text"><strong>Module quiz activity —</strong> Scenario-based questions on user/group management, permission models (SUID/SGID/sticky bit, ACLs), sudo configuration, LVM operations, and cron syntax. Administered at the start of Session 5.</div>
+    </div>
+
+    <div class="session" id="s3">
+      <div class="session-head" onclick="toggle('s3')">
+        <span class="session-num">03</span>
+        <div class="session-info">
+          <div class="session-title">Users, Permissions &amp; Processes</div>
+          <div class="session-subtitle">Who can do what — access control and process management</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>useradd, usermod, userdel, groupadd</li>
+              <li>/etc/passwd, /etc/shadow, /etc/group structure</li>
+              <li>chmod (octal + symbolic), chown, chgrp, umask</li>
+              <li>Special bits: SUID, SGID, sticky bit</li>
+              <li>Extended ACLs: getfacl, setfacl</li>
+              <li>sudo, /etc/sudoers, principle of least privilege</li>
+              <li>Process management: ps, top, kill, nice, renice, nohup, tmux</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Create dev and ops groups; assign users appropriately</li>
+              <li>Set ACLs on a project directory: dev read-write, ops read-only</li>
+              <li>Configure restricted sudo for a deploy user</li>
+              <li>Use tmux: create a session, detach, reattach after SSH reconnect</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="session" id="s4">
+      <div class="session-head" onclick="toggle('s4')">
+        <span class="session-num">04</span>
+        <div class="session-info">
+          <div class="session-title">Software, Storage &amp; Scheduled Tasks</div>
+          <div class="session-subtitle">apt, LVM, cron, systemd timers</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>apt / dpkg: install, remove, version pinning, PPAs</li>
+              <li>Building from source: configure, make, make install</li>
+              <li>Partitioning: fdisk, lsblk, mkfs, mount, /etc/fstab</li>
+              <li>LVM: PV, VG, LV — create and expand online</li>
+              <li>cron: 5-field syntax, crontab -e, /etc/cron.d</li>
+              <li>systemd timer: .timer unit files as a cron alternative</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Create an LVM volume, format, mount and persist via /etc/fstab</li>
+              <li>Expand the LV by 5 GB online without unmounting</li>
+              <li>Install nginx, pin the version, verify with apt-mark hold</li>
+              <li>Create a cron job logging a timestamp every minute; verify after 5 min</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE 3 -->
+  <div class="module-block">
+    <div class="module-head">
+      <span class="mod-tag" style="background:var(--mod3);color:var(--mod3t);">Module 3</span>
+      <span class="mod-name">Networking &amp; Security</span>
+      <span class="mod-sessions">Sessions 5–6</span>
+    </div>
+
+    <div class="quiz-banner">
+      <span class="quiz-icon">✎</span>
+      <div class="quiz-text"><strong>Module quiz activity —</strong> Practical in-class quiz covering all content from Modules 1–3. Students complete tasks on a live VM: configure networking, harden SSH, set firewall rules, and interpret security logs. Held during Session 6 lab time.</div>
+    </div>
+
+    <div class="session" id="s5">
+      <div class="session-head" onclick="toggle('s5')">
+        <span class="session-num">05</span>
+        <div class="session-info">
+          <div class="session-title">Network Configuration &amp; SSH</div>
+          <div class="session-subtitle">Connectivity, file transfer and secure remote access</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>ip addr, ip route, nmcli — static IP and DHCP</li>
+              <li>/etc/hosts, /etc/resolv.conf, dig, nslookup</li>
+              <li>Diagnostics: ss, ping, traceroute, curl, wget</li>
+              <li>sshd_config: port, PermitRootLogin, AllowUsers</li>
+              <li>SSH key pairs, authorized_keys, ~/.ssh/config</li>
+              <li>SSH ProxyJump through a bastion host</li>
+              <li>File transfer: scp, rsync</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Set a static IP on a VM using nmcli</li>
+              <li>Generate SSH key pair; configure passwordless login between two VMs</li>
+              <li>Configure ~/.ssh/config with aliases for multiple servers</li>
+              <li>Sync a web directory to a backup VM with rsync; schedule via cron</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="session" id="s6">
+      <div class="session-head" onclick="toggle('s6')">
+        <span class="session-num">06</span>
+        <div class="session-info">
+          <div class="session-title">Firewall &amp; System Hardening</div>
+          <div class="session-subtitle">UFW, fail2ban, auditd — module quiz this session</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>UFW: allow, deny, limit, logging rules</li>
+              <li>iptables: INPUT / OUTPUT / FORWARD chains, NAT basics</li>
+              <li>fail2ban: jail.conf, filters, actions</li>
+              <li>SSH hardening: disable root login, change port, AllowUsers</li>
+              <li>PAM: password policy, login limits</li>
+              <li>auditd: track access to sensitive files</li>
+              <li>journalctl and /var/log/auth.log — reading security logs</li>
+              <li>Lynis: automated hardening audit and scoring</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Configure UFW: open only ports 22, 80, 443</li>
+              <li>Install fail2ban, simulate SSH brute-force, confirm IP is banned</li>
+              <li>Install auditd, watch /etc/passwd and /etc/shadow for access events</li>
+              <li>Run Lynis, record the score, remediate 3 HIGH warnings</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE 4 -->
+  <div class="module-block">
+    <div class="module-head">
+      <span class="mod-tag" style="background:var(--mod4);color:var(--mod4t);">Module 4</span>
+      <span class="mod-name">Application Deployment</span>
+      <span class="mod-sessions">Sessions 7–9</span>
+    </div>
+
+    <div class="quiz-banner">
+      <span class="quiz-icon">✎</span>
+      <div class="quiz-text"><strong>Module quiz activity —</strong> Written quiz on web server configuration (Nginx/Apache), database access control and backup strategies, and systemd service management. Administered at the start of Session 10.</div>
+    </div>
+
+    <div class="session" id="s7">
+      <div class="session-head" onclick="toggle('s7')">
+        <span class="session-num">07</span>
+        <div class="session-info">
+          <div class="session-title">Web Servers — Nginx &amp; Apache</div>
+          <div class="session-subtitle">Virtual hosts, reverse proxy, SSL/TLS</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>Nginx vs Apache: processing models and trade-offs</li>
+              <li>Nginx: server block, root, index, location directives</li>
+              <li>Apache: VirtualHost, .htaccess, mod_rewrite</li>
+              <li>PHP-FPM + Nginx: unix socket vs TCP socket</li>
+              <li>Nginx reverse proxy: proxy_pass, header forwarding</li>
+              <li>SSL/TLS with certbot (Let's Encrypt)</li>
+              <li>Nginx: rate limiting, gzip compression, log formats</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Create 2 Nginx virtual hosts serving two websites on one server</li>
+              <li>Install PHP-FPM and connect to Nginx via unix socket</li>
+              <li>Configure Nginx as a reverse proxy for an app on a high port</li>
+              <li>Generate and apply a self-signed SSL certificate for the lab</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="session" id="s8">
+      <div class="session-head" onclick="toggle('s8')">
+        <span class="session-num">08</span>
+        <div class="session-info">
+          <div class="session-title">Database Servers — MySQL &amp; PostgreSQL</div>
+          <div class="session-subtitle">Installation, access control, backup and restore</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>Install MySQL / PostgreSQL, run mysql_secure_installation</li>
+              <li>Create DB users, GRANT / REVOKE privileges</li>
+              <li>mysqldump, pg_dump — full and per-database backup</li>
+              <li>Restore and verify data integrity</li>
+              <li>bind-address — restrict DB to localhost only</li>
+              <li>Slow query log — identify expensive queries</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Install MySQL, create an application user and database</li>
+              <li>Back up all databases with mysqldump + gzip</li>
+              <li>Restore a database from backup into a new schema; verify data</li>
+              <li>Set up automated backup via cron; configure email alert on failure</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="session" id="s9">
+      <div class="session-head" onclick="toggle('s9')">
+        <span class="session-num">09</span>
+        <div class="session-info">
+          <div class="session-title">Deploying a Real Web Application</div>
+          <div class="session-subtitle">Flask/Node.js + systemd + Nginx + SSL</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>Running Python (Flask/FastAPI) or Node.js apps on Linux</li>
+              <li>Writing a systemd .service unit for an application</li>
+              <li>Restart policies: on-failure, always</li>
+              <li>Environment variables via EnvironmentFile</li>
+              <li>Logging to journald via stdout/stderr</li>
+              <li>Nginx reverse proxy + SSL for the application</li>
+              <li>Safe deployment workflow: test → reload → rollback</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Write a systemd service for Flask/Node.js with automatic restart</li>
+              <li>Configure an EnvironmentFile for secrets (DB password, API key)</li>
+              <li>Place the app behind Nginx reverse proxy with SSL</li>
+              <li>Simulate a crash; confirm systemd restarts and journals the event</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE 5 -->
+  <div class="module-block">
+    <div class="module-head">
+      <span class="mod-tag" style="background:var(--mod5);color:var(--mod5t);">Module 5</span>
+      <span class="mod-name">Scripting &amp; Capstone Project</span>
+      <span class="mod-sessions">Sessions 10–11</span>
+    </div>
+
+    <div class="quiz-banner">
+      <span class="quiz-icon">✎</span>
+      <div class="quiz-text"><strong>Module quiz activity —</strong> No standalone quiz. Assessment for this module is the capstone project itself — live demo, technical report, and lecturer Q&amp;A defence replace a written quiz.</div>
+    </div>
+
+    <div class="session" id="s10">
+      <div class="session-head" onclick="toggle('s10')">
+        <span class="session-num">10</span>
+        <div class="session-info">
+          <div class="session-title">Bash Scripting &amp; Automation</div>
+          <div class="session-subtitle">Monitoring, backup, alerting — production-grade scripts</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <div class="two-col">
+          <div>
+            <div class="col-head theory">Theory</div>
+            <ul class="item-list">
+              <li>Variables, arrays, conditionals, loops, functions</li>
+              <li>Script parameters: $1, $@, $#, getopts</li>
+              <li>Error handling: set -euo pipefail, trap EXIT/ERR</li>
+              <li>Heredoc and process substitution</li>
+              <li>Alerting: Telegram Bot API via curl, mail command</li>
+              <li>Advanced rsync: incremental backup, --delete, --exclude</li>
+              <li>3-2-1 backup strategy</li>
+              <li>shellcheck — static analysis for scripts</li>
+            </ul>
+          </div>
+          <div>
+            <div class="col-head lab">Labs</div>
+            <ul class="item-list">
+              <li>Write a health-check script: monitor CPU, disk, RAM, port 80, service status; send Telegram alert if thresholds exceeded</li>
+              <li>Write a backup script: mysqldump + /var/www → compress → rsync → delete backups older than 7 days</li>
+              <li>Add trap ERR to both scripts; simulate a failure and confirm the alert fires</li>
+              <li>Schedule health-check every 5 min and backup at 2 AM via cron</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="session" id="s11">
+      <div class="session-head" onclick="toggle('s11')">
+        <span class="session-num">11</span>
+        <div class="session-info">
+          <div class="session-title">Capstone Project</div>
+          <div class="session-subtitle">Build a complete Linux system — live demo + defence</div>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="session-body">
+        <p class="col-head theory" style="margin-bottom:12px;">Project tracks — choose one</p>
+        <div class="track-grid">
+          <div class="track-card">
+            <div class="track-title">Track A — Multi-service server</div>
+            <div class="track-desc">Nginx reverse proxy + MySQL + automated backup + full hardening (UFW, fail2ban, auditd)</div>
+          </div>
+          <div class="track-card">
+            <div class="track-title">Track B — Production web app</div>
+            <div class="track-desc">Deploy Python/Node.js + PostgreSQL + Nginx + SSL + systemd + monitoring script</div>
+          </div>
+          <div class="track-card">
+            <div class="track-title">Track C — Sysadmin toolkit</div>
+            <div class="track-desc">Complete Bash toolkit: deploy, backup, health-check, log rotation — interactive CLI menu</div>
+          </div>
+        </div>
+        <p class="col-head lab" style="margin-bottom:12px;">Grading criteria</p>
+        <div class="grade-grid">
+          <div class="grade-card"><div class="grade-pct">30%</div><div class="grade-name">System works</div><div class="grade-desc">Live demo</div></div>
+          <div class="grade-card"><div class="grade-pct">20%</div><div class="grade-name">Security</div><div class="grade-desc">Firewall, SSH, fail2ban</div></div>
+          <div class="grade-card"><div class="grade-pct">20%</div><div class="grade-name">Backup &amp; restore</div><div class="grade-desc">Demonstrated live</div></div>
+          <div class="grade-card"><div class="grade-pct">15%</div><div class="grade-name">Automation</div><div class="grade-desc">Scripts running</div></div>
+          <div class="grade-card"><div class="grade-pct">15%</div><div class="grade-name">Report &amp; defence</div><div class="grade-desc">Technical Q&amp;A</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEMINAR TOPICS -->
+  <div class="seminar-section">
+    <p class="section-label" style="margin-top:2.5rem;">Student seminar topics</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:1rem;font-style:italic;">10 topics · 30–45 min per presentation · goal: real-world awareness + career readiness</p>
+
+    <table class="seminar-table">
+      <thead>
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>Topic</th>
+          <th>Area</th>
+          <th>Why it matters</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sem-num">01</td>
+          <td class="sem-topic">Ansible — configuration management and automation</td>
+          <td><span class="sem-area area-auto">Automation</span></td>
+          <td style="font-size:12px;color:var(--muted);">Most in-demand sysadmin skill; appears in nearly every DevOps job description</td>
+        </tr>
+        <tr>
+          <td class="sem-num">02</td>
+          <td class="sem-topic">Prometheus + Grafana — metrics monitoring and dashboards</td>
+          <td><span class="sem-area area-mon">Monitoring</span></td>
+          <td style="font-size:12px;color:var(--muted);">Industry-standard observability stack; used across startups and enterprises alike</td>
+        </tr>
+        <tr>
+          <td class="sem-num">03</td>
+          <td class="sem-topic">HAProxy — load balancing and high availability</td>
+          <td><span class="sem-area area-net">Networking</span></td>
+          <td style="font-size:12px;color:var(--muted);">Bread-and-butter for web infrastructure; handles millions of requests in production</td>
+        </tr>
+        <tr>
+          <td class="sem-num">04</td>
+          <td class="sem-topic">Redis — in-memory caching and data structures</td>
+          <td><span class="sem-area area-app">Application</span></td>
+          <td style="font-size:12px;color:var(--muted);">Behind nearly every high-traffic web app for caching and session storage</td>
+        </tr>
+        <tr>
+          <td class="sem-num">05</td>
+          <td class="sem-topic">NFS — network file sharing between Linux servers</td>
+          <td><span class="sem-area area-stor">Storage</span></td>
+          <td style="font-size:12px;color:var(--muted);">Core network storage protocol; heavily used in on-prem and hybrid environments</td>
+        </tr>
+        <tr>
+          <td class="sem-num">06</td>
+          <td class="sem-topic">Git server — self-hosted repository over SSH</td>
+          <td><span class="sem-area area-dev">DevOps</span></td>
+          <td style="font-size:12px;color:var(--muted);">Connects version control to Linux admin; immediately employable skill</td>
+        </tr>
+        <tr>
+          <td class="sem-num">07</td>
+          <td class="sem-topic">Zabbix — enterprise host and network monitoring</td>
+          <td><span class="sem-area area-mon">Monitoring</span></td>
+          <td style="font-size:12px;color:var(--muted);">Widely deployed in large organizations and government infrastructure</td>
+        </tr>
+        <tr>
+          <td class="sem-num">08</td>
+          <td class="sem-topic">SysStat — historical performance analysis (sar, iostat, mpstat)</td>
+          <td><span class="sem-area area-perf">Performance</span></td>
+          <td style="font-size:12px;color:var(--muted);">Essential for diagnosing CPU, disk, and I/O bottlenecks; used daily by sysadmins</td>
+        </tr>
+        <tr>
+          <td class="sem-num">09</td>
+          <td class="sem-topic">Docker CE — containerisation and image-based deployment</td>
+          <td><span class="sem-area area-dev">DevOps</span></td>
+          <td style="font-size:12px;color:var(--muted);">Most widely adopted container runtime; foundational for understanding modern deployment pipelines</td>
+        </tr>
+        <tr>
+          <td class="sem-num">10</td>
+          <td class="sem-topic">ELK Stack — centralised log management (Elasticsearch, Logstash, Kibana)</td>
+          <td><span class="sem-area area-mon">Monitoring</span></td>
+          <td style="font-size:12px;color:var(--muted);">Industry-standard log aggregation and search platform; heavily used in operations and security teams</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-note">
+    <strong>Prerequisites:</strong> Students should be comfortable with basic programming (loops, conditionals, functions) and have completed at least one networking or OS fundamentals course. All lab work uses VirtualBox VMs running Ubuntu 22.04 Server. No cloud provider accounts or Docker knowledge is required.
+  </div>
+
+</div>
+
+<script>
+function toggle(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+function toggleAll(open) {
+  document.querySelectorAll('.session').forEach(s => {
+    open ? s.classList.add('open') : s.classList.remove('open');
+  });
+}
+</script>
+</body>
+</html>
