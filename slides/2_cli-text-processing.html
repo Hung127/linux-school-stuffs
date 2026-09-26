@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 02 — CLI & Text Processing</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Fraunces:ital,wght@0,300;0,600;0,700;1,300;1,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0d12;--surface:#111620;--surface2:#161c28;--border:#1e2840;
+  --amber:#f59e0b;--amber-dim:#92600a;--amber-glow:rgba(245,158,11,0.1);
+  --teal:#00c9a7;--teal-dim:#007d68;
+  --red:#ef4444;--blue:#3b82f6;--green:#22c55e;--purple:#a78bfa;
+  --white:#f0f4f8;--muted:#64748b;--text:#cbd5e1;
+  --accent:var(--amber);--accent-dim:var(--amber-dim);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Fraunces',Georgia,serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
+
+/* ── ENGINE ── */
+.deck{width:100vw;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.45s ease;overflow:hidden}
+.slide.active{opacity:1;pointer-events:all}
+
+/* ── NAV ── */
+.nav{position:fixed;bottom:1.75rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:1rem;z-index:100;background:rgba(10,13,18,0.9);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:100px;padding:.5rem 1.25rem}
+.nav-btn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:6px 16px;border-radius:100px;cursor:pointer;transition:all .2s}
+.nav-btn:hover{border-color:var(--amber);color:var(--amber)}
+.slide-counter{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);min-width:60px;text-align:center}
+.dots{display:flex;gap:5px;align-items:center}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--border);cursor:pointer;transition:all .2s}
+.dot.active{background:var(--amber);width:18px;border-radius:3px}
+
+/* ── SHARED ── */
+.tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--amber);text-transform:uppercase;margin-bottom:.5rem}
+code{font-family:'IBM Plex Mono',monospace;background:rgba(245,158,11,0.1);color:var(--amber);padding:1px 6px;border-radius:4px;font-size:.88em}
+.mono{font-family:'IBM Plex Mono',monospace}
+
+.term{background:#050709;border:1px solid var(--border);border-radius:10px;overflow:hidden;font-family:'IBM Plex Mono',monospace;font-size:13px}
+.term-bar{background:#111620;padding:8px 14px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
+.td{width:10px;height:10px;border-radius:50%}
+.term-body{padding:1.25rem 1.5rem;line-height:2}
+.tp{color:var(--amber)}
+.tc{color:var(--white)}
+.to{color:var(--muted)}
+.te{color:var(--red)}
+.tg{color:var(--green)}
+.th{color:#60a5fa}
+.blink{animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ═══════════════════════════════════════
+   SLIDE 1 — TITLE
+═══════════════════════════════════════ */
+#s1{background:var(--bg);justify-content:center;align-items:center}
+.s1-scanlines{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(245,158,11,0.015) 2px,rgba(245,158,11,0.015) 4px);pointer-events:none}
+.s1-glow{position:absolute;width:700px;height:700px;background:radial-gradient(circle,rgba(245,158,11,0.05) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)}
+.s1-content{position:relative;text-align:center;z-index:1;animation:fadeUp .8s ease forwards}
+.s1-session{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--amber);margin-bottom:1.5rem}
+.s1-title{font-size:clamp(44px,6.5vw,78px);font-weight:700;color:var(--white);line-height:1.05;margin-bottom:1rem;letter-spacing:-.02em}
+.s1-title em{color:var(--amber);font-style:normal}
+.s1-sub{font-size:17px;color:var(--muted);font-style:italic;font-weight:300;margin-bottom:2.5rem}
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 14px;border-radius:100px;border:1px solid var(--border);color:var(--muted)}
+.chip.hi{border-color:var(--amber-dim);color:var(--amber)}
+
+/* ═══════════════════════════════════════
+   SLIDE 2 — STORY HOOK
+═══════════════════════════════════════ */
+#s2{flex-direction:row}
+.s2-left{width:40%;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;padding:4rem 3rem}
+.s2-right{flex:1;display:flex;flex-direction:column;justify-content:center;padding:3.5rem 3rem}
+.quote-block{border-left:3px solid var(--amber);padding:.75rem 1.25rem;margin:1.25rem 0;font-size:14px;font-style:italic;line-height:1.7;color:var(--text)}
+
+/* ═══════════════════════════════════════
+   SLIDE 3 — NAVIGATION
+═══════════════════════════════════════ */
+#s3{padding:2.5rem 4.5rem}
+.cmd-explorer{display:grid;grid-template-columns:220px 1fr;gap:1.5rem;margin-top:1.5rem;height:calc(100% - 90px)}
+.cmd-list-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;overflow-y:auto}
+.cmd-group-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:6px 8px}
+.cmd-item{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);padding:7px 10px;border-radius:6px;cursor:pointer;transition:all .2s;display:flex;gap:8px;align-items:center}
+.cmd-item:hover,.cmd-item.sel{background:rgba(245,158,11,0.08);color:var(--amber)}
+.cmd-item .ci{font-size:11px;color:var(--muted)}
+.cmd-detail{display:flex;flex-direction:column;gap:1rem}
+.cd-top{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.75rem;flex:1}
+.cd-name{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:var(--amber);margin-bottom:.4rem}
+.cd-synopsis{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);margin-bottom:1rem}
+.cd-desc{font-size:14px;line-height:1.75;margin-bottom:1rem}
+.cd-flags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem}
+.flag-pill{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text)}
+.flag-pill span{color:var(--amber)}
+.cd-example{background:#050709;border-radius:8px;padding:1rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.75;color:var(--muted);max-height:340px;overflow-y:auto;white-space:pre-wrap}
+.cd-example::-webkit-scrollbar{width:6px}
+.cd-example::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.ex-label{display:block;width:fit-content;font-size:10px;letter-spacing:.08em;color:var(--amber);text-transform:uppercase;background:rgba(245,158,11,0.08);padding:3px 10px;border-radius:4px;margin:14px 0 6px 0;font-family:'IBM Plex Mono',monospace;font-weight:500}
+.ex-label:first-child{margin-top:0}
+.ex-divider{border:none;border-top:1px dashed var(--border);margin:10px 0 6px 0}
+
+/* ═══════════════════════════════════════
+   SLIDE 4 — PIPES & REDIRECTION
+═══════════════════════════════════════ */
+#s4{padding:2.5rem 4.5rem}
+.pipe-builder{margin-top:1.5rem;display:flex;flex-direction:column;gap:1.25rem}
+.pipe-stage{display:flex;gap:0;align-items:stretch}
+.ps-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;flex:1;cursor:pointer;transition:all .25s}
+.ps-box:hover,.ps-box.active{border-color:var(--amber);background:rgba(245,158,11,0.06)}
+.ps-cmd{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--white);margin-bottom:4px}
+.ps-what{font-size:12px;color:var(--muted)}
+.ps-arrow{display:flex;align-items:center;padding:0 10px;color:var(--amber-dim);font-size:20px;font-weight:300}
+.pipe-detail{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:1.25rem 1.5rem;min-height:100px}
+.pd-title{font-size:15px;font-weight:600;color:var(--white);margin-bottom:.5rem}
+.pd-body{font-size:13px;line-height:1.7}
+.redir-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:1.25rem}
+.redir-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.rc-op{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:var(--amber);margin-bottom:4px}
+.rc-name{font-size:12px;font-weight:600;color:var(--white);margin-bottom:2px}
+.rc-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.rc-ex{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--teal);margin-top:6px}
+
+/* ═══════════════════════════════════════
+   SLIDE 5 — GREP
+═══════════════════════════════════════ */
+#s5{padding:2.5rem 4.5rem}
+.grep-lab{margin-top:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;height:calc(100% - 90px)}
+.grep-patterns{display:flex;flex-direction:column;gap:8px}
+.gp-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;cursor:pointer;transition:all .2s}
+.gp-card:hover,.gp-card.sel{border-color:var(--amber);background:rgba(245,158,11,0.05)}
+.gp-pattern{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--amber);font-weight:600;margin-bottom:3px}
+.gp-use{font-size:12px;color:var(--muted)}
+.grep-output{background:#050709;border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.go-header{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+.go-body{flex:1;padding:1.25rem 1.5rem;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:2;overflow-y:auto}
+.match{color:var(--amber);font-weight:600}
+.filename{color:#60a5fa}
+.linenum{color:var(--muted)}
+
+/* ═══════════════════════════════════════
+   SLIDE 6 — AWK
+═══════════════════════════════════════ */
+#s6{padding:2.5rem 4.5rem;flex-direction:row;gap:0}
+.s6-left{width:42%;padding:2.5rem 3rem;display:flex;flex-direction:column;justify-content:flex-start;padding-top:2.5rem}
+.s6-right{flex:1;background:var(--surface);border-left:1px solid var(--border);padding:2.5rem 2.5rem;display:flex;flex-direction:column}
+.awk-model{display:flex;flex-direction:column;gap:6px;margin:1rem 0}
+.am-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.am-pattern{color:var(--amber);min-width:110px;font-weight:600}
+.am-arrow{color:var(--muted);font-size:14px}
+.am-action{color:var(--white)}
+.am-row.begin{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2)}
+.am-row.main{background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2)}
+.am-row.end{background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2)}
+.am-row.begin .am-pattern{color:#60a5fa}
+.am-row.end .am-pattern{color:#4ade80}
+.awk-steps{display:flex;flex-direction:column;gap:8px;flex:1}
+.awk-step-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .2s;text-align:left}
+.awk-step-btn:hover,.awk-step-btn.active{border-color:var(--amber);background:rgba(245,158,11,0.07)}
+.asb-label{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--amber);margin-bottom:3px}
+.asb-code{font-size:12px;color:var(--muted)}
+.awk-output{background:#050709;border-radius:8px;padding:1rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:2;margin-top:auto;min-height:120px}
+
+/* ═══════════════════════════════════════
+   SLIDE 7 — SED
+═══════════════════════════════════════ */
+#s7{padding:2.5rem 4.5rem}
+.sed-live{margin-top:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;height:calc(100% - 90px)}
+.sed-left{display:flex;flex-direction:column;gap:10px}
+.sed-op{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;cursor:pointer;transition:all .2s}
+.sed-op:hover,.sed-op.sel{border-color:var(--amber);background:rgba(245,158,11,.06)}
+.so-cmd{font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--amber);font-weight:600;margin-bottom:4px}
+.so-what{font-size:12px;color:var(--muted)}
+.sed-right{display:flex;flex-direction:column;gap:12px}
+.sed-demo{background:#050709;border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:1}
+.sd-header{background:var(--surface2);padding:10px 16px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+.sd-cols{display:grid;grid-template-columns:1fr 1fr;height:calc(100% - 37px)}
+.sd-col{padding:1rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:2;overflow-y:auto}
+.sd-col:first-child{border-right:1px solid var(--border)}
+.sd-before{color:var(--muted)}
+.sd-after{color:var(--green)}
+.sd-highlight{color:var(--amber);text-decoration:line-through}
+.sd-new{color:var(--green);font-weight:600}
+.sed-story{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.7}
+
+/* ═══════════════════════════════════════
+   SLIDE 8 — LINKS & INODES
+═══════════════════════════════════════ */
+#s8{padding:2.5rem 4.5rem;flex-direction:row;gap:2.5rem}
+.inode-visual{width:340px;display:flex;flex-direction:column;justify-content:center;gap:1rem}
+.inode-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;position:relative}
+.ib-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem}
+.inode-record{background:#050709;border-radius:6px;padding:.75rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.9}
+.ir-key{color:var(--blue)}
+.ir-val{color:var(--amber)}
+.link-arrow{text-align:center;color:var(--amber-dim);font-size:20px;margin:.25rem 0}
+.file-node{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);margin:4px 0}
+.fn-hard{border-color:var(--amber-dim);color:var(--amber)}
+.fn-soft{border-color:var(--teal-dim);color:var(--teal)}
+.fn-broken{border-color:var(--red);color:var(--red);text-decoration:line-through}
+
+.link-detail{flex:1;display:flex;flex-direction:column;gap:1rem}
+.ld-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;flex:1}
+.ldc-title{font-size:18px;font-weight:700;color:var(--white);margin-bottom:.6rem}
+.ldc-body{font-size:14px;line-height:1.75;margin-bottom:.75rem}
+.ldc-term{background:#050709;border-radius:6px;padding:.75rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.9;color:var(--muted)}
+.scenario-strip{background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.6}
+.scenario-strip strong{color:var(--red)}
+
+/* ═══════════════════════════════════════
+   SLIDE 9 — CASE STUDY: LOG ANALYSIS
+═══════════════════════════════════════ */
+#s9{flex-direction:row}
+.s9-left{width:36%;background:var(--surface);border-right:1px solid var(--border);padding:3.5rem 2.5rem;display:flex;flex-direction:column;justify-content:center}
+.s9-right{flex:1;padding:2.5rem 3rem;display:flex;flex-direction:column;justify-content:center;gap:1rem}
+.case-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:100px;padding:4px 12px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#60a5fa;margin-bottom:1.25rem;width:fit-content}
+.pipeline-step{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;cursor:pointer;transition:all .2s;position:relative}
+.pipeline-step:hover,.pipeline-step.active{border-color:var(--amber);background:rgba(245,158,11,.06)}
+.ps-num{position:absolute;top:-8px;left:12px;background:var(--amber);color:var(--bg);font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;padding:1px 7px;border-radius:100px}
+.ps-cmd2{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;padding-top:4px}
+.ps-explain{font-size:12px;color:var(--muted)}
+.ps-arrow2{text-align:center;color:var(--amber-dim);font-size:16px;margin:2px 0}
+.result-box{background:#050709;border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:2;color:var(--muted)}
+
+/* ═══════════════════════════════════════
+   SLIDE 10 — XARGS & FIND
+═══════════════════════════════════════ */
+#s10{padding:2.5rem 4.5rem}
+.xargs-split{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem;height:calc(100% - 90px)}
+.xargs-panel{display:flex;flex-direction:column;gap:10px}
+.xp-title{font-size:16px;font-weight:700;color:var(--white);margin-bottom:.25rem}
+.xp-sub{font-size:13px;color:var(--muted);margin-bottom:.5rem}
+.comparison-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem;flex:1}
+.cb-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem}
+.cb-label.bad{color:var(--red)}
+.cb-label.good{color:var(--green)}
+.cb-code{background:#050709;border-radius:6px;padding:.75rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.9}
+.cb-note{font-size:12px;line-height:1.65;margin-top:.75rem}
+.find-recipes{display:flex;flex-direction:column;gap:8px;flex:1}
+.find-recipe{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;cursor:pointer;transition:all .2s}
+.find-recipe:hover,.find-recipe.sel{border-color:var(--amber);background:rgba(245,158,11,.06)}
+.fr-cmd{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--amber);margin-bottom:3px}
+.fr-what{font-size:11.5px;color:var(--muted)}
+.find-output{background:#050709;border-radius:8px;padding:.75rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:2;margin-top:auto;min-height:100px;color:var(--muted)}
+
+/* ═══════════════════════════════════════
+   SLIDE 11 — INTERACTIVE QUIZ
+═══════════════════════════════════════ */
+#s11{padding:2.5rem 5rem}
+.quiz-wrap{margin-top:1.5rem;display:flex;flex-direction:column;gap:1.25rem}
+.quiz-q{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem 1.75rem}
+.q-text{font-size:15px;font-weight:600;color:var(--white);margin-bottom:1rem;line-height:1.5}
+.q-options{display:flex;flex-wrap:wrap;gap:8px}
+.q-opt{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:all .2s}
+.q-opt:hover{border-color:var(--amber);color:var(--amber)}
+.q-opt.correct{border-color:var(--green);background:rgba(34,197,94,.1);color:var(--green);pointer-events:none}
+.q-opt.wrong{border-color:var(--red);background:rgba(239,68,68,.1);color:var(--red)}
+.q-opt.disabled{pointer-events:none;opacity:.5}
+.q-fb{margin-top:.75rem;font-size:13px;line-height:1.65;display:none}
+.q-fb.show{display:block}
+.q-fb.ok{color:var(--green)}
+.q-fb.no{color:#f87171}
+
+/* ═══════════════════════════════════════
+   SLIDE 12 — BASHRC & PRODUCTIVITY
+═══════════════════════════════════════ */
+#s12{padding:2.5rem 4.5rem;flex-direction:row;gap:2rem}
+.bash-left{width:300px;display:flex;flex-direction:column;gap:8px;justify-content:center}
+.bash-cat{cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;transition:all .2s}
+.bash-cat:hover,.bash-cat.sel{border-color:var(--amber);background:rgba(245,158,11,.06)}
+.bc-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--amber);margin-bottom:3px}
+.bc-sub{font-size:12px;color:var(--muted)}
+.bash-right{flex:1;display:flex;flex-direction:column;gap:1rem}
+.bashrc-preview{background:#050709;border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:1}
+.bp-header{background:var(--surface2);padding:9px 16px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+.bp-body{padding:1.25rem 1.5rem;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:2;overflow-y:auto}
+.bp-comment{color:#374151}
+.bp-key{color:#60a5fa}
+.bp-val{color:var(--green)}
+.bp-alias{color:var(--amber)}
+.bp-tip{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.65}
+
+/* ═══════════════════════════════════════
+   SLIDE 13 — LAB
+═══════════════════════════════════════ */
+#s13{padding:2.5rem 4rem}
+.labs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:1.5rem;flex:1}
+.lab-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
+.lab-card:hover{border-color:var(--amber-dim)}
+.lab-hdr{background:var(--surface2);border-bottom:1px solid var(--border);padding:12px 18px;display:flex;align-items:center;gap:12px}
+.lab-n{width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,.12);border:1px solid var(--amber-dim);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber)}
+.lab-title{font-size:14px;font-weight:600;color:var(--white)}
+.lab-body{padding:1.25rem 1.5rem}
+.lab-task{display:flex;gap:8px;margin-bottom:7px;font-size:13px;line-height:1.5;align-items:flex-start}
+.lab-task::before{content:'→';color:var(--amber-dim);flex-shrink:0;margin-top:1px}
+.lab-cmd{margin-top:10px;background:#050709;border-radius:6px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--amber);line-height:1.9}
+
+/* ═══════════════════════════════════════
+   SLIDE 14 — CLOSE
+═══════════════════════════════════════ */
+#s14{background:var(--bg);justify-content:center;align-items:center;text-align:center}
+.s14-glow{position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(245,158,11,.06) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)}
+.s14-wrap{position:relative;z-index:1}
+.s14-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--amber);margin-bottom:1rem}
+.s14-title{font-size:48px;font-weight:700;color:var(--white);margin-bottom:.75rem}
+.s14-sub{font-size:16px;color:var(--muted);font-style:italic;margin-bottom:2.5rem}
+.s14-next{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem 2.5rem;display:inline-block;text-align:left;max-width:520px;width:100%}
+.s14-next h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:.75rem}
+.s14-item{font-size:14px;display:flex;gap:8px;align-items:baseline;margin-bottom:6px}
+.s14-item::before{content:'▸';color:var(--amber);flex-shrink:0;font-size:10px}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ════════════════════════════════════
+     SLIDE 1 — TITLE
+════════════════════════════════════ -->
+<div class="slide active" id="s1">
+  <div class="s1-scanlines"></div>
+  <div class="s1-glow"></div>
+  <div class="s1-content">
+    <div class="s1-session">SESSION 02 · LINUX OS & APPLICATIONS</div>
+    <h1 class="s1-title">CLI &amp; <em>Text</em><br>Processing</h1>
+    <p class="s1-sub">Shell · Pipes · grep · awk · sed — the tools sysadmins live inside</p>
+    <div class="chips">
+      <span class="chip hi">14 slides</span>
+      <span class="chip hi">Interactive</span>
+      <span class="chip">Real log analysis</span>
+      <span class="chip">Live pipeline builder</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 2 — STORY HOOK
+════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="s2-left">
+    <div class="tag">The challenge</div>
+    <h2 style="font-size:28px;font-weight:700;color:var(--white);line-height:1.3;margin-bottom:1.25rem;">You have 2 minutes.<br>And a 4 GB log file.</h2>
+    <p style="font-size:15px;line-height:1.8;margin-bottom:1rem;">The CTO is on the phone. The payment API started returning 500 errors at 14:32. "Find out which endpoint is failing and which IPs are hitting it." The log file has 8 million lines.</p>
+    <div class="quote-block">"You don't have time to open it in an editor. You need four commands chained together — and the answer in under two minutes."</div>
+    <p style="font-size:14px;line-height:1.8;color:var(--muted);">By the end of this session, those four commands will feel obvious. You'll write them without thinking.</p>
+    <div style="margin-top:1.25rem;padding:12px 16px;background:rgba(245,158,11,.07);border:1px solid var(--amber-dim);border-radius:8px;">
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);">↳ Based on a real incident at Tiki (Vietnamese e-commerce), 2022</p>
+    </div>
+  </div>
+  <div class="s2-right">
+    <div class="tag" style="margin-bottom:1rem;">The four commands that solved it</div>
+    <div class="term">
+      <div class="term-bar"><div class="td" style="background:#ff5f57"></div><div class="td" style="background:#febc2e"></div><div class="td" style="background:#28c840"></div><span class="mono" style="font-size:11px;color:var(--muted);margin-left:8px;">prod-api-01 — bash</span></div>
+      <div class="term-body" style="font-size:12.5px;">
+        <div><span class="tp">$ </span><span class="tc">grep " 500 " /var/log/nginx/access.log \</span></div>
+        <div><span class="tc">&nbsp;&nbsp;| grep "POST /api/payment" \</span></div>
+        <div><span class="tc">&nbsp;&nbsp;| awk '{print $1}' \</span></div>
+        <div><span class="tc">&nbsp;&nbsp;| sort | uniq -c | sort -rn | head -5</span></div>
+        <div>&nbsp;</div>
+        <div class="tg">    142 192.168.1.45</div>
+        <div class="tg">     89 10.0.0.123</div>
+        <div class="tg">     67 172.16.0.8</div>
+        <div class="tg">     23 10.0.0.99</div>
+        <div class="tg">     11 192.168.2.10</div>
+        <div>&nbsp;</div>
+        <div class="to"># Total time: 8 seconds. 8 million lines analysed.</div>
+        <div class="to"># IP 192.168.1.45 is a misconfigured internal service.</div>
+      </div>
+    </div>
+    <p style="margin-top:1rem;font-size:13px;color:var(--muted);font-style:italic;text-align:center;">grep filters → grep filters more → awk extracts the IP column → sort+uniq counts → sort shows top offenders</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 3 — NAVIGATION COMMANDS
+════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div style="padding:2.5rem 4.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Navigation & file operations</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">The commands you type 100 times a day — click to explore</h2>
+    <div class="cmd-explorer">
+      <div class="cmd-list-panel">
+        <div class="cmd-group-label">Navigation</div>
+        <div class="cmd-item sel" onclick="showCmd('ls',this)"><span class="ci">$</span>ls</div>
+        <div class="cmd-item" onclick="showCmd('cd',this)"><span class="ci">$</span>cd</div>
+        <div class="cmd-item" onclick="showCmd('find',this)"><span class="ci">$</span>find</div>
+        <div class="cmd-item" onclick="showCmd('locate',this)"><span class="ci">$</span>locate</div>
+        <div class="cmd-group-label" style="margin-top:8px;">File Operations</div>
+        <div class="cmd-item" onclick="showCmd('cp',this)"><span class="ci">$</span>cp</div>
+        <div class="cmd-item" onclick="showCmd('mv',this)"><span class="ci">$</span>mv</div>
+        <div class="cmd-item" onclick="showCmd('rm',this)"><span class="ci">$</span>rm</div>
+        <div class="cmd-item" onclick="showCmd('ln',this)"><span class="ci">$</span>ln</div>
+        <div class="cmd-group-label" style="margin-top:8px;">Viewing</div>
+        <div class="cmd-item" onclick="showCmd('cat',this)"><span class="ci">$</span>cat</div>
+        <div class="cmd-item" onclick="showCmd('less',this)"><span class="ci">$</span>less</div>
+        <div class="cmd-item" onclick="showCmd('tail',this)"><span class="ci">$</span>tail</div>
+        <div class="cmd-item" onclick="showCmd('wc',this)"><span class="ci">$</span>wc</div>
+      </div>
+      <div class="cmd-detail" id="cmd-detail">
+        <div class="cd-top">
+          <div class="cd-name" id="cd-name">ls</div>
+          <div class="cd-synopsis" id="cd-synopsis">ls [OPTIONS] [PATH]</div>
+          <div class="cd-desc" id="cd-desc">List directory contents. The most-typed command in Linux. Without arguments, lists the current directory. The -l flag reveals permissions, ownership, size, and modification time — everything about a file.</div>
+          <div class="cd-flags" id="cd-flags">
+            <div class="flag-pill"><span>-l</span> long format</div>
+            <div class="flag-pill"><span>-a</span> show hidden files</div>
+            <div class="flag-pill"><span>-h</span> human sizes</div>
+            <div class="flag-pill"><span>-t</span> sort by time</div>
+            <div class="flag-pill"><span>-r</span> reverse sort</div>
+            <div class="flag-pill"><span>-S</span> sort by size</div>
+          </div>
+          <div class="cd-example" id="cd-example"><div class="ex-label">1 · Long listing with human-readable sizes</div>$ ls -lah /var/log/
+<span style="color:var(--amber)">total 1.2G</span>
+drwxr-xr-x  root root   4.0K  Mar 15 03:01  <span style="color:#60a5fa">./</span>
+-rw-r--r--  root root   <span style="color:var(--red)">18G</span>   Mar 15 03:01  access.log  ← the culprit
+-rw-r-----  root adm    2.1M  Mar 15 02:59  auth.log
+-rw-r--r--  root root   445K  Mar 15 03:00  syslog
+<div class="ex-label">2 · Find the largest files in a directory</div>$ ls -lahS /var/log | head -5
+-rw-r--r--  root root  <span style="color:var(--red)">18G</span>   access.log
+-rw-r--r--  root root  892M  dpkg.log
+-rw-r--r--  root root  445K  syslog
+<span style="color:var(--muted)"># -S sorts by size, largest first</span>
+<div class="ex-label">3 · Reveal hidden dotfiles</div>$ ls -la ~ | grep "^\."
+-rw-------  user user  3.2K  .bash_history
+-rw-r--r--  user user   220  .bashrc
+drwx------  user user  4.0K  .ssh</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 4 — PIPES & REDIRECTION
+════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div style="padding:2.5rem 4.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Pipes & redirection — the Unix superpower</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">Click a stage to understand how data flows</h2>
+    <div class="pipe-builder">
+      <div class="pipe-stage">
+        <div class="ps-box active" id="pipe0" onclick="showPipe(0,this)">
+          <div class="ps-cmd">cat access.log</div>
+          <div class="ps-what">Source: reads 8M lines from disk</div>
+        </div>
+        <div class="ps-arrow">|</div>
+        <div class="ps-box" id="pipe1" onclick="showPipe(1,this)">
+          <div class="ps-cmd">grep "POST /payment"</div>
+          <div class="ps-what">Filter: only payment POSTs</div>
+        </div>
+        <div class="ps-arrow">|</div>
+        <div class="ps-box" id="pipe2" onclick="showPipe(2,this)">
+          <div class="ps-cmd">awk '{print $1}'</div>
+          <div class="ps-what">Extract: column 1 (IP address)</div>
+        </div>
+        <div class="ps-arrow">|</div>
+        <div class="ps-box" id="pipe3" onclick="showPipe(3,this)">
+          <div class="ps-cmd">sort | uniq -c</div>
+          <div class="ps-what">Count: occurrences per IP</div>
+        </div>
+        <div class="ps-arrow">|</div>
+        <div class="ps-box" id="pipe4" onclick="showPipe(4,this)">
+          <div class="ps-cmd">sort -rn | head -5</div>
+          <div class="ps-what">Rank: top 5 by frequency</div>
+        </div>
+      </div>
+      <div class="pipe-detail" id="pipe-detail">
+        <div class="pd-title">cat — the source of data</div>
+        <div class="pd-body">The pipeline starts here. <code>cat</code> reads the entire file and writes it to stdout. The pipe <code>|</code> connects stdout of one command to stdin of the next — no temporary files, no disk I/O between steps. The kernel handles this entirely in memory using a ring buffer. Each command in the pipeline runs <em>simultaneously</em> as separate processes — that's why pipelines are fast even on huge files.</div>
+      </div>
+      <div class="redir-grid">
+        <div class="redir-card">
+          <div class="rc-op">&gt;</div>
+          <div class="rc-name">Redirect stdout</div>
+          <div class="rc-desc">Write output to file. Overwrites if exists.</div>
+          <div class="rc-ex">cmd &gt; output.txt</div>
+        </div>
+        <div class="redir-card">
+          <div class="rc-op">&gt;&gt;</div>
+          <div class="rc-name">Append stdout</div>
+          <div class="rc-desc">Add output to end of file. Safe for logs.</div>
+          <div class="rc-ex">cmd &gt;&gt; output.txt</div>
+        </div>
+        <div class="redir-card">
+          <div class="rc-op">2&gt;</div>
+          <div class="rc-name">Redirect stderr</div>
+          <div class="rc-desc">Write errors only. Stdout goes to terminal.</div>
+          <div class="rc-ex">cmd 2&gt; errors.txt</div>
+        </div>
+        <div class="redir-card">
+          <div class="rc-op">2&gt;&amp;1</div>
+          <div class="rc-name">Merge streams</div>
+          <div class="rc-desc">Send both stdout and stderr to same place.</div>
+          <div class="rc-ex">cmd &gt; all.txt 2&gt;&amp;1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 5 — GREP
+════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div style="padding:2.5rem 4.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">grep — finding needles in haystacks</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">Click a pattern to see it search a real nginx log</h2>
+    <div class="grep-lab">
+      <div class="grep-patterns">
+        <div class="gp-card sel" onclick="showGrep('basic',this)">
+          <div class="gp-pattern">grep "ERROR"</div>
+          <div class="gp-use">Basic string match — case sensitive</div>
+        </div>
+        <div class="gp-card" onclick="showGrep('i',this)">
+          <div class="gp-pattern">grep -i "error"</div>
+          <div class="gp-use">Case-insensitive — matches Error, ERROR, error</div>
+        </div>
+        <div class="gp-card" onclick="showGrep('v',this)">
+          <div class="gp-pattern">grep -v "200"</div>
+          <div class="gp-use">Invert match — show lines that do NOT match</div>
+        </div>
+        <div class="gp-card" onclick="showGrep('E',this)">
+          <div class="gp-pattern">grep -E "4[0-9]{2}"</div>
+          <div class="gp-use">Extended regex — match 400–499 status codes</div>
+        </div>
+        <div class="gp-card" onclick="showGrep('oE',this)">
+          <div class="gp-pattern">grep -oE "\b[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b"</div>
+          <div class="gp-use">Extract only IPs from any text file</div>
+        </div>
+        <div class="gp-card" onclick="showGrep('r',this)">
+          <div class="gp-pattern">grep -r "password" /etc/</div>
+          <div class="gp-use">Recursive — search all files in a directory</div>
+        </div>
+        <div class="gp-card" onclick="showGrep('c',this)">
+          <div class="gp-pattern">grep -c "POST" access.log</div>
+          <div class="gp-use">Count — just print the number of matching lines</div>
+        </div>
+      </div>
+      <div class="grep-output">
+        <div class="go-header" id="grep-cmd-display">$ grep "ERROR" /var/log/nginx/access.log</div>
+        <div class="go-body" id="grep-output-body">
+          <span class="filename">access.log</span><span class="linenum">:8421:</span> 192.168.1.45 - - [15/Mar/2024:14:32:11] "POST /api/payment HTTP/1.1" <span class="match">500</span> 523<br>
+          <span class="filename">access.log</span><span class="linenum">:8435:</span> 10.0.0.123 - - [15/Mar/2024:14:32:15] "POST /api/payment HTTP/1.1" <span class="match">500</span> 523<br>
+          <span class="filename">access.log</span><span class="linenum">:8441:</span> 192.168.1.45 - - [15/Mar/2024:14:32:19] "POST /api/payment HTTP/1.1" <span class="match">500</span> 523<br>
+          <span class="filename">access.log</span><span class="linenum">:8502:</span> 172.16.0.8 - - [15/Mar/2024:14:32:44] "POST /api/payment HTTP/1.1" <span class="match">500</span> 523<br>
+          <span style="color:var(--muted);font-size:11px;">... 138 more matches</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 6 — AWK
+════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="s6-left">
+    <div class="tag">awk — the columnar surgeon</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);margin-bottom:1rem;">A mini programming language for structured text</h2>
+    <p style="font-size:14px;line-height:1.75;margin-bottom:1rem;">awk reads files line by line, splits each line into fields ($1, $2 ...), and runs your program on each one. Nginx logs are perfectly structured — every field has a position.</p>
+    <div class="awk-model">
+      <div class="am-row begin"><span class="am-pattern">BEGIN { }</span><span class="am-arrow">→</span><span class="am-action">Run once before any input</span></div>
+      <div class="am-row main"><span class="am-pattern">/pattern/ { }</span><span class="am-arrow">→</span><span class="am-action">Run for each matching line</span></div>
+      <div class="am-row main"><span class="am-pattern">{ }</span><span class="am-arrow">→</span><span class="am-action">Run for every line</span></div>
+      <div class="am-row end"><span class="am-pattern">END { }</span><span class="am-arrow">→</span><span class="am-action">Run once after all input</span></div>
+    </div>
+    <div style="background:#050709;border-radius:8px;padding:1rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:2;margin-top:.5rem;">
+      <span style="color:var(--muted)"># Nginx log field positions:</span><br>
+      <span style="color:var(--amber)">$1</span>=IP &nbsp;<span style="color:var(--amber)">$7</span>=URL &nbsp;<span style="color:var(--amber)">$9</span>=status &nbsp;<span style="color:var(--amber)">$10</span>=bytes<br>
+      <span style="color:var(--muted)">192.168.1.45 - - [date] "POST /api" 500 523</span>
+    </div>
+  </div>
+  <div class="s6-right">
+    <div class="tag">Click an example to see it run</div>
+    <div class="awk-steps">
+      <div class="awk-step-btn active" onclick="showAwk(0,this)">
+        <div class="asb-label">awk '{print $1}' access.log</div>
+        <div class="asb-code">Extract column 1 — the IP address from every line</div>
+      </div>
+      <div class="awk-step-btn" onclick="showAwk(1,this)">
+        <div class="asb-label">awk '$9 == 500 {print $1, $7}' access.log</div>
+        <div class="asb-code">Only 500 errors — print IP and URL</div>
+      </div>
+      <div class="awk-step-btn" onclick="showAwk(2,this)">
+        <div class="asb-label">awk '{sum += $10} END {print sum/1024/1024 "MB"}' access.log</div>
+        <div class="asb-code">Total bandwidth served — sum the bytes column</div>
+      </div>
+      <div class="awk-step-btn" onclick="showAwk(3,this)">
+        <div class="asb-label">awk '$9==200 {c++} END {print c " OK requests"}' access.log</div>
+        <div class="asb-code">Count successful requests without grep | wc -l</div>
+      </div>
+      <div class="awk-step-btn" onclick="showAwk(4,this)">
+        <div class="asb-label">awk '{ip[$1]++} END {for(i in ip) print ip[i], i}' access.log</div>
+        <div class="asb-code">Count requests per IP — associative array in one line</div>
+      </div>
+    </div>
+    <div class="awk-output" id="awk-output">
+      <span style="color:var(--teal)">192.168.1.45</span><br>
+      <span style="color:var(--teal)">10.0.0.123</span><br>
+      <span style="color:var(--teal)">172.16.0.8</span><br>
+      <span style="color:var(--teal)">192.168.1.45</span><br>
+      <span style="color:var(--muted)">... 7,999,996 more lines</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 7 — SED
+════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div style="padding:2.5rem 4.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">sed — the stream editor</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">Click an operation — see before and after side by side</h2>
+    <div class="sed-live">
+      <div class="sed-left">
+        <div class="sed-op sel" onclick="showSed('sub',this)">
+          <div class="so-cmd">sed 's/old/new/'</div>
+          <div class="so-what">Substitute first match per line</div>
+        </div>
+        <div class="sed-op" onclick="showSed('subg',this)">
+          <div class="so-cmd">sed 's/old/new/g'</div>
+          <div class="so-what">Substitute ALL matches per line (g flag)</div>
+        </div>
+        <div class="sed-op" onclick="showSed('i',this)">
+          <div class="so-cmd">sed -i 's/old/new/g' file</div>
+          <div class="so-what">Edit file in-place — changes the actual file</div>
+        </div>
+        <div class="sed-op" onclick="showSed('d',this)">
+          <div class="so-cmd">sed '/pattern/d'</div>
+          <div class="so-what">Delete lines matching a pattern</div>
+        </div>
+        <div class="sed-op" onclick="showSed('p',this)">
+          <div class="so-cmd">sed -n '/ERROR/p'</div>
+          <div class="so-what">Print only matching lines (like grep)</div>
+        </div>
+        <div class="sed-op" onclick="showSed('n',this)">
+          <div class="so-cmd">sed '1,5d'</div>
+          <div class="so-what">Delete lines 1 through 5 by line number</div>
+        </div>
+        <div class="sed-story" id="sed-story">💡 <strong style="color:var(--white)">Real use:</strong> A developer hardcoded <code>localhost</code> in 47 config files before deploying to production. One sed command fixed all of them: <code>find /etc/app -name "*.conf" | xargs sed -i 's/localhost/10.0.0.5/g'</code></div>
+      </div>
+      <div class="sed-right">
+        <div class="sed-demo" id="sed-demo">
+          <div class="sd-header"><span>BEFORE</span><span>AFTER — sed 's/localhost/10.0.0.5/'</span></div>
+          <div class="sd-cols">
+            <div class="sd-col sd-before" id="sed-before">db_host=<span class="sd-highlight">localhost</span><br>db_port=5432<br>cache_host=<span class="sd-highlight">localhost</span><br>cache_port=6379<br>api_url=http://<span class="sd-highlight">localhost</span>:8080<br>debug=false</div>
+            <div class="sd-col" id="sed-after">db_host=<span class="sd-new">10.0.0.5</span><br>db_port=5432<br>cache_host=<span style="color:var(--muted)">localhost</span><br>cache_port=6379<br>api_url=http://<span style="color:var(--muted)">localhost</span>:8080<br>debug=false</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 8 — LINKS & INODES
+════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div style="padding:2.5rem 4.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Hard links · Soft links · Inodes</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);margin-bottom:1.25rem;">Understanding what a "file" really is in Linux</h2>
+    <div style="display:flex;gap:2rem;flex:1;min-height:0;">
+      <div class="inode-visual">
+        <div class="inode-box">
+          <div class="ib-label">Inode #42 (the actual data)</div>
+          <div class="inode-record">
+            <span class="ir-key">type:</span>     <span class="ir-val">regular file</span><br>
+            <span class="ir-key">permissions:</span><span class="ir-val"> rw-r--r--</span><br>
+            <span class="ir-key">owner:</span>    <span class="ir-val">deploy:www-data</span><br>
+            <span class="ir-key">size:</span>     <span class="ir-val">18,432 bytes</span><br>
+            <span class="ir-key">links:</span>    <span class="ir-val">2</span> ← reference count<br>
+            <span class="ir-key">blocks:</span>   <span class="ir-val">[4821, 4822, 4823]</span>
+          </div>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:12px;font-family:'IBM Plex Mono',monospace;">↑ inodes don't have names ↑</div>
+        <div style="text-align:center;color:var(--amber);font-size:18px;">↑  ↑</div>
+        <div style="display:flex;gap:8px;">
+          <div class="file-node fn-hard" style="flex:1">app.conf<br><span style="font-size:10px;color:var(--amber-dim);">hard link → inode 42</span></div>
+          <div class="file-node fn-hard" style="flex:1">app.conf.bak<br><span style="font-size:10px;color:var(--amber-dim);">hard link → inode 42</span></div>
+        </div>
+        <div style="margin-top:.75rem;">
+          <div class="file-node fn-soft">current → /etc/nginx/sites-enabled/app<br><span style="font-size:10px;color:var(--teal-dim);">symlink (stores a path)</span></div>
+          <div style="margin-top:4px;" class="file-node fn-broken">old-link → /etc/nginx/sites-enabled/deleted<br><span style="font-size:10px;">broken symlink — target gone</span></div>
+        </div>
+      </div>
+      <div class="link-detail">
+        <div class="ld-card">
+          <div class="ldc-title">Hard link — another name for the same inode</div>
+          <div class="ldc-body">A hard link is just a directory entry pointing to an inode. The file data exists once; both names are equal. Deleting one name decrements the link count — the data is only freed when count reaches 0. You cannot hard-link across filesystems or hard-link directories.</div>
+          <div class="ldc-term">
+            <span style="color:var(--amber)">$ ln app.conf app.conf.bak</span><br>
+            <span style="color:var(--muted)">$ ls -li app.conf app.conf.bak</span><br>
+            <span style="color:var(--teal)">42 -rw-r--r-- <span style="color:var(--amber)">2</span> deploy app.conf</span><br>
+            <span style="color:var(--teal)">42 -rw-r--r-- <span style="color:var(--amber)">2</span> deploy app.conf.bak</span><br>
+            <span style="color:var(--muted)"># Same inode (42), link count = 2</span><br>
+            <span style="color:var(--muted)">$ rm app.conf   # link count drops to 1</span><br>
+            <span style="color:var(--muted)">$ cat app.conf.bak  # data still here!</span>
+          </div>
+        </div>
+        <div class="scenario-strip">
+          <strong>Real scenario:</strong> nginx uses symlinks for virtual hosts. <code>/etc/nginx/sites-enabled/myapp</code> is a symlink to <code>/etc/nginx/sites-available/myapp</code>. To disable a site: <code>rm /etc/nginx/sites-enabled/myapp</code> — the config file stays safe in sites-available. Re-enable with <code>ln -s</code>.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 9 — CASE STUDY: FULL LOG ANALYSIS
+════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="s9-left">
+    <div class="case-badge">📊 Case Study</div>
+    <div class="tag">Tiki.vn — 14:32 incident</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);line-height:1.3;margin-bottom:1rem;">Building the investigation pipeline, step by step</h2>
+    <p style="font-size:14px;line-height:1.8;margin-bottom:1rem;">8 million nginx log lines. The CTO needs: which endpoint is failing, how many times, and which IPs. Click each step to understand what it does and why.</p>
+    <div class="term" style="font-size:11.5px;">
+      <div class="term-bar"><div class="td" style="background:#ff5f57"></div><div class="td" style="background:#febc2e"></div><div class="td" style="background:#28c840"></div></div>
+      <div class="term-body" style="line-height:1.8;padding:1rem 1.25rem;">
+        <div><span class="tp">$ </span><span class="tc">wc -l access.log</span></div>
+        <div class="tg">8,142,331 access.log</div>
+        <div><span class="tp">$ </span><span class="tc">ls -lh access.log</span></div>
+        <div class="tg">-rw-r--r-- 1 www-data www-data 4.1G access.log</div>
+      </div>
+    </div>
+  </div>
+  <div class="s9-right">
+    <div class="tag">Click each step</div>
+    <div class="pipeline-step active" id="pstep0" onclick="showPipeStep(0,this)">
+      <div class="ps-num">1</div>
+      <div class="ps-cmd2">grep " 500 " access.log</div>
+      <div class="ps-explain">Filter: keep only lines with HTTP 500 status. Reduces 8M lines to ~14K.</div>
+    </div>
+    <div class="ps-arrow2">↓</div>
+    <div class="pipeline-step" id="pstep1" onclick="showPipeStep(1,this)">
+      <div class="ps-num">2</div>
+      <div class="ps-cmd2">grep "POST /api/payment"</div>
+      <div class="ps-explain">Filter further: only failed payment POSTs. Reduces 14K to 332 lines.</div>
+    </div>
+    <div class="ps-arrow2">↓</div>
+    <div class="pipeline-step" id="pstep2" onclick="showPipeStep(2,this)">
+      <div class="ps-num">3</div>
+      <div class="ps-cmd2">awk '{print $1}'</div>
+      <div class="ps-explain">Extract: column 1 is the IP address. Now we have 332 IPs, one per line.</div>
+    </div>
+    <div class="ps-arrow2">↓</div>
+    <div class="pipeline-step" id="pstep3" onclick="showPipeStep(3,this)">
+      <div class="ps-num">4</div>
+      <div class="ps-cmd2">sort | uniq -c | sort -rn | head -5</div>
+      <div class="ps-explain">Count, rank, and show top 5. The answer: one internal IP caused 43% of failures.</div>
+    </div>
+    <div class="result-box" id="pipe-result">
+      <span style="color:var(--muted)"># Click a step above to see its output</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 10 — FIND & XARGS
+════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div style="padding:2.5rem 4.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">find & xargs — searching and acting at scale</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">find locates. xargs scales. Together they're unstoppable.</h2>
+    <div class="xargs-split">
+      <div class="xargs-panel">
+        <div class="comparison-box">
+          <div class="cb-label bad">❌ The slow way — shell loop</div>
+          <div class="cb-code">
+            <span style="color:var(--muted)"># Runs one process per file</span><br>
+            <span style="color:var(--red)">for f in $(find /logs -name "*.log"); do</span><br>
+            <span style="color:var(--red)">&nbsp;&nbsp;gzip "$f"</span><br>
+            <span style="color:var(--red)">done</span><br>
+            <span style="color:var(--muted)"># 10,000 files = 10,000 gzip processes</span><br>
+            <span style="color:var(--muted)"># Time: ~4 minutes</span>
+          </div>
+          <div class="cb-note" style="color:var(--muted);">Each iteration spawns a new process. Huge overhead for thousands of files. Also breaks on filenames with spaces.</div>
+        </div>
+        <div class="comparison-box" style="border-color:rgba(34,197,94,.3);">
+          <div class="cb-label good">✓ The fast way — xargs with parallelism</div>
+          <div class="cb-code">
+            <span style="color:var(--muted)"># Batches args, runs in parallel</span><br>
+            <span style="color:var(--green)">find /logs -name "*.log" -print0 \</span><br>
+            <span style="color:var(--green)">&nbsp;&nbsp;| xargs -0 -P4 gzip</span><br>
+            <span style="color:var(--muted)"># -0 handles spaces in filenames</span><br>
+            <span style="color:var(--muted)"># -P4 runs 4 gzip processes at once</span><br>
+            <span style="color:var(--muted)"># Time: ~35 seconds</span>
+          </div>
+          <div class="cb-note" style="color:var(--text);">xargs reads stdin, batches arguments, and passes them to a command. <code>-P4</code> runs 4 parallel processes — uses all CPU cores.</div>
+        </div>
+      </div>
+      <div class="xargs-panel">
+        <div class="xp-title">find recipes — click to see output</div>
+        <div class="xp-sub">Real commands from production sysadmin work</div>
+        <div class="find-recipes">
+          <div class="find-recipe sel" onclick="showFind(0,this)">
+            <div class="fr-cmd">find /var/log -name "*.log" -mtime +7</div>
+            <div class="fr-what">Log files older than 7 days</div>
+          </div>
+          <div class="find-recipe" onclick="showFind(1,this)">
+            <div class="fr-cmd">find /etc -name "*.conf" -newer /etc/nginx/nginx.conf</div>
+            <div class="fr-what">Config files modified after nginx.conf</div>
+          </div>
+          <div class="find-recipe" onclick="showFind(2,this)">
+            <div class="fr-cmd">find / -perm -4000 -type f 2>/dev/null</div>
+            <div class="fr-what">All SUID files — security audit</div>
+          </div>
+          <div class="find-recipe" onclick="showFind(3,this)">
+            <div class="fr-cmd">find /tmp -size +100M -delete</div>
+            <div class="fr-what">Delete temporary files larger than 100 MB</div>
+          </div>
+          <div class="find-recipe" onclick="showFind(4,this)">
+            <div class="fr-cmd">find /var/www -name "*.php" | xargs grep -l "eval(base64"</div>
+            <div class="fr-what">Find web shells — common security check</div>
+          </div>
+        </div>
+        <div class="find-output" id="find-output">
+          <span style="color:var(--teal)">/var/log/nginx/access.log.8</span><br>
+          <span style="color:var(--teal)">/var/log/nginx/error.log.8</span><br>
+          <span style="color:var(--teal)">/var/log/syslog.8</span><br>
+          <span style="color:var(--teal)">/var/log/auth.log.8</span><br>
+          <span style="color:var(--muted)">... 23 more files</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 11 — QUIZ
+════════════════════════════════════ -->
+<div class="slide" id="s11">
+  <div style="padding:2.5rem 5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Quick check — click your answer</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">3 real sysadmin scenarios</h2>
+    <div class="quiz-wrap">
+      <div class="quiz-q">
+        <div class="q-text">Q1 — You want to find all lines in <code>/var/log/auth.log</code> containing "Failed password" and count unique source IPs. Which pipeline is correct?</div>
+        <div class="q-options">
+          <div class="q-opt" onclick="ans(this,'wrong','q1')">A) grep "Failed password" auth.log | cut -d' ' -f1 | sort | uniq</div>
+          <div class="q-opt" onclick="ans(this,'correct','q1')">B) grep "Failed password" auth.log | awk '{print $11}' | sort | uniq -c | sort -rn</div>
+          <div class="q-opt" onclick="ans(this,'wrong','q1')">C) cat auth.log | grep -c "Failed" | awk '{print $1}'</div>
+          <div class="q-opt" onclick="ans(this,'wrong','q1')">D) sed '/Failed password/p' auth.log | cut -f11</div>
+        </div>
+        <div class="q-fb ok" id="q1-ok">✓ Correct. In auth.log, field $11 is the source IP. <code>uniq -c</code> counts occurrences, <code>sort -rn</code> shows the worst offenders first. This is exactly how you detect SSH brute-force attacks.</div>
+        <div class="q-fb no" id="q1-no">✗ Field $11 contains the source IP in auth.log's "Failed password" lines. You need <code>awk '{print $11}'</code> to extract it, then <code>sort | uniq -c | sort -rn</code> to count and rank.</div>
+      </div>
+      <div class="quiz-q">
+        <div class="q-text">Q2 — A developer hardcoded <code>db_host=localhost</code> in <code>/etc/app/config.conf</code>. You need to change it to <code>db_host=10.5.0.2</code> without opening an editor. Which command works correctly?</div>
+        <div class="q-options">
+          <div class="q-opt" onclick="ans(this,'wrong','q2')">A) sed 's/localhost/10.5.0.2/' /etc/app/config.conf</div>
+          <div class="q-opt" onclick="ans(this,'wrong','q2')">B) grep -r 's/localhost/10.5.0.2/g' /etc/app/config.conf</div>
+          <div class="q-opt" onclick="ans(this,'correct','q2')">C) sed -i 's/localhost/10.5.0.2/' /etc/app/config.conf</div>
+          <div class="q-opt" onclick="ans(this,'wrong','q2')">D) awk '{gsub(/localhost/,"10.5.0.2")}' /etc/app/config.conf</div>
+        </div>
+        <div class="q-fb ok" id="q2-ok">✓ Correct. The <code>-i</code> flag tells sed to edit the file <strong>in place</strong>. Without <code>-i</code>, sed just prints the result to stdout — the file stays unchanged. Option D would need <code>{print}</code> and output redirection to actually save.</div>
+        <div class="q-fb no" id="q2-no">✗ The key is <code>-i</code> (in-place). Without it, sed prints to stdout but doesn't change the file. <code>sed -i 's/localhost/10.5.0.2/' file</code> modifies the actual file on disk.</div>
+      </div>
+      <div class="quiz-q">
+        <div class="q-text">Q3 — You delete the original file <code>report.txt</code> after creating both a hard link <code>report_hard.txt</code> and a soft link <code>report_soft.txt</code> to it. What happens?</div>
+        <div class="q-options">
+          <div class="q-opt" onclick="ans(this,'wrong','q3')">A) Both links break immediately</div>
+          <div class="q-opt" onclick="ans(this,'wrong','q3')">B) Both links continue to work normally</div>
+          <div class="q-opt" onclick="ans(this,'correct','q3')">C) report_hard.txt still works; report_soft.txt is broken</div>
+          <div class="q-opt" onclick="ans(this,'wrong','q3')">D) report_soft.txt still works; report_hard.txt is deleted too</div>
+        </div>
+        <div class="q-fb ok" id="q3-ok">✓ Correct. The hard link points directly to the inode — data survives until all hard links are removed. The soft link stores the <em>path</em> to report.txt, which no longer exists. This is why nginx uses symlinks for sites-enabled — you can safely remove and re-create them.</div>
+        <div class="q-fb no" id="q3-no">✗ Hard links point to the inode (the actual data). Deleting report.txt removes one directory entry but the inode still has a link count of 1 (the hard link). The soft link stores the path "/path/to/report.txt" which no longer resolves — it becomes dangling.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 12 — BASHRC
+════════════════════════════════════ -->
+<div class="slide" id="s12">
+  <div style="padding:2.5rem 4.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">vim basics · alias · .bashrc</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);margin-bottom:1.25rem;">Configuring your shell — click a category</h2>
+    <div style="display:flex;gap:2rem;flex:1;min-height:0;">
+      <div class="bash-left">
+        <div class="bash-cat sel" onclick="showBash('alias',this)">
+          <div class="bc-title">Aliases</div>
+          <div class="bc-sub">Short names for long commands</div>
+        </div>
+        <div class="bash-cat" onclick="showBash('env',this)">
+          <div class="bc-title">Environment Variables</div>
+          <div class="bc-sub">PATH, EDITOR, custom vars</div>
+        </div>
+        <div class="bash-cat" onclick="showBash('functions',this)">
+          <div class="bc-title">Shell Functions</div>
+          <div class="bc-sub">Mini scripts inside your shell</div>
+        </div>
+        <div class="bash-cat" onclick="showBash('history',this)">
+          <div class="bc-title">History & Prompt</div>
+          <div class="bc-sub">PS1, HISTSIZE, timestamps</div>
+        </div>
+        <div class="bash-cat" onclick="showBash('vim',this)">
+          <div class="bc-title">vim Survival Guide</div>
+          <div class="bc-sub">The 10 commands you must know</div>
+        </div>
+      </div>
+      <div class="bash-right">
+        <div class="bashrc-preview">
+          <div class="bp-header" id="bp-header">~/.bashrc — Aliases</div>
+          <div class="bp-body" id="bp-body">
+            <span class="bp-comment"># ── Safer defaults ──────────────────</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">rm</span>=<span class="bp-val">'rm -i'</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># always confirm delete</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">cp</span>=<span class="bp-val">'cp -i'</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># confirm overwrites</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">mv</span>=<span class="bp-val">'mv -i'</span><br><br>
+            <span class="bp-comment"># ── Shortcuts ───────────────────────</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">ll</span>=<span class="bp-val">'ls -lah'</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># detailed list</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">la</span>=<span class="bp-val">'ls -A'</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">grep</span>=<span class="bp-val">'grep --color=auto'</span><br><br>
+            <span class="bp-comment"># ── Sysadmin shortcuts ──────────────</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">ports</span>=<span class="bp-val">'ss -tulnp'</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># open ports</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">meminfo</span>=<span class="bp-val">'free -h'</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">diskinfo</span>=<span class="bp-val">'df -h'</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">topcpu</span>=<span class="bp-val">'ps aux --sort=-%cpu | head -10'</span><br>
+            <span class="bp-alias">alias</span> <span class="bp-key">logs</span>=<span class="bp-val">'journalctl -f'</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># live system logs</span>
+          </div>
+        </div>
+        <div class="bp-tip" id="bp-tip">💡 After editing .bashrc, run <code>source ~/.bashrc</code> or open a new terminal to apply changes. The file is sourced (executed) every time an interactive shell starts.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 13 — LAB
+════════════════════════════════════ -->
+<div class="slide" id="s13">
+  <div style="padding:2.5rem 4rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Lab session</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">4 tasks · work with a partner · submit before session 3</h2>
+    <div class="labs-grid">
+      <div class="lab-card">
+        <div class="lab-hdr"><div class="lab-n">1</div><div class="lab-title">Analyse access.log — top 10 IPs</div></div>
+        <div class="lab-body">
+          <div class="lab-task">Download the provided access.log (100K lines, real nginx format)</div>
+          <div class="lab-task">Find top 10 IPs by request count using awk + sort + uniq</div>
+          <div class="lab-task">Find top 5 URLs that returned 404 — what were people hitting?</div>
+          <div class="lab-cmd">awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -10<br>grep " 404 " access.log | awk '{print $7}' | sort | uniq -c | sort -rn | head -5</div>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-hdr"><div class="lab-n">2</div><div class="lab-title">Bulk-replace strings in config files</div></div>
+        <div class="lab-body">
+          <div class="lab-task">Create 5 config files each containing <code>db_host=old-server.local</code></div>
+          <div class="lab-task">Replace all occurrences with <code>db_host=10.5.0.2</code> using a single sed + find command</div>
+          <div class="lab-task">Verify all files changed without opening them (grep -r)</div>
+          <div class="lab-cmd">find ./configs -name "*.conf" \<br>&nbsp;&nbsp;| xargs sed -i 's/old-server.local/10.5.0.2/g'<br>grep -r "db_host" ./configs/</div>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-hdr"><div class="lab-n">3</div><div class="lab-title">Hard links, soft links and inodes</div></div>
+        <div class="lab-body">
+          <div class="lab-task">Create a file, create one hard link and one soft link to it</div>
+          <div class="lab-task">Compare inodes with <code>ls -li</code> — confirm hard link shares the inode</div>
+          <div class="lab-task">Delete the original — test which link survives. Explain why in your report.</div>
+          <div class="lab-cmd">echo "test" > original.txt<br>ln original.txt hard.txt<br>ln -s original.txt soft.txt<br>ls -li original.txt hard.txt soft.txt<br>rm original.txt && cat hard.txt && cat soft.txt</div>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-hdr"><div class="lab-n">4</div><div class="lab-title">Configure .bashrc with useful aliases</div></div>
+        <div class="lab-body">
+          <div class="lab-task">Add at least 5 useful aliases to your .bashrc</div>
+          <div class="lab-task">Create a shell function <code>mkcd()</code> that creates a directory and immediately cd's into it</div>
+          <div class="lab-task">Set HISTTIMEFORMAT to show timestamps in history</div>
+          <div class="lab-cmd">mkcd() { mkdir -p "$1" && cd "$1"; }<br>export HISTTIMEFORMAT="%F %T  "<br>source ~/.bashrc && history | tail -5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SLIDE 14 — CLOSE
+════════════════════════════════════ -->
+<div class="slide" id="s14">
+  <div class="s14-glow"></div>
+  <div class="s14-wrap">
+    <div class="s14-tag">SESSION 02 COMPLETE</div>
+    <h2 class="s14-title">You just analysed<br>8 million log lines.</h2>
+    <p class="s14-sub">In 8 seconds. With four commands. That's the Unix philosophy at work.</p>
+    <div class="s14-next">
+      <h4>Next session — Users, Permissions & Processes</h4>
+      <div>
+        <div class="s14-item">Who can read, write, and execute — chmod, chown, ACLs</div>
+        <div class="s14-item">SUID, SGID, sticky bit — and when they matter in production</div>
+        <div class="s14-item">Process management: kill, nice, tmux for persistent sessions</div>
+        <div class="s14-item">Case study: a misconfigured /tmp permission that caused a data leak</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .deck -->
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-btn" onclick="prev()">← prev</button>
+  <div class="dots" id="dots"></div>
+  <span class="slide-counter" id="counter">1 / 14</span>
+  <button class="nav-btn" onclick="next()">next →</button>
+</div>
+
+<script>
+const TOTAL=14; let cur=1;
+const dotsEl=document.getElementById('dots');
+for(let i=1;i<=TOTAL;i++){const d=document.createElement('div');d.className='dot'+(i===1?' active':'');d.onclick=()=>go(i);dotsEl.appendChild(d);}
+function go(n){document.getElementById('s'+cur).classList.remove('active');cur=Math.max(1,Math.min(TOTAL,n));document.getElementById('s'+cur).classList.add('active');document.getElementById('counter').textContent=cur+' / '+TOTAL;document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i+1===cur));}
+function next(){go(cur+1)} function prev(){go(cur-1)}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next();}if(e.key==='ArrowLeft'){e.preventDefault();prev();}});
+
+/* ── CMD EXPLORER (slide 3) ── */
+const cmdData={
+  ls:{name:'ls',syn:'ls [OPTIONS] [PATH]',desc:'List directory contents. The most-typed command in Linux. Without arguments, lists the current directory. The <code>-l</code> flag reveals permissions, ownership, size, and modification time — everything about a file at a glance.',flags:[{f:'-l',d:'long format'},{f:'-a',d:'show hidden'},{f:'-h',d:'human sizes'},{f:'-t',d:'sort by time'},{f:'-r',d:'reverse'},{f:'-S',d:'sort by size'}],ex:'<div class="ex-label">1 · Long listing with human-readable sizes</div>$ ls -lah /var/log/\n<span style="color:var(--amber)">total 1.2G</span>\ndrwxr-xr-x root root  4.0K Mar 15 ./\n-rw-r--r-- root root  <span style="color:var(--red)">18G</span>  Mar 15 access.log  ← the 3AM culprit\n-rw-r----- root adm   2.1M Mar 15 auth.log\n-rw-r--r-- root root  445K Mar 15 syslog\n<div class="ex-label">2 · Find the largest files in a directory</div>$ ls -lahS /var/log | head -5\n-rw-r--r-- root root  <span style="color:var(--red)">18G</span>  access.log\n-rw-r--r-- root root  892M dpkg.log\n-rw-r--r-- root root  445K syslog\n<span style="color:var(--muted)"># -S sorts by size, largest first — pipe to head for top N</span>\n<div class="ex-label">3 · Show only files modified today</div>$ ls -lt --time-style=+%F /var/log | head\n-rw-r--r-- root  18G  2024-03-15 access.log  ← today\n-rw-r--r-- root  2.1M 2024-03-15 auth.log\n-rw-r--r-- root  445K 2024-03-14 syslog       ← yesterday\n<span style="color:var(--muted)"># -t sorts by modification time, newest first</span>\n<div class="ex-label">4 · Reveal hidden dotfiles in your home folder</div>$ ls -la ~ | grep "^\\."\n-rw------- user user  3.2K Mar 15 .bash_history\n-rw-r--r-- user user  220  Mar 15 .bashrc\ndrwx------ user user  4.0K Mar 15 .ssh\n<span style="color:var(--muted)"># -a shows entries starting with "." (config files, SSH keys)</span>'},
+
+  cd:{name:'cd',syn:'cd [DIRECTORY]',desc:'Change directory. <code>cd ~</code> goes home, <code>cd -</code> returns to the previous directory (a lifesaver when alternating between two directories), <code>cd ..</code> goes up one level.',flags:[{f:'~',d:'home directory'},{f:'-',d:'previous dir'},{f:'..',d:'parent dir'},{f:'/',d:'root dir'}],ex:'<div class="ex-label">1 · Jump straight home from anywhere</div>$ pwd\n/var/log/nginx/sites-available\n$ cd ~\n$ pwd\n/home/student\n<span style="color:var(--muted)"># ~ always expands to your $HOME — works in any path</span>\n<div class="ex-label">2 · Toggle between two directories with "cd -"</div>$ cd /etc/nginx\n$ cd /var/log/nginx\n$ cd -              ← jumps back to /etc/nginx\n/etc/nginx\n$ cd -              ← jumps back to /var/log/nginx\n/var/log/nginx\n<span style="color:var(--muted)"># Like Alt+Tab for the shell — switches between last two dirs</span>\n<div class="ex-label">3 · Climb the directory tree quickly</div>$ pwd\n/var/log/nginx/sites-available/myapp\n$ cd ../..\n$ pwd\n/var/log/nginx\n$ cd ../../../home  ← three levels up, then into home\n/home\n<div class="ex-label">4 · Use $OLDPWD and brace expansion for power moves</div>$ cd /tmp && echo $OLDPWD\n/home/student\n$ cd /var/{log,www,backups}/app\n<span style="color:var(--muted)"># $OLDPWD holds your previous dir — same as "cd -"</span>\n<span style="color:var(--muted)"># Brace expansion lets you build long paths concisely</span>'},
+
+  find:{name:'find',syn:'find [PATH] [EXPRESSION]',desc:'Search for files recursively. Far more powerful than locate — it searches in real time, can match by name, size, permissions, age, owner, and can execute commands on results via <code>-exec</code> or <code>| xargs</code>.',flags:[{f:'-name',d:'match filename'},{f:'-type f/d',d:'file or dir'},{f:'-mtime +N',d:'older than N days'},{f:'-size +NM',d:'larger than N MB'},{f:'-perm',d:'match permissions'},{f:'-exec',d:'run command'}],ex:'<div class="ex-label">1 · Find old log files for rotation</div>$ find /var/log -name "*.log" -mtime +7\n/var/log/nginx/access.log.8\n/var/log/nginx/error.log.8\n/var/log/syslog.8\n<span style="color:var(--muted)"># -mtime +7 = modified more than 7 days ago</span>\n<div class="ex-label">2 · Reclaim disk space — delete huge temp files</div>$ find /tmp -type f -size +100M\n/tmp/core.8421     (234M)\n/tmp/dump.bin      (891M)\n$ find /tmp -type f -size +100M -delete\n<span style="color:var(--green)"># Freed 1.28 GB — always run without -delete first to preview!</span>\n<div class="ex-label">3 · Run a command on every matching file</div>$ find /etc/app -name "*.conf" -exec chmod 600 {} \\;\n$ find /var/www -name "*.php" -exec grep -l "eval(base64" {} +\n/var/www/html/upload/shell.php  ← suspicious!\n<span style="color:var(--muted)"># {} is the filename placeholder; + batches args (faster than \\;)</span>\n<div class="ex-label">4 · Hunt down recently modified config files</div>$ find /etc -type f -mmin -30 2>/dev/null\n/etc/app/database.conf       ← changed 14 min ago\n/etc/app/cache.conf\n<span style="color:var(--muted)"># -mmin -30 = modified in the last 30 minutes</span>\n<span style="color:var(--muted)"># Perfect for "what changed right before the outage?"</span>'},
+
+  locate:{name:'locate',syn:'locate [PATTERN]',desc:'Find files using a pre-built database. Extremely fast but only as current as the last <code>updatedb</code> run (usually nightly). Use find for real-time searches, locate for quick lookups of system files.',flags:[{f:'-i',d:'case insensitive'},{f:'-r',d:'regex pattern'},{f:'-n N',d:'limit results'}],ex:'<div class="ex-label">1 · Instantly find a system config file</div>$ locate nginx.conf\n/etc/nginx/nginx.conf\n/usr/share/doc/nginx/nginx.conf\n/usr/share/nginx/nginx.conf.default\n<span style="color:var(--muted)"># Returns results in milliseconds — find would take seconds</span>\n<div class="ex-label">2 · Refresh the database after installing new software</div>$ sudo apt install postgresql\n$ locate postgres.conf\n<span style="color:var(--muted)"># (no results — database is stale)</span>\n$ sudo updatedb\n$ locate postgres.conf\n/etc/postgresql/14/main/postgresql.conf\n<div class="ex-label">3 · Case-insensitive search for certificates</div>$ locate -i "*.pem"\n/etc/ssl/CERTS/Server.PEM\n/etc/letsencrypt/live/site/cert.pem\n/home/user/.ssh/key.pem\n<span style="color:var(--muted)"># -i matches PEM, pem, Pem — useful when naming is inconsistent</span>\n<div class="ex-label">4 · Limit and filter results with pipes</div>$ locate -n 5 .so          ← only show first 5 matches\n$ locate python | grep -v "test"\n/usr/bin/python3\n/usr/lib/python3.10\n<span style="color:var(--muted)"># locate prints paths — pipe to grep/head/awk for refinement</span>'},
+
+  cp:{name:'cp',syn:'cp [OPTIONS] SOURCE DEST',desc:'Copy files or directories. Always use <code>-i</code> in your .bashrc alias to prevent silent overwrites. Use <code>-p</code> to preserve timestamps and permissions — critical when copying config files that have specific access requirements.',flags:[{f:'-r',d:'recursive (dirs)'},{f:'-p',d:'preserve attrs'},{f:'-i',d:'confirm overwrite'},{f:'-v',d:'verbose output'},{f:'-u',d:'skip if newer'}],ex:'<div class="ex-label">1 · Backup a directory before editing</div>$ cp -rp /etc/nginx /etc/nginx.bak\n<span style="color:var(--muted)"># -r copies the directory tree; -p preserves owner/mode/timestamps</span>\n<span style="color:var(--muted)"># Always do this before risky config changes</span>\n<div class="ex-label">2 · Timestamped snapshot of a single file</div>$ cp -v app.conf app.conf.$(date +%F)\n\'app.conf\' -> \'app.conf.2024-03-15\'\n$ cp -v app.conf app.conf.$(date +%F-%H%M)\n\'app.conf\' -> \'app.conf.2024-03-15-1432\'\n<span style="color:var(--muted)"># $(date +%F) = 2024-03-15  — quick versioned backups</span>\n<div class="ex-label">3 · Safe overwrite — confirm before clobbering</div>$ cp -i new.conf /etc/nginx/nginx.conf\ncp: overwrite \'/etc/nginx/nginx.conf\'? <span style="color:var(--green)">n</span>\n<span style="color:var(--muted)"># Without -i this would silently replace your production config</span>\n<span style="color:var(--muted)"># Add "alias cp=\'cp -i\'" to ~/.bashrc forever</span>\n<div class="ex-label">4 · Sync only newer files (poor man\'s rsync)</div>$ cp -uv /backups/configs/*.conf /etc/app/\n\'database.conf\' -> \'/etc/app/database.conf\'   ← newer, copied\n<span style="color:var(--muted)">\'cache.conf\' -> skipped (destination is newer)</span>\n<span style="color:var(--muted)"># -u only copies if SOURCE is newer than DEST — useful in scripts</span>'},
+
+  mv:{name:'mv',syn:'mv [OPTIONS] SOURCE DEST',desc:'Move or rename files. Like cp but removes the source. <code>mv</code> within the same filesystem is instant (just renames the directory entry) — it does NOT copy data. Moving across filesystems copies then deletes.',flags:[{f:'-i',d:'confirm overwrite'},{f:'-v',d:'verbose'},{f:'-n',d:'never overwrite'},{f:'-u',d:'move if newer'}],ex:'<div class="ex-label">1 · Rename a file (zero data is moved)</div>$ mv app.conf.bak app.conf\n<span style="color:var(--muted)"># Instant — just updates the directory entry, even for a 50GB file</span>\n$ mv /var/log/old/ /var/log/archive/\n<span style="color:var(--muted)"># Same filesystem? Instant. Different filesystem? Copies then deletes.</span>\n<div class="ex-label">2 · Promote a staging file into production</div>$ mv -v /tmp/upload.jpg /var/www/img/banner.jpg\nrenamed \'/tmp/upload.jpg\' -> \'/var/www/img/banner.jpg\'\n<span style="color:var(--muted)"># mv is atomic within one filesystem — no half-written file</span>\n<span style="color:var(--muted)"># Web servers see either the old file or the new one, never broken</span>\n<div class="ex-label">3 · Batch rename with a shell loop</div>$ ls\nlog1.log  log2.log  log3.log\n$ for f in *.log; do mv "$f" "${f%.log}.txt"; done\n$ ls\nlog1.txt  log2.txt  log3.txt\n<span style="color:var(--muted)"># ${f%.log} strips the .log extension; appending .txt renames cleanly</span>\n<div class="ex-label">4 · Never overwrite — fail-safe mode</div>$ mv -n new.conf /etc/app/database.conf\n<span style="color:var(--muted)"># database.conf already exists — mv does nothing, silently</span>\n$ mv -nv *.tar.gz /backups/\n<span style="color:var(--muted)"># -n skips any destination that already exists — safe for bulk moves</span>'},
+
+  rm:{name:'rm',syn:'rm [OPTIONS] FILE...',desc:'<strong style="color:var(--red)">DANGER — no trash bin.</strong> Deleted files are unrecoverable without forensics tools. Always add <code>alias rm="rm -i"</code> to your .bashrc. In scripts, use <code>-f</code> carefully and always test with <code>echo rm</code> first.',flags:[{f:'-i',d:'confirm each file'},{f:'-r',d:'recursive (dirs)'},{f:'-f',d:'force, no errors'},{f:'-v',d:'verbose'}],ex:'<div class="ex-label">1 · Single file delete — no trash, no undo</div>$ rm important_file.conf\n<span style="color:var(--red)"># GONE FOREVER — no Recycle Bin in Unix</span>\n$ rm -i secret.key\nrm: remove regular file \'secret.key\'? <span style="color:var(--green)">y</span>\n<span style="color:var(--muted)"># Always use -i for one-off deletions of important files</span>\n<div class="ex-label">2 · Recursive delete — wipe a whole directory tree</div>$ rm -rf /var/cache/old-builds/\n<span style="color:var(--muted)"># -r recurses into subdirs, -f suppresses prompts and missing-file errors</span>\n<span style="color:var(--muted)"># Quote variables to defend against expansion accidents:</span>\n$ rm -rf "$BUILD_DIR"     ← good\n$ rm -rf $BUILD_DIR       ← if $BUILD_DIR is empty, this becomes "rm -rf "\n<div class="ex-label">3 · Dry-run with echo before pulling the trigger</div>$ echo rm -rf /var/old-data/*\nrm -rf /var/old-data/file1 /var/old-data/file2 /var/old-data/file3\n<span style="color:var(--green)"># See exactly what will be deleted before running for real</span>\n$ rm -rf /var/old-data/*\n<span style="color:var(--muted)"># Then drop the "echo" once you\'re sure</span>\n<div class="ex-label">4 · The legendary catastrophe</div>$ rm -rf / --no-preserve-root\n<span style="color:var(--red)"># Wipes the entire filesystem. Modern rm refuses without the flag.</span>\n$ rm -rf ~/ .bashrc       ← space between ~/ and .bashrc deletes home!\n<span style="color:var(--muted)"># Watch your spaces. This is how production servers die.</span>'},
+
+  ln:{name:'ln',syn:'ln [OPTIONS] TARGET LINK_NAME',desc:'Create hard links (default) or symbolic links (<code>-s</code>). Soft links are like Windows shortcuts — they store a path. Hard links are equal references to the same inode. nginx uses symlinks for sites-enabled to make enabling/disabling sites safe and reversible.',flags:[{f:'-s',d:'symbolic link'},{f:'-v',d:'verbose'},{f:'-f',d:'force replace'},{f:'-n',d:'no dereference'}],ex:'<div class="ex-label">1 · Hard link — two names, same inode</div>$ ln config.conf config.conf.bak\n$ ls -li config.conf config.conf.bak\n<span style="color:var(--teal)">42</span> -rw-r--r-- <span style="color:var(--amber)">2</span> deploy config.conf\n<span style="color:var(--teal)">42</span> -rw-r--r-- <span style="color:var(--amber)">2</span> deploy config.conf.bak\n<span style="color:var(--muted)"># Same inode 42, link count = 2. Delete one — data lives on.</span>\n<div class="ex-label">2 · Symbolic link — the nginx vhost pattern</div>$ ln -s /etc/nginx/sites-available/myapp \\\n        /etc/nginx/sites-enabled/myapp\n$ ls -l /etc/nginx/sites-enabled/\nmyapp -> /etc/nginx/sites-available/myapp\n<span style="color:var(--muted)"># Enable site: create symlink.   Disable: rm the symlink.</span>\n<span style="color:var(--muted)"># The real config file in sites-available is never touched.</span>\n<div class="ex-label">3 · Atomic deploy with symlink swap</div>$ ln -s /releases/v1.4 /var/www/current   ← old\n$ ln -sfn /releases/v1.5 /var/www/current  ← deploy v1.5\n<span style="color:var(--muted)"># -s symlink, -f force overwrite, -n don\'t dereference if it\'s a dir</span>\n<span style="color:var(--green)"># Zero-downtime deploy: requests see v1.4 or v1.5, never broken</span>\n<div class="ex-label">4 · Shortcut a long tool path</div>$ ln -s /opt/jdk-21.0.2/bin/java /usr/local/bin/java\n$ java -version\nopenjdk 21.0.2\n<span style="color:var(--muted)"># Symlinks let you upgrade by repointing — no PATH changes needed</span>'},
+
+  cat:{name:'cat',syn:'cat [OPTIONS] [FILE...]',desc:'Concatenate and print files. Perfect for small files. For large files, use <code>less</code> or pipeline it. The name comes from "concatenate" — you can join multiple files: <code>cat header.txt body.txt footer.txt > full.txt</code>.',flags:[{f:'-n',d:'number lines'},{f:'-A',d:'show special chars'},{f:'-s',d:'squeeze blank lines'}],ex:'<div class="ex-label">1 · Print a small file to stdout</div>$ cat /etc/hostname\nprod-web-01\n$ cat /etc/os-release | head -3\nPRETTY_NAME="Ubuntu 24.04 LTS"\nNAME="Ubuntu"\nVERSION_ID="24.04"\n<div class="ex-label">2 · Concatenate multiple files into one</div>$ cat header.txt body.txt footer.txt > report.txt\n$ cat part-*.csv > combined.csv\n<span style="color:var(--muted)"># Glue together log shards, CSV exports, or template fragments</span>\n<span style="color:var(--muted)"># Beware: cat blindly joins — no de-duplication of CSV headers</span>\n<div class="ex-label">3 · Heredoc — write a multi-line file inline</div>$ cat << EOF > /etc/app/config.conf\ndb_host=localhost\ndb_port=5432\napi_url=http://localhost:8080\nEOF\n<span style="color:var(--green)"># File created with exactly those three lines</span>\n<span style="color:var(--muted)"># Heredocs are great in deploy scripts and Dockerfiles</span>\n<div class="ex-label">4 · Truncate a log file without breaking the writer</div>$ cat /dev/null > /var/log/myapp.log\n<span style="color:var(--muted)"># The file is now empty but the inode is preserved</span>\n<span style="color:var(--muted)"># If you used "rm + touch", the app might keep writing to the old inode!</span>\n<div class="ex-label">5 · Reveal invisible characters</div>$ cat -A weird.txt\nhello world$\n^I^Itab^Iindented$\n<span style="color:var(--muted)"># $ = end of line, ^I = tab, ^M = Windows CR</span>\n<span style="color:var(--muted)"># Diagnose mystery whitespace bugs in configs and scripts</span>'},
+
+  less:{name:'less',syn:'less [FILE]',desc:'Page through files — unlike cat, less doesn\'t load the entire file into memory. Essential for huge log files. Press <code>G</code> to jump to end, <code>g</code> to go back to start, <code>/pattern</code> to search, <code>q</code> to quit.',flags:[{f:'/pattern',d:'search forward'},{f:'n',d:'next match'},{f:'G',d:'jump to end'},{f:'g',d:'jump to start'},{f:'-N',d:'show line numbers'}],ex:'<div class="ex-label">1 · Open a huge file without loading it</div>$ less /var/log/nginx/access.log\n<span style="color:var(--muted)"># Opens an 18GB file in 50ms — pages on demand, never fills RAM</span>\n<span style="color:var(--muted)"># Compare: "cat big.log" would freeze your terminal for minutes</span>\n<div class="ex-label">2 · Live tail mode with search</div>$ less +F /var/log/syslog\nMar 15 14:32:01 server kernel: ...\nMar 15 14:32:02 server sshd[8421]: ...\n<span style="color:var(--amber)">Waiting for data... (interrupt to abort)</span>\n<span style="color:var(--muted)"># Press Ctrl+C to leave follow mode, then "/" to search backwards</span>\n<span style="color:var(--muted)"># Press F again to resume following — like tail -f with superpowers</span>\n<div class="ex-label">3 · Search inside the pager</div>$ less /var/log/nginx/access.log\n/500<span class="ir-key"> ↵</span>   ← search forward for "500"\nn         ← jump to next match\nN         ← jump to previous match\n?ERROR<span class="ir-key"> ↵</span>  ← search backward for "ERROR"\nq         ← quit\n<div class="ex-label">4 · Open at end, with line numbers</div>$ less +G access.log         ← jump to end immediately\n$ less -N error.log          ← show line numbers in left margin\n$ less +/timeout app.log     ← open and jump to first "timeout"\n<span style="color:var(--muted)"># Combine with grep for surgical inspection of huge logs</span>'},
+
+  tail:{name:'tail',syn:'tail [OPTIONS] [FILE]',desc:'Show the last N lines of a file. The <code>-f</code> flag follows the file as it grows — essential for watching logs in real time during deployments or debugging. <code>-F</code> follows even if the file is rotated (recreated).',flags:[{f:'-n N',d:'last N lines'},{f:'-f',d:'follow (live)'},{f:'-F',d:'follow + rotate'},{f:'-q',d:'quiet headers'}],ex:'<div class="ex-label">1 · Follow a log live during deployment</div>$ tail -f /var/log/nginx/access.log\n192.168.1.10 - - "GET /api/health" 200 12\n192.168.1.11 - - "POST /api/order" 201 145\n<span class="ir-key">^C</span>\n<span style="color:var(--muted)"># Press Ctrl+C to stop. Updates stream in real time as nginx writes.</span>\n<div class="ex-label">2 · Last N lines of a file</div>$ tail -n 100 /var/log/auth.log | grep "Failed"\nMar 15 14:31:55 sshd: Failed password for root from 5.42.18.9\nMar 15 14:31:58 sshd: Failed password for root from 5.42.18.9\n<span style="color:var(--muted)"># Default is 10 lines; -n 100 gives more recent history</span>\n<div class="ex-label">3 · Survive log rotation with -F</div>$ tail -F /var/log/syslog\n<span style="color:var(--muted)"># When logrotate renames syslog → syslog.1 and creates a new syslog,</span>\n<span style="color:var(--muted)"># -F (capital) reopens the new file. -f (lowercase) would keep</span>\n<span style="color:var(--muted)"># following the old, now-renamed file — and you\'d see nothing new.</span>\n<div class="ex-label">4 · Watch multiple files at once</div>$ tail -f /var/log/nginx/access.log /var/log/nginx/error.log\n==> access.log <==\n10.0.0.1 - "GET /home" 200\n==> error.log <==\n[error] connect() failed: upstream timeout\n<span style="color:var(--muted)"># Headers show which file each line came from — split-screen logs</span>\n<div class="ex-label">5 · Skip the first N lines instead</div>$ tail -n +2 data.csv | awk -F, \'{sum+=$3} END {print sum}\'\n<span style="color:var(--muted)"># +N starts from line N (skips header). Common CSV preprocessing trick.</span>'},
+
+  wc:{name:'wc',syn:'wc [OPTIONS] [FILE...]',desc:'Word count — counts lines, words, and bytes. Most commonly used with <code>-l</code> to count lines. Combine with pipes to count command output: <code>grep "ERROR" app.log | wc -l</code> tells you exactly how many errors there are.',flags:[{f:'-l',d:'count lines'},{f:'-w',d:'count words'},{f:'-c',d:'count bytes'},{f:'-m',d:'count chars'}],ex:'<div class="ex-label">1 · Count lines in a file</div>$ wc -l access.log\n8142331 access.log\n<span style="color:var(--muted)"># 8.1 million lines — and wc reads the whole file in under a second</span>\n<div class="ex-label">2 · Count matching lines from a pipeline</div>$ grep " 500 " access.log | wc -l\n14283\n$ grep -c " 500 " access.log\n14283\n<span style="color:var(--muted)"># Same answer — but grep -c is faster (no pipe, no second process)</span>\n<div class="ex-label">3 · Count files in a directory</div>$ ls /etc/ | wc -l\n187\n$ find /var/www -type f -name "*.php" | wc -l\n3421    ← total PHP files in the project\n<div class="ex-label">4 · All three counts at once</div>$ wc /etc/hosts\n  12  47  389  /etc/hosts\n<span style="color:var(--muted)">#  ↑   ↑   ↑</span>\n<span style="color:var(--muted)"># lines  words  bytes</span>\n<div class="ex-label">5 · Count unique IPs in a log</div>$ awk \'{print $1}\' access.log | sort -u | wc -l\n47291\n<span style="color:var(--green)"># 47,291 distinct IPs hit the server today</span>\n<span style="color:var(--muted)"># Classic Unix pipeline: extract → dedupe → count</span>'}
+};
+function showCmd(key,el){document.querySelectorAll('.cmd-item').forEach(i=>i.classList.remove('sel'));el.classList.add('sel');const d=cmdData[key];const flags=d.flags.map(f=>`<div class="flag-pill"><span>${f.f}</span> ${f.d}</div>`).join('');document.getElementById('cd-name').textContent=d.name;document.getElementById('cd-synopsis').textContent=d.syn;document.getElementById('cd-desc').innerHTML=d.desc;document.getElementById('cd-flags').innerHTML=flags;document.getElementById('cd-example').innerHTML=d.ex;}
+
+/* ── PIPES (slide 4) ── */
+const pipeData=[
+  {title:'cat — the data source',body:'cat reads the file and streams every line to stdout. The pipe | immediately connects that stdout to grep\'s stdin. No temporary file is created — the kernel connects them with an in-memory ring buffer. cat and grep run simultaneously as separate processes.'},
+  {title:'grep — the first filter',body:'grep reads line by line from stdin (not from disk) and only passes through lines containing " 500 ". It reduces 8 million lines to around 14,000. grep is single-pass and extremely fast — it never stores the full file in memory.'},
+  {title:"awk — field extraction",body:"awk receives the 14,000 filtered lines. It splits each on whitespace and prints $1 — the first field, which in nginx's Combined Log Format is always the client IP address. Output: 14,000 IP addresses, one per line."},
+  {title:'sort | uniq -c — counting',body:'sort rearranges the IPs alphabetically so identical IPs are adjacent. uniq -c then counts consecutive identical lines and prefixes each unique IP with its count. sort -rn sorts numerically in descending order — highest count first.'},
+  {title:'head -5 — the answer',body:'head -5 stops after 5 lines — the top 5 offending IPs with their failure counts. The entire pipeline processed 8 million lines in 8 seconds without ever reading the full file into memory at once. This is the Unix philosophy: small tools, composed.'}
+];
+function showPipe(idx,el){document.querySelectorAll('.ps-box').forEach(b=>b.classList.remove('active'));el.classList.add('active');const d=pipeData[idx];document.getElementById('pipe-detail').innerHTML=`<div class="pd-title">${d.title}</div><div class="pd-body">${d.body}</div>`;}
+
+/* ── GREP (slide 5) ── */
+const grepData={
+  basic:{cmd:'$ grep "ERROR" /var/log/nginx/access.log',out:`<span class="filename">access.log</span><span class="linenum">:8421:</span> 192.168.1.45 - - [15/Mar] "POST /api/payment" <span class="match">500</span> 523\n<span class="filename">access.log</span><span class="linenum">:8435:</span> 10.0.0.123 - - [15/Mar] "POST /api/payment" <span class="match">500</span> 523\n<span class="filename">access.log</span><span class="linenum">:8441:</span> 192.168.1.45 - - [15/Mar] "POST /api/payment" <span class="match">500</span> 523\n<span style="color:var(--muted);font-size:11px;">... 138 more matches</span>`},
+  i:{cmd:'$ grep -i "error" /var/log/app/application.log',out:`<span class="filename">application.log</span><span class="linenum">:112:</span> [14:32:01] <span class="match">ERROR</span>: Database connection failed\n<span class="filename">application.log</span><span class="linenum">:115:</span> [14:32:02] <span class="match">Error</span>: Retry attempt 1 of 3\n<span class="filename">application.log</span><span class="linenum">:118:</span> [14:32:04] <span class="match">error</span>: max retries exceeded\n<span style="color:var(--muted);font-size:11px;">-i matches ERROR, Error, error, eRrOr — all variants</span>`},
+  v:{cmd:'$ grep -v "200" access.log | head -8',out:`<span class="to">192.168.1.45 - - [15/Mar] "POST /api/payment" <span class="match">500</span> 523</span>\n<span class="to">10.0.0.123 - - [15/Mar] "GET /api/status" <span class="match">404</span> 153</span>\n<span class="to">172.16.0.8 - - [15/Mar] "POST /api/payment" <span class="match">500</span> 523</span>\n<span class="to">10.0.1.5 - - [15/Mar] "DELETE /api/old" <span class="match">403</span> 89</span>\n<span style="color:var(--muted);font-size:11px;">-v inverts: everything that is NOT a 200 success</span>`},
+  E:{cmd:'$ grep -E "4[0-9]{2}" access.log | awk \'{print $9}\' | sort | uniq -c',out:`<span class="tg">   4521 400</span>  ← bad requests\n<span class="tg">   1832 401</span>  ← unauthorised\n<span class="tg">     93 403</span>  ← forbidden\n<span class="tg">   2147 404</span>  ← not found\n<span class="tg">     12 429</span>  ← rate limited\n<span style="color:var(--muted);font-size:11px;">-E enables extended regex. [0-9]{2} = exactly 2 digits.</span>`},
+  oE:{cmd:'$ grep -oE "\\b([0-9]{1,3}\\.){3}[0-9]{1,3}\\b" access.log | sort -u | head -8',out:`<span class="tg">10.0.0.99</span>\n<span class="tg">10.0.0.123</span>\n<span class="tg">172.16.0.8</span>\n<span class="tg">192.168.1.45</span>\n<span class="tg">192.168.2.10</span>\n<span style="color:var(--muted);font-size:11px;">-o prints only the matching part (not the whole line)\nExtracts ALL IP addresses from any text — log, email, config</span>`},
+  r:{cmd:'$ grep -r "password" /etc/ 2>/dev/null | grep -v ".pyc"',out:`<span class="te">/etc/mysql/my.cnf:password=oldP@ss123</span>  ← EXPOSED!\n<span class="to">/etc/pam.d/common-password:password        requisite</span>\n<span class="to">/etc/security/pwquality.conf:# password quality</span>\n<span style="color:var(--muted);font-size:11px;">-r searches all files recursively\n2>/dev/null silences "permission denied" errors</span>`},
+  c:{cmd:'$ grep -c "POST" access.log',out:`<span class="tg">2847193</span>\n\n<span style="color:var(--muted)"># Equivalent to: grep "POST" access.log | wc -l</span>\n<span style="color:var(--muted)"># But -c is faster — no pipe needed</span>\n\n<span style="color:var(--muted)"># Count per file:</span>\n<span class="tg">$ grep -rc "ERROR" /var/log/\n/var/log/app.log:1429\n/var/log/nginx/error.log:83\n/var/log/syslog:12</span>`}
+};
+function showGrep(key,el){document.querySelectorAll('.gp-card').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');const d=grepData[key];document.getElementById('grep-cmd-display').textContent=d.cmd;document.getElementById('grep-output-body').innerHTML=d.out;}
+
+/* ── AWK (slide 6) ── */
+const awkData=[
+  {out:`<span style="color:var(--teal)">192.168.1.45</span>\n<span style="color:var(--teal)">10.0.0.123</span>\n<span style="color:var(--teal)">172.16.0.8</span>\n<span style="color:var(--teal)">192.168.1.45</span>\n<span style="color:var(--muted)">... 7,999,996 more lines</span>`},
+  {out:`<span style="color:var(--teal)">192.168.1.45</span> <span style="color:var(--amber)">/api/payment</span>\n<span style="color:var(--teal)">10.0.0.123</span> <span style="color:var(--amber)">/api/payment</span>\n<span style="color:var(--teal)">172.16.0.8</span> <span style="color:var(--amber)">/api/payment</span>\n<span style="color:var(--muted)">332 lines total (filtered from 8M)</span>`},
+  {out:`<span style="color:var(--green)">Total bandwidth served: 847.3MB</span>\n<span style="color:var(--muted)"># awk summed 8M numbers in one pass\n# No temp files, no intermediate storage\n# Runs entirely in streaming mode</span>`},
+  {out:`<span style="color:var(--green)">6,842,150 OK requests</span>\n<span style="color:var(--muted)"># Counter variable c increments each match\n# END block runs after all input is read\n# Equivalent to: grep " 200 " | wc -l\n# But awk does it in ONE process</span>`},
+  {out:`<span style="color:var(--green)">     142 192.168.1.45</span>  ← the culprit\n<span style="color:var(--green)">      89 10.0.0.123</span>\n<span style="color:var(--green)">      67 172.16.0.8</span>\n<span style="color:var(--muted)"># Associative array ip[] indexed by IP string\n# Built entirely in awk — no sort | uniq needed</span>`}
+];
+function showAwk(idx,el){document.querySelectorAll('.awk-step-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');document.getElementById('awk-output').innerHTML=awkData[idx].out;}
+
+/* ── SED (slide 7) ── */
+const sedOps={
+  sub:{before:`db_host=<span class="sd-highlight">localhost</span>\ndb_port=5432\ncache_host=<span class="sd-highlight">localhost</span>\ncache_port=6379\napi_url=http://<span class="sd-highlight">localhost</span>:8080\ndebug=false`,after:`db_host=<span class="sd-new">10.0.0.5</span>\ndb_port=5432\ncache_host=<span style="color:var(--muted)">localhost</span>\ncache_port=6379\napi_url=http://<span style="color:var(--muted)">localhost</span>:8080\ndebug=false`,hdr:'BEFORE | AFTER — sed \'s/localhost/10.0.0.5/\'',story:'💡 Without the <code>g</code> flag, sed replaces only the <strong style="color:var(--white)">first occurrence per line</strong>. Notice cache_host and api_url still have localhost — only db_host changed.'},
+  subg:{before:`db_host=<span class="sd-highlight">localhost</span>\ndb_port=5432\ncache_host=<span class="sd-highlight">localhost</span>\ncache_port=6379\napi_url=http://<span class="sd-highlight">localhost</span>:8080\ndebug=false`,after:`db_host=<span class="sd-new">10.0.0.5</span>\ndb_port=5432\ncache_host=<span class="sd-new">10.0.0.5</span>\ncache_port=6379\napi_url=http://<span class="sd-new">10.0.0.5</span>:8080\ndebug=false`,hdr:'BEFORE | AFTER — sed \'s/localhost/10.0.0.5/g\'',story:'✓ The <code>g</code> flag replaces <strong style="color:var(--white)">all occurrences</strong> on every line. All three localhost references updated in one pass through the file.'},
+  i:{before:`db_host=<span class="sd-highlight">localhost</span>\ndb_port=5432\ncache_host=<span class="sd-highlight">localhost</span>\n# This file is on disk`,after:`db_host=<span class="sd-new">10.0.0.5</span>\ndb_port=5432\ncache_host=<span class="sd-new">10.0.0.5</span>\n<span style="color:var(--green)"># File modified on disk ✓</span>`,hdr:'BEFORE | AFTER — sed -i \'s/localhost/10.0.0.5/g\' file',story:'💡 <strong style="color:var(--white)">-i edits the file in place.</strong> Without -i, sed only prints to stdout — the original file is unchanged. Combine with find to edit thousands of files: <code>find /etc -name "*.conf" | xargs sed -i \'s/localhost/10.0.0.5/g\'</code>'},
+  d:{before:`# Good config\ndb_host=10.0.0.5\n<span class="sd-highlight"># TODO: remove this before prod</span>\ndb_port=5432\n<span class="sd-highlight"># FIXME: debug mode</span>\n<span class="sd-highlight">debug=true</span>`,after:`<span style="color:var(--green)"># Good config</span>\n<span style="color:var(--green)">db_host=10.0.0.5</span>\n<span style="color:var(--green)">db_port=5432</span>`,hdr:'BEFORE | AFTER — sed \'/TODO\\|FIXME\\|debug/d\'',story:'💡 The <code>d</code> command deletes matching lines. Use <code>\\|</code> for OR in patterns. Useful for stripping comments, debug lines, or blank lines from configs before deploying.'},
+  p:{before:`192.168.1.1 200 /index.html\n192.168.1.45 <span class="sd-highlight">500</span> /api/payment\n10.0.0.1 200 /status\n172.16.0.8 <span class="sd-highlight">500</span> /api/payment`,after:`<span style="color:var(--green)">192.168.1.45 500 /api/payment</span>\n<span style="color:var(--green)">172.16.0.8 500 /api/payment</span>`,hdr:'BEFORE | AFTER — sed -n \'/500/p\'',story:'💡 <code>-n</code> suppresses default output. <code>p</code> prints matching lines. Together they work exactly like grep — but sed can do much more complex matching and transformation in the same command.'},
+  n:{before:`<span class="sd-highlight">line 1: old header</span>\n<span class="sd-highlight">line 2: old metadata</span>\n<span class="sd-highlight">line 3: old version</span>\nline 4: actual data starts here\nline 5: more data\nline 6: more data`,after:`<span style="color:var(--green)">line 4: actual data starts here</span>\n<span style="color:var(--green)">line 5: more data</span>\n<span style="color:var(--green)">line 6: more data</span>`,hdr:'BEFORE | AFTER — sed \'1,3d\'',story:'💡 Line-number ranges let you delete headers. Common use: strip the first line of a CSV before processing: <code>sed \'1d\' data.csv | awk -F, \'{sum+=$3} END {print sum}\'</code>'}
+};
+function showSed(key,el){document.querySelectorAll('.sed-op').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');const d=sedOps[key];document.getElementById('sed-before').innerHTML=d.before;document.getElementById('sed-after').innerHTML=d.after;document.querySelector('.sd-header').innerHTML=`<span>BEFORE</span><span>${d.hdr.split('|')[1]||''}</span>`;document.getElementById('sed-story').innerHTML=d.story;}
+
+/* ── PIPELINE CASE STUDY (slide 9) ── */
+const pipeStepData=[
+  {result:`<span style="color:var(--teal)">192.168.1.45 - - [15/Mar/2024:14:32:11 +0000] "POST /api/payment HTTP/1.1" 500 523</span>\n<span style="color:var(--teal)">10.0.0.123 - - [15/Mar/2024:14:32:15 +0000] "POST /api/payment HTTP/1.1" 500 523</span>\n<span style="color:var(--muted)">... 14,281 more lines (from 8,142,331 total)</span>\n<span style="color:var(--amber)">8M → 14K lines in 0.8s</span>`},
+  {result:`<span style="color:var(--teal)">192.168.1.45 - - [15/Mar/2024:14:32:11 +0000] "POST /api/payment HTTP/1.1" 500 523</span>\n<span style="color:var(--teal)">10.0.0.123 - - [15/Mar/2024:14:32:15 +0000] "POST /api/payment HTTP/1.1" 500 523</span>\n<span style="color:var(--muted)">... 330 more lines</span>\n<span style="color:var(--amber)">14K → 332 lines — only payment POST 500s</span>`},
+  {result:`<span style="color:var(--teal)">192.168.1.45</span>\n<span style="color:var(--teal)">10.0.0.123</span>\n<span style="color:var(--teal)">192.168.1.45</span>\n<span style="color:var(--teal)">172.16.0.8</span>\n<span style="color:var(--muted)">... 328 more IPs — one per line, ready to count</span>`},
+  {result:`<span style="color:var(--green)">    142 192.168.1.45</span>  ← 43% of all failures\n<span style="color:var(--green)">     89 10.0.0.123</span>\n<span style="color:var(--green)">     67 172.16.0.8</span>\n<span style="color:var(--green)">     23 10.0.0.99</span>\n<span style="color:var(--green)">     11 192.168.2.10</span>\n<span style="color:var(--amber)">Root cause: 192.168.1.45 is a misconfigured payment processor. Fixed in 3 minutes.</span>`}
+];
+function showPipeStep(idx,el){document.querySelectorAll('.pipeline-step').forEach(s=>s.classList.remove('active'));el.classList.add('active');document.getElementById('pipe-result').innerHTML=pipeStepData[idx].result;}
+
+/* ── FIND (slide 10) ── */
+const findData=[
+  {out:`<span style="color:var(--teal)">/var/log/nginx/access.log.8</span>\n<span style="color:var(--teal)">/var/log/nginx/error.log.8</span>\n<span style="color:var(--teal)">/var/log/syslog.8</span>\n<span style="color:var(--teal)">/var/log/auth.log.8</span>\n<span style="color:var(--muted)">... 23 more files older than 7 days</span>`},
+  {out:`<span style="color:var(--teal)">/etc/app/database.conf</span>  modified 14:33 today\n<span style="color:var(--teal)">/etc/app/cache.conf</span>   modified 14:31 today\n<span style="color:var(--teal)">/etc/app/api.conf</span>    modified 14:28 today\n<span style="color:var(--muted)"># These 3 were changed after nginx — correlates with the incident</span>`},
+  {out:`<span style="color:var(--red)">/usr/bin/passwd</span>      ← expected SUID (for changing passwords)\n<span style="color:var(--red)">/usr/bin/sudo</span>        ← expected SUID\n<span style="color:var(--red)">/usr/bin/su</span>          ← expected SUID\n<span style="color:var(--amber)">/tmp/backdoor</span>        ← NOT expected! Security incident!\n<span style="color:var(--muted)"># Run this monthly as part of security audit</span>`},
+  {out:`<span style="color:var(--muted)">removed '/tmp/core.8421' (234M)</span>\n<span style="color:var(--muted)">removed '/tmp/upload.tmp' (156M)</span>\n<span style="color:var(--muted)">removed '/tmp/dump.bin' (891M)</span>\n<span style="color:var(--green)">Freed 1.28 GB — disk usage: 100% → 72%</span>`},
+  {out:`<span style="color:var(--red)">/var/www/html/images/shell.php</span>  ← web shell found!\n<span style="color:var(--red)">/var/www/html/upload/img.php</span>   ← web shell found!\n<span style="color:var(--muted)"># eval(base64_decode(...)) is how attackers\n# hide malicious code from casual inspection\n# Run this if you suspect a compromise</span>`}
+];
+function showFind(idx,el){document.querySelectorAll('.find-recipe').forEach(r=>r.classList.remove('sel'));el.classList.add('sel');document.getElementById('find-output').innerHTML=findData[idx].out;}
+
+/* ── QUIZ ── */
+function ans(el,result,qid){const q=el.closest('.quiz-q');q.querySelectorAll('.q-opt').forEach(o=>o.classList.add('disabled'));el.classList.remove('disabled');el.classList.add(result);document.getElementById(qid+'-ok').classList[result==='correct'?'add':'remove']('show');document.getElementById(qid+'-no').classList[result==='wrong'?'add':'remove']('show');}
+
+/* ── BASHRC (slide 12) ── */
+const bashData={
+  alias:{header:'~/.bashrc — Aliases',body:`<span class="bp-comment"># ── Safer defaults ─────────────────</span><br><span class="bp-alias">alias</span> <span class="bp-key">rm</span>=<span class="bp-val">'rm -i'</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># always confirm</span><br><span class="bp-alias">alias</span> <span class="bp-key">cp</span>=<span class="bp-val">'cp -i'</span><br><span class="bp-alias">alias</span> <span class="bp-key">mv</span>=<span class="bp-val">'mv -i'</span><br><br><span class="bp-comment"># ── Quick lookups ───────────────────</span><br><span class="bp-alias">alias</span> <span class="bp-key">ll</span>=<span class="bp-val">'ls -lah'</span><br><span class="bp-alias">alias</span> <span class="bp-key">grep</span>=<span class="bp-val">'grep --color=auto'</span><br><span class="bp-alias">alias</span> <span class="bp-key">ports</span>=<span class="bp-val">'ss -tulnp'</span><br><span class="bp-alias">alias</span> <span class="bp-key">topcpu</span>=<span class="bp-val">'ps aux --sort=-%cpu | head -10'</span><br><span class="bp-alias">alias</span> <span class="bp-key">logs</span>=<span class="bp-val">'journalctl -f'</span>`,tip:'💡 After editing .bashrc, run <code>source ~/.bashrc</code> to apply. Aliases only work in interactive shells — not in scripts.'},
+  env:{header:'~/.bashrc — Environment Variables',body:`<span class="bp-comment"># ── Editor preference ───────────────</span><br><span class="bp-key">export</span> <span class="bp-alias">EDITOR</span>=<span class="bp-val">vim</span><br><span class="bp-key">export</span> <span class="bp-alias">VISUAL</span>=<span class="bp-val">vim</span><br><br><span class="bp-comment"># ── PATH additions ──────────────────</span><br><span class="bp-key">export</span> <span class="bp-alias">PATH</span>=<span class="bp-val">"$HOME/.local/bin:$HOME/bin:$PATH"</span><br><br><span class="bp-comment"># ── Custom vars ─────────────────────</span><br><span class="bp-key">export</span> <span class="bp-alias">PROD_SERVER</span>=<span class="bp-val">"10.0.0.5"</span><br><span class="bp-key">export</span> <span class="bp-alias">BACKUP_DIR</span>=<span class="bp-val">"/mnt/backups"</span><br><br><span class="bp-comment"># Usage in aliases:</span><br><span class="bp-alias">alias</span> <span class="bp-key">prod</span>=<span class="bp-val">'ssh deploy@$PROD_SERVER'</span>`,tip:'💡 <code>export</code> makes variables available to child processes. Without export, a variable is only in the current shell. Use <code>printenv</code> to see all exported variables.'},
+  functions:{header:'~/.bashrc — Shell Functions',body:`<span class="bp-comment"># mkcd: make directory and cd into it</span><br><span class="bp-val">mkcd</span>() { mkdir -p <span class="bp-key">"$1"</span> && cd <span class="bp-key">"$1"</span>; }<br><br><span class="bp-comment"># extract: universal archive extractor</span><br><span class="bp-val">extract</span>() {<br>&nbsp;&nbsp;<span class="bp-key">case</span> <span class="bp-alias">"$1"</span> <span class="bp-key">in</span><br>&nbsp;&nbsp;&nbsp;&nbsp;*.tar.gz) tar xzf <span class="bp-alias">"$1"</span> ;;<br>&nbsp;&nbsp;&nbsp;&nbsp;*.zip)    unzip <span class="bp-alias">"$1"</span> ;;<br>&nbsp;&nbsp;&nbsp;&nbsp;*.gz)     gunzip <span class="bp-alias">"$1"</span> ;;<br>&nbsp;&nbsp;<span class="bp-key">esac</span><br>}<br><br><span class="bp-comment"># ports: what's listening on a port</span><br><span class="bp-val">whatsport</span>() { ss -tulnp | grep <span class="bp-alias">":$1"</span>; }`,tip:'💡 Functions can span multiple lines and use logic — more powerful than aliases. They are available in the same shell but not in subshells unless exported with <code>export -f funcname</code>.'},
+  history:{header:'~/.bashrc — History & Prompt',body:`<span class="bp-comment"># ── History settings ────────────────</span><br><span class="bp-key">export</span> <span class="bp-alias">HISTSIZE</span>=<span class="bp-val">50000</span><br><span class="bp-key">export</span> <span class="bp-alias">HISTFILESIZE</span>=<span class="bp-val">100000</span><br><span class="bp-key">export</span> <span class="bp-alias">HISTTIMEFORMAT</span>=<span class="bp-val">"%F %T  "</span><br><span class="bp-key">export</span> <span class="bp-alias">HISTCONTROL</span>=<span class="bp-val">ignoredups:erasedups</span><br><br><span class="bp-comment"># ── Prompt (shows git branch) ───────</span><br><span class="bp-key">parse_branch</span>() {<br>&nbsp;&nbsp;git branch 2>/dev/null | grep '\\*' | cut -d' ' -f2<br>}<br><br><span class="bp-key">export</span> <span class="bp-alias">PS1</span>=<span class="bp-val">'\\u@\\h:\\w $(parse_branch)\\$ '</span>`,tip:'💡 <code>history | grep ssh</code> finds past SSH commands. With HISTTIMEFORMAT set, <code>history</code> shows when each command ran — invaluable for post-incident analysis.'},
+  vim:{header:'vim — the 10 commands you must know',body:`<span class="bp-comment"># MODE SWITCHING ─────────────────────</span><br><span class="bp-alias">i</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># enter INSERT mode (start typing)</span><br><span class="bp-alias">Esc</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># return to NORMAL mode</span><br><span class="bp-alias">:w</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># save (write)</span><br><span class="bp-alias">:q</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># quit</span><br><span class="bp-alias">:wq</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># save and quit</span><br><span class="bp-alias">:q!</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># force quit without saving</span><br><br><span class="bp-comment"># NAVIGATION & EDITING ───────────────</span><br><span class="bp-alias">gg / G</span>&nbsp;&nbsp;&nbsp;<span class="bp-comment"># jump to first / last line</span><br><span class="bp-alias">/pattern</span>&nbsp;<span class="bp-comment"># search — n for next, N for prev</span><br><span class="bp-alias">dd</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bp-comment"># delete current line</span><br><span class="bp-alias">:%s/a/b/g</span><span class="bp-comment"># replace all 'a' with 'b' in file</span>`,tip:'💡 vim is on every Linux server — no install needed. The #1 rule: press Esc first, then type commands. If lost: <code>Esc :q!</code> to escape without saving anything.'}
+};
+function showBash(key,el){document.querySelectorAll('.bash-cat').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');const d=bashData[key];document.getElementById('bp-header').textContent=d.header;document.getElementById('bp-body').innerHTML=d.body;document.getElementById('bp-tip').innerHTML=d.tip;}
+</script>
+</body>
+</html>
