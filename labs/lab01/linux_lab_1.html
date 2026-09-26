@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Homework 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d12;
+    --surface:#111620;
+    --surface2:#161c28;
+    --border:#1e2840;
+    --text:#cbd5e1;
+    --white:#f0f4f8;
+    --muted:#64748b;
+    --amber:#f59e0b;
+    --amber-dim:#92600a;
+    --green:#22c55e;
+    --blue:#3b82f6;
+    --red:#ef4444;
+    --purple:#a78bfa;
+    --teal:#00c9a7;
+    --teal-dim:#007d68;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  body{padding:3rem 2rem 6rem}
+  .wrap{max-width:1180px;margin:0 auto}
+  .mono{font-family:'IBM Plex Mono',monospace}
+
+  /* ─── Header ─────────────────────────────── */
+  .hdr{
+    display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:end;
+    padding:2.5rem 0 2rem;border-bottom:1px solid var(--border);margin-bottom:2.5rem;
+    position:relative;
+  }
+  .hdr::before{
+    content:'';position:absolute;top:0;left:-2rem;width:48px;height:2px;background:var(--amber);
+  }
+  .crumb{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--amber);text-transform:uppercase;margin-bottom:.75rem}
+  h1{font-size:42px;font-weight:600;color:var(--white);letter-spacing:-.015em;line-height:1.1}
+  h1 .accent{color:var(--amber)}
+  .sub{font-size:14px;color:var(--muted);margin-top:.85rem;max-width:620px}
+  .meta{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);line-height:1.9}
+  .meta b{color:var(--text);font-weight:500}
+
+  /* ─── Submission box ─────────────────────────────── */
+  .submit-box{
+    background:linear-gradient(180deg, rgba(245,158,11,.06) 0%, rgba(245,158,11,.02) 100%);
+    border:1px solid rgba(245,158,11,.25);border-radius:14px;
+    padding:1.75rem 2rem;margin-bottom:2rem;
+    position:relative;overflow:hidden;
+  }
+  .submit-box::before{
+    content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--amber);
+  }
+  .sb-tag{
+    display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--amber);background:rgba(245,158,11,.1);
+    padding:4px 10px;border-radius:4px;margin-bottom:.85rem;font-weight:600;
+  }
+  .sb-title{font-size:22px;font-weight:600;color:var(--white);margin-bottom:1rem;letter-spacing:-.01em}
+  .sb-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.25rem}
+  .sb-col h4{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:.65rem;font-weight:500;
+  }
+  .sb-col ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .sb-col li{display:flex;gap:9px;font-size:13.5px;color:var(--text);line-height:1.55}
+  .sb-col li::before{content:'▸';color:var(--amber);flex-shrink:0;font-size:11px;margin-top:3px}
+  .sb-col code{
+    background:var(--bg);color:var(--amber);padding:1px 6px;border-radius:3px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid var(--border);
+  }
+
+  /* ─── Legend ─────────────────────────────── */
+  .legend{
+    display:flex;gap:1.25rem;flex-wrap:wrap;margin-bottom:2.5rem;
+    padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  }
+  .lg{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .pip{width:8px;height:8px;border-radius:50%}
+  .pip.warm{background:var(--green)}
+  .pip.med{background:var(--amber)}
+  .pip.hot{background:var(--red)}
+
+  /* ─── Lab cards ─────────────────────────────── */
+  .labs{display:flex;flex-direction:column;gap:1.5rem}
+  .lab{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;
+    transition:border-color .25s,transform .25s;
+  }
+  .lab:hover{border-color:var(--amber-dim)}
+
+  .lab-hdr{
+    display:grid;grid-template-columns:auto 1fr auto;gap:1.25rem;align-items:center;
+    padding:1.25rem 1.75rem;background:var(--surface2);border-bottom:1px solid var(--border);
+  }
+  .lab-num{
+    width:42px;height:42px;border-radius:10px;
+    background:rgba(245,158,11,.1);border:1px solid var(--amber-dim);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--amber);
+  }
+  .lab-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+  .lab-title{font-size:18px;font-weight:600;color:var(--white)}
+  .lab-pill{
+    display:flex;align-items:center;gap:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    padding:6px 12px;border-radius:20px;background:var(--bg);border:1px solid var(--border);
+  }
+  .lab-pill.warm{color:var(--green);border-color:rgba(34,197,94,.3)}
+  .lab-pill.med{color:var(--amber);border-color:rgba(245,158,11,.3)}
+  .lab-pill.hot{color:var(--red);border-color:rgba(239,68,68,.3)}
+
+  .lab-body{padding:1.5rem 1.75rem 1.75rem;display:grid;grid-template-columns:1.15fr 1fr;gap:1.75rem}
+
+  .panel-label{
+    font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:.85rem;display:flex;align-items:center;gap:8px;
+  }
+  .panel-label::before{content:'';width:14px;height:1px;background:var(--amber-dim)}
+
+  .tasks{display:flex;flex-direction:column;gap:9px}
+  .task{display:flex;gap:10px;font-size:13.5px;line-height:1.55;color:var(--text)}
+  .task .arrow{color:var(--amber);flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;margin-top:2px}
+  .task code{
+    background:var(--bg);color:var(--amber);padding:1px 6px;border-radius:3px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid var(--border);
+  }
+
+  /* ─── Deliverables panel (replaces terminal) ─── */
+  .deliv{
+    background:var(--bg);border:1px solid var(--border);border-radius:8px;
+    padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:.6rem;
+  }
+  .deliv-item{
+    display:flex;gap:10px;font-size:13px;line-height:1.55;color:var(--text);
+    padding-bottom:.55rem;border-bottom:1px dashed var(--border);
+  }
+  .deliv-item:last-child{border-bottom:none;padding-bottom:0}
+  .deliv-icon{
+    flex-shrink:0;width:22px;height:22px;border-radius:5px;
+    background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+  }
+  .deliv-icon.cam{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25);color:var(--amber)}
+  .deliv-icon.txt{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.25);color:var(--blue)}
+  .deliv-text b{color:var(--white);font-weight:500;display:block;margin-bottom:1px;font-size:13px}
+  .deliv-text span{color:var(--muted);font-size:12.5px}
+  .deliv-text code{
+    background:var(--surface2);color:var(--amber);padding:0 5px;border-radius:3px;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;
+  }
+
+  .hint{
+    margin-top:1rem;padding:.85rem 1rem;background:rgba(245,158,11,.04);border-left:2px solid var(--amber);
+    border-radius:0 6px 6px 0;font-size:12.5px;color:var(--text);
+  }
+  .hint b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--amber);text-transform:uppercase;display:block;margin-bottom:3px;font-weight:500}
+
+  /* ─── Footer ─────────────────────────────── */
+  .foot{
+    margin-top:4rem;padding:2rem 0 0;border-top:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+  }
+  .foot .amb{color:var(--amber)}
+
+  /* ─── Responsive ─────────────────────────────── */
+  @media (max-width: 880px){
+    .lab-body, .sb-grid{grid-template-columns:1fr}
+    .hdr{grid-template-columns:1fr;gap:1rem}
+    .meta{text-align:left}
+    h1{font-size:32px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ═══ HEADER ═══════════════════════════════ -->
+  <header class="hdr">
+    <div>
+      <div class="crumb">› Homework 1 / Lab Pack</div>
+      <h1>Ten labs in the <span class="accent">text-processing</span> trenches.</h1>
+      <p class="sub">Practical exercises in <span class="mono">grep · awk · sed · find · xargs · pipes · inodes · .bashrc</span>. Work through them in order — each one builds a habit you'll use every day on a real Linux box.</p>
+    </div>
+    <div class="meta">
+      <div><b>Total</b> 10 labs</div>
+      <div><b>Time</b> ~3 hours</div>
+      <div><b>Platform</b> any POSIX shell</div>
+    </div>
+  </header>
+
+  <!-- ═══ SUBMISSION REQUIREMENTS ═══════════════════════════════ -->
+  <div class="submit-box">
+    <span class="sb-tag">★ Required — read before you start</span>
+    <div class="sb-title">You must complete all 10 labs and write a report.</div>
+    <p style="font-size:14px;color:var(--text);line-height:1.65;max-width:780px;">
+      Do every task in every lab on your own machine or VM. For each lab, capture screenshots of your terminal showing the commands you ran and their output. Then write a single <span class="mono" style="color:var(--amber)">report.md</span> file that walks through what you did, what you observed, and what you learned.
+    </p>
+    <div class="sb-grid">
+      <div class="sb-col">
+        <h4>What to submit</h4>
+        <ul>
+          <li>One file <code>report.md</code> — Markdown format, written in your own words</li>
+          <li>A folder <code>screenshots/</code> containing PNG/JPG captures of every lab</li>
+          <li>Any scripts, config files, or <code>.bashrc</code> snippets you created</li>
+          <li>Everything zipped as <code>lab1_&lt;studentID&gt;.zip</code></li>
+        </ul>
+      </div>
+      <div class="sb-col">
+        <h4>Report structure (per lab)</h4>
+        <ul>
+          <li><code>## Lab N — Title</code> heading for each lab</li>
+          <li>The exact commands you ran (in fenced code blocks)</li>
+          <li>At least <strong>one screenshot</strong> showing the result</li>
+          <li>2–4 sentences explaining what happened and why</li>
+          <li>Answers to any questions asked in the lab</li>
+        </ul>
+      </div>
+    </div>
+    <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px dashed var(--border);font-size:12.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace">
+      <span style="color:var(--red)">⚠</span> Reports without screenshots will not be graded. Reports that only paste commands without explanation will lose marks.
+    </div>
+  </div>
+
+  <!-- ═══ LEGEND ═══════════════════════════════ -->
+  <div class="legend">
+    <div class="lg"><span class="pip warm"></span>Warm-up · single tool</div>
+    <div class="lg"><span class="pip med"></span>Medium · 2–3 tools piped</div>
+    <div class="lg"><span class="pip hot"></span>Spicy · real-world scenario</div>
+  </div>
+
+  <!-- ═══ LABS ═══════════════════════════════ -->
+  <div class="labs">
+
+    <!-- ── LAB 01 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">01</div>
+        <div>
+          <div class="lab-tag">Navigation · tree</div>
+          <div class="lab-title">Map an unknown directory</div>
+        </div>
+        <div class="lab-pill warm"><span class="pip warm"></span>Warm-up</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create a nested directory <code>~/lab01/{src,test,docs}/{img,raw}</code> in a single command.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Drop empty files into each leaf folder and verify with <code>tree -L 3</code> (or <code>find . -type f</code> if tree isn't installed).</span></div>
+            <div class="task"><span class="arrow">→</span><span>Count <em>only</em> the directories under <code>~/lab01</code> — not the files.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Print the full path of every file using one command.</span></div>
+          </div>
+          <div class="hint"><b>Hint</b>Brace expansion expands left-to-right. <code>mkdir -p a/{x,y}/{1,2}</code> creates 4 leaf dirs.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Output of <code>tree ~/lab01</code> showing the full structure.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Directory count and full file-path listing.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Explain how brace expansion produced N folders from a one-liner.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 02 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">02</div>
+        <div>
+          <div class="lab-tag">Pipes &amp; redirection</div>
+          <div class="lab-title">Stdout vs stderr — split the streams</div>
+        </div>
+        <div class="lab-pill warm"><span class="pip warm"></span>Warm-up</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Run <code>ls /etc /nonexistent</code>. Redirect <strong>only</strong> stdout to <code>good.txt</code> and <strong>only</strong> stderr to <code>bad.txt</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Combine both streams into a single file <code>all.txt</code> in one command.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Discard stderr completely while keeping stdout on screen.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Use <code>tee</code> to send <code>uptime</code> to a file <em>and</em> the screen at the same time.</span></div>
+          </div>
+          <div class="hint"><b>Why this matters</b>Confusing stdout and stderr is the #1 reason "I piped it but grep found nothing." Errors don't go through pipes by default.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>cat good.txt</code> and <code>cat bad.txt</code> — show they contain different data.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The <code>tee</code> command running, output appearing on screen <em>and</em> in the file.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Explain what <code>2&gt;&amp;1</code> means and why order matters: <code>cmd &gt;f 2&gt;&amp;1</code> vs <code>cmd 2&gt;&amp;1 &gt;f</code>.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 03 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">03</div>
+        <div>
+          <div class="lab-tag">grep · pattern hunting</div>
+          <div class="lab-title">Find every TODO in a codebase</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Clone any small repo (or use <code>/usr/include</code>). Find every line containing <code>TODO</code>, <code>FIXME</code>, or <code>XXX</code> — case-insensitive — across all files.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Print each match with <em>filename, line number, and 1 line of context above</em>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Exclude <code>node_modules/</code>, <code>.git/</code>, and any binary files from the search.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Count how many distinct files contain at least one TODO.</span></div>
+          </div>
+          <div class="hint"><b>Hint</b><code>-r</code> recursive · <code>-n</code> line number · <code>-i</code> ignore case · <code>-E</code> extended regex · <code>-B 1</code> 1 line before · <code>-l</code> list files only · <code>--exclude-dir</code> skip a folder.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>State first</b><span>Which repo or folder you searched, and roughly how many files.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>At least 10 lines of matches showing filename, line number, and context.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The file count from <code>grep -l … | wc -l</code>.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Pick one TODO — what would you fix and why?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 04 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">04</div>
+        <div>
+          <div class="lab-tag">awk · log analytics</div>
+          <div class="lab-title">Top 10 IPs in <span class="mono">access.log</span></div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Download the provided <code>access.log</code> (100K lines, real nginx combined format).</span></div>
+            <div class="task"><span class="arrow">→</span><span>Find the top 10 IPs by request count using <code>awk + sort + uniq</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Find the top 5 URLs that returned <strong>404</strong> — what were people hitting?</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Stretch:</strong> sum the total bytes served (field 10) using awk's <code>END</code> block.</span></div>
+          </div>
+          <div class="hint"><b>Hint</b>Pipe order matters: <code>awk</code> extracts the field, <code>sort</code> groups equal values together, <code>uniq -c</code> counts runs, then a second <code>sort -rn</code> ranks by count.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Output of the top-10-IPs pipeline.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Output of the top-5 404 URLs pipeline.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>What does the 404 list tell you about the traffic? Are these real users or bots?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 05 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">05</div>
+        <div>
+          <div class="lab-tag">awk · group &amp; aggregate</div>
+          <div class="lab-title">Build a request-rate report by hour</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Using the same <code>access.log</code>, count requests per <strong>hour of day</strong> — output should be <code>HH count</code> sorted by hour.</span></div>
+            <div class="task"><span class="arrow">→</span><span>For each HTTP status code, print how many times it occurred and its share of total traffic (as a percentage with 1 decimal).</span></div>
+            <div class="task"><span class="arrow">→</span><span>Identify the single hour with the highest 5xx error count.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Stretch:</strong> compute the average response size for <code>200 OK</code> responses only.</span></div>
+          </div>
+          <div class="hint"><b>awk superpower</b><code>split($4, a, ":")</code> breaks the timestamp <code>[22/May/2026:14:23:11</code> into parts — <code>a[2]</code> is the hour. Associative arrays <code>cnt[hour]++</code> do the grouping.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The 24-line hour-by-hour count.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Status-code breakdown with percentages.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>State the peak hour and the worst-5xx hour. Are they the same? What would that mean?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 06 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">06</div>
+        <div>
+          <div class="lab-tag">sed · find · xargs</div>
+          <div class="lab-title">Bulk-replace strings in config files</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create 5 <code>.conf</code> files under <code>~/lab06/configs/</code>, each containing the line <code>db_host=old-server.local</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Replace every occurrence of <code>old-server.local</code> with <code>10.5.0.2</code> using a single <code>find … | xargs sed -i</code> pipeline.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Verify all files changed <em>without opening them individually</em> — use <code>grep -r</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Stretch:</strong> before the replace, back up each file to <code>*.conf.bak</code> using sed's <code>-i.bak</code> flag.</span></div>
+          </div>
+          <div class="hint"><b>Watch out</b><code>sed -i</code> edits in place — <strong>no undo</strong>. Always test on one file first, or use <code>-i.bak</code> to keep originals.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Listing of the 5 files and <code>cat</code> of one of them <em>before</em> the replace.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The find/xargs/sed command and a <code>grep -r</code> proving all 5 files changed.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Why use <code>xargs</code> instead of a shell <code>for</code> loop? When does <code>xargs</code> break (hint: spaces in filenames)?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 07 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">07</div>
+        <div>
+          <div class="lab-tag">find · permissions · size</div>
+          <div class="lab-title">Disk-hog hunt &amp; permission audit</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Find the 10 largest files under your home directory and print them sorted by size, human-readable.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Find every file modified in the last 24 hours under <code>~/lab06</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Find every file under <code>/tmp</code> that is world-writable (<code>-perm -o+w</code>) — be careful, don't change them.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Stretch:</strong> find all empty files <em>and</em> empty directories in your home and list them separately.</span></div>
+          </div>
+          <div class="hint"><b>Hint</b><code>find ~ -type f -printf '%s %p\n'</code> prints size + path; pipe to <code>sort -rn</code> then <code>head</code>. Use <code>numfmt --to=iec</code> to make sizes human-readable.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Top-10 largest files in your home.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>World-writable files under <code>/tmp</code>.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Why is a world-writable file potentially dangerous? Give one realistic attack scenario.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 08 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">08</div>
+        <div>
+          <div class="lab-tag">Inodes &amp; links</div>
+          <div class="lab-title">Hard links, soft links, and the inode</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create a file <code>original.txt</code>, then one hard link and one symlink to it.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Compare inodes with <code>ls -li</code> — confirm the hard link shares the inode, the symlink does not.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Delete the original — which link survives, and why?</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Stretch:</strong> show what happens when you create a symlink to a file in a different directory, then <code>mv</code> it to a third location.</span></div>
+          </div>
+          <div class="hint"><b>The mental model</b>A file <em>is</em> its inode. A name in a directory is just a pointer to one. Hard links add pointers; symlinks are tiny files that hold a path string.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>ls -li</code> showing inode numbers for all 3 files <em>before</em> deletion.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>cat hard.txt</code> and <code>cat soft.txt</code> <em>after</em> deleting the original.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Explain in your own words why the hard link survives and the symlink breaks. Draw a small ASCII diagram if it helps.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 09 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">09</div>
+        <div>
+          <div class="lab-tag">.bashrc · productivity</div>
+          <div class="lab-title">Make your shell yours</div>
+        </div>
+        <div class="lab-pill warm"><span class="pip warm"></span>Warm-up</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Add at least <strong>5 useful aliases</strong> to <code>~/.bashrc</code> — e.g. <code>ll</code>, <code>..</code>, <code>gs</code>, <code>please</code>, whatever you'd reach for daily.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Write a shell function <code>mkcd()</code> that creates a directory and immediately <code>cd</code>'s into it.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Set <code>HISTTIMEFORMAT</code> so <code>history</code> shows when each command ran.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Stretch:</strong> add a function <code>extract()</code> that handles <code>.tar.gz</code>, <code>.zip</code>, <code>.tar.bz2</code> with a <code>case</code> statement on the filename extension.</span></div>
+          </div>
+          <div class="hint"><b>Reload, don't relogin</b><code>source ~/.bashrc</code> picks up changes immediately. If something breaks, <code>bash --norc</code> gets you a clean shell to fix it from.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>Attach</b><span>Your <code>.bashrc</code> snippet — paste the additions into the report.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>mkcd test123</code> creating a folder and showing the new <code>pwd</code>.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>history | tail -10</code> with timestamps visible.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 10 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">10</div>
+        <div>
+          <div class="lab-tag">Capstone · multi-tool</div>
+          <div class="lab-title">The 3 AM pager — find the bad deploy</div>
+        </div>
+        <div class="lab-pill hot"><span class="pip hot"></span>Spicy</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>You're on-call. Payment API is throwing 500s. Using only <code>grep · awk · sed · sort · uniq</code>, in the <code>access.log</code> from Lab 04, isolate every <strong>POST</strong> request to any <code>/api/v1/payment*</code> URL that returned a 5xx.</span></div>
+            <div class="task"><span class="arrow">→</span><span>From those failing requests, list the unique client IPs in order of who failed the most.</span></div>
+            <div class="task"><span class="arrow">→</span><span>What hour did the failures cluster in? Use awk to bucket by hour.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Produce a single one-liner — pipeline only, no scripts, no temp files — that outputs: <code>IP &lt;tab&gt; failure_count &lt;tab&gt; first_seen &lt;tab&gt; last_seen</code> for the top 5 offending IPs.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Write-up:</strong> 5–10 sentences explaining what you found and what you'd do next (rollback? rate limit? page the backend team?).</span></div>
+          </div>
+          <div class="hint"><b>This is the whole point</b>Every tool from session 2 collapses into one pipeline. If you can do this in under five minutes by lab 10, you've internalised the Unix philosophy.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Your one-liner running in the terminal with the top-5 IP table visible.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The hour-bucket showing when failures clustered.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Your one-liner pasted as code <em>and</em> your 5–10 sentence incident write-up: what's wrong, what you'd do next, what the data ruled out.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <!-- ═══ FOOTER ═══════════════════════════════ -->
+  <footer class="foot">
+    <div>Session 02 · Text Processing · Lab Pack <span class="amb">v2</span></div>
+    <div>Submit <span class="amb">report.md + screenshots/ + scripts</span> as one zip · deadline end of week</div>
+  </footer>
+
+</div>
+</body>
+</html>
