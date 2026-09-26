@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Software, Storage & Tasks — Module 2 · Session 4</title>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;600&family=Barlow:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:    #ffffff;
+  --bg2:   #f6f8fa;
+  --bg3:   #eef1f4;
+  --bg4:   #e4e8ec;
+  --b:     rgba(31,35,40,0.12);
+  --b2:    rgba(31,35,40,0.22);
+  --text:  #1f2328;
+  --muted: #57606a;
+  --dim:   #8c959f;
+  --amber: #b35c00;
+  --amber2:#9a4d00;
+  --teal:  #0f766e;
+  --teal2: #0b5f58;
+  --slate: #1f6fa3;
+  --slate2:#175b86;
+  --coral: #c93a1f;
+  --coral2:#b0301a;
+  --lime:  #4d7c0f;
+  --lime2: #3f6a0a;
+  --mono:  'Azeret Mono', monospace;
+  --sans:  'Barlow', sans-serif;
+}
+
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+/* grain texture */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 997; opacity: 0.6;
+}
+
+#progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--amber), var(--teal)); transition: width 0.4s ease; z-index: 999; }
+
+.deck { width: 100vw; height: 100vh; position: relative; }
+
+.slide {
+  position: absolute; inset: 0;
+  display: none; flex-direction: column;
+  padding: 46px 62px 82px;
+  opacity: 0; transition: opacity 0.32s ease;
+}
+.slide.active { display: flex; opacity: 1; }
+
+/* label */
+.lbl {
+  font-family: var(--mono); font-size: 16px; color: var(--muted);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+}
+.lbl-pip {
+  width: 18px; height: 3px; border-radius: 2px;
+  background: var(--amber); flex-shrink: 0;
+}
+
+h1 { font-size: 89.6px; font-weight: 800; line-height: 1.0; letter-spacing: -0.03em; }
+h2 { font-size: 57.6px; font-weight: 800; line-height: 1.1; letter-spacing: -0.025em; }
+h3 { font-size: 25.6px; font-weight: 600; }
+
+.a  { color: var(--amber); }
+.t  { color: var(--teal); }
+.s  { color: var(--slate); }
+.c  { color: var(--coral); }
+.l  { color: var(--lime); }
+
+/* CODE */
+.code {
+  background: #f6f8fa;
+  border: 1px solid var(--b2);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-family: var(--mono);
+  font-size: 20px;
+  line-height: 1.95;
+}
+.cc  { color: #6e7781; }       /* comment */
+.cp  { color: var(--muted); }  /* prompt */
+.cm  { color: var(--teal); }   /* command */
+.cf  { color: var(--amber); }  /* flag */
+.ca  { color: var(--slate2); } /* arg */
+.ck  { color: var(--coral2); } /* keyword/config key */
+.cv  { color: var(--lime2); }  /* value */
+.co  { color: #57606a; }       /* output */
+
+/* CARDS */
+.card { background: var(--bg2); border: 1px solid var(--b); border-radius: 10px; padding: 18px 22px; }
+.ctitle { font-family: var(--mono); font-size: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+.note   { border-left: 2px solid var(--teal);  padding: 9px 14px; background: rgba(15,118,110,0.07); border-radius: 0 7px 7px 0; font-size: 20.8px; color: #2f363d; line-height: 1.7; }
+.warn   { border-left: 2px solid var(--amber); padding: 9px 14px; background: rgba(179,92,0,0.07); border-radius: 0 7px 7px 0; font-size: 20.8px; color: #2f363d; line-height: 1.7; }
+.tip    { border-left: 2px solid var(--lime);  padding: 9px 14px; background: rgba(77,124,15,0.07); border-radius: 0 7px 7px 0; font-size: 20.8px; color: #2f363d; line-height: 1.7; }
+
+.tag { display: inline-block; font-family: var(--mono); font-size: 16px; padding: 3px 9px; border-radius: 20px; border: 1px solid; margin: 2px; }
+.ta  { border-color: var(--amber); color: var(--amber2); }
+.tt  { border-color: var(--teal);  color: var(--teal2); }
+.ts  { border-color: var(--slate); color: var(--slate2); }
+.tc  { border-color: var(--coral); color: var(--coral2); }
+.tl  { border-color: var(--lime);  color: var(--lime2); }
+
+.body { font-size: 22.4px; line-height: 1.75; color: #2f363d; }
+
+.ft { width: 100%; border-collapse: collapse; font-size: 20px; }
+.ft th { font-family: var(--mono); font-size: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--b2); }
+.ft td { padding: 8px 10px; border-bottom: 1px solid rgba(31,35,40,0.05); }
+.ft tr:last-child td { border-bottom: none; }
+
+/* NAV */
+.nav { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; background: var(--bg2); border: 1px solid var(--b2); border-radius: 40px; padding: 9px 18px; z-index: 100; }
+.nbtn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 24px; padding: 4px 7px; border-radius: 5px; transition: color 0.2s, background 0.2s; }
+.nbtn:hover { color: var(--text); background: var(--bg3); }
+.ncnt { font-family: var(--mono); font-size: 17.6px; color: var(--muted); min-width: 42px; text-align: center; }
+.dots { display: flex; gap: 5px; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--b2); cursor: pointer; transition: background 0.2s, transform 0.2s; }
+.dot.on { background: var(--amber); transform: scale(1.4); }
+.kbhint { position: fixed; bottom: 26px; right: 36px; font-family: var(--mono); font-size: 16px; color: var(--dim); }
+
+/* ── LVM DIAGRAM ── */
+.lvm-stack { display: flex; flex-direction: column; gap: 6px; }
+.lvm-row { display: flex; gap: 6px; align-items: stretch; }
+.lvm-cell {
+  flex: 1; border-radius: 6px; padding: 9px 12px;
+  font-family: var(--mono); font-size: 18.4px; font-weight: 600;
+  text-align: center; border: 1px solid;
+}
+.lvm-lv  { background: rgba(15,118,110,0.08);  border-color: rgba(15,118,110,0.3);  color: var(--teal2); }
+.lvm-vg  { background: rgba(179,92,0,0.08);  border-color: rgba(179,92,0,0.3);  color: var(--amber2); }
+.lvm-pv  { background: rgba(31,111,163,0.08); border-color: rgba(31,111,163,0.3); color: var(--slate2); }
+.lvm-disk{ background: rgba(31,35,40,0.05); border-color: rgba(31,35,40,0.17); color: var(--muted); }
+
+/* CRON grid */
+.cron-field { text-align: center; }
+.cron-val { font-family: var(--mono); font-size: 35.2px; font-weight: 600; color: var(--amber); line-height: 1; }
+.cron-label { font-family: var(--mono); font-size: 16px; color: var(--muted); margin-top: 4px; }
+.cron-sep { font-family: var(--mono); font-size: 35.2px; color: var(--dim); align-self: flex-start; padding-top: 2px; }
+
+/* lab card */
+.lab-card { background: var(--bg2); border: 1px solid var(--b); border-radius: 10px; padding: 18px 20px; }
+.lab-num  { font-family: var(--mono); font-size: 41.6px; font-weight: 600; color: var(--b2); float: right; }
+.lab-title { font-size: 22.4px; font-weight: 600; margin-bottom: 8px; }
+.lab-steps { font-size: 20px; color: var(--muted); line-height: 2.0; }
+
+/* fstab highlight */
+.fstab-row { display: grid; grid-template-columns: 1.8fr 1fr 0.8fr 1.5fr 0.4fr 0.4fr; gap: 6px; font-family: var(--mono); font-size: 18.4px; padding: 6px 0; border-bottom: 1px solid var(--b); align-items: center; }
+.fstab-row:last-child { border-bottom: none; }
+
+/* slide 1 accent glow */
+#s1::after {
+  content: '';
+  position: absolute; bottom: 40px; right: 60px;
+  width: 320px; height: 320px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(179,92,0,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── presentation stage (light) ── */
+html, body { background:#ffffff; }
+body::before { display:none; }
+.deck { width:1600px; height:900px; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(var(--k,1)); background:#fff; }
+.slide { padding: 40px 64px 44px; }
+.lbl { margin-bottom:14px; }
+.code { line-height:1.55; padding:14px 20px; }
+.gap { display:block; height:0.55em; }
+.ft td { padding:6px 10px; }
+.ft th { padding:5px 10px; }
+.card { padding:14px 20px; }
+.ctitle { margin-bottom:8px; }
+.lab-steps { line-height:1.65; color:#2f363d; }
+.body { line-height:1.6; }
+.note, .warn, .tip { border-left-width:3px; }
+strong { font-weight:600; }
+#progress { height:4px; }
+.nav { bottom:14px; box-shadow:0 2px 10px rgba(31,35,40,0.08); }
+.kbhint { bottom:18px; color:#8c959f; }
+.nav, .kbhint { transition:opacity .4s; }
+body.idle .nav, body.idle .kbhint { opacity:0; pointer-events:none; }
+#s1 { justify-content:center; }
+#s1 h1 { font-size:104px; }
+#s1 > p { font-size:32px !important; }
+#s1 > div:last-child { font-size:20px !important; color:#57606a !important; }
+#s2 .card > div:nth-child(1) { font-size:40px !important; }
+#s2 .card > div:nth-child(2) { font-size:28px !important; }
+#s2 .card > div:nth-child(3) { font-size:20px !important; color:#2f363d !important; }
+#s2 .card { padding:26px; }
+#s1 .lbl { font-size:20px; }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<div class="deck">
+
+<!-- ═══ S1 TITLE ═══ -->
+<div class="slide active" id="s1">
+  <div class="lbl"><span class="lbl-pip"></span>Module 2 · System Administration · Session 4</div>
+  <h1>Software,<br>Storage &amp;<br><span class="a">Tasks</span></h1>
+  <p style="font-size: 28.8px; color: var(--muted); margin-top: 18px; font-weight: 300;">apt · LVM · cron · systemd timer</p>
+  <div style="display: flex; gap: 18px; margin-top: 44px; font-family: var(--mono); font-size: 17.6px; color: var(--dim);">
+    <span>20 slides</span>
+    <span>·</span>
+    <span>Theory + Examples + Labs</span>
+    <span>·</span>
+    <span>~90 min</span>
+  </div>
+</div>
+
+<!-- ═══ S2 OVERVIEW ═══ -->
+<div class="slide" id="s2">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 2 — Overview</div>
+  <h2 style="margin-bottom: 24px;">What we'll <span class="t">cover</span></h2>
+  <div style="display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; flex: 1;">
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:32px;">📦</div>
+      <div style="font-size:24px;font-weight:600;" class="a">Package Mgmt</div>
+      <div style="font-family:var(--mono);font-size:17.6px;color:var(--muted);line-height:1.9;">apt / dpkg<br>Version pinning<br>PPA sources<br>Build from source</div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:32px;">🗂</div>
+      <div style="font-size:24px;font-weight:600;" class="t">Storage</div>
+      <div style="font-family:var(--mono);font-size:17.6px;color:var(--muted);line-height:1.9;">fdisk / lsblk<br>mkfs / mount<br>/etc/fstab<br>LVM: PV, VG, LV</div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:32px;">⏰</div>
+      <div style="font-size:24px;font-weight:600;" class="s">Cron</div>
+      <div style="font-family:var(--mono);font-size:17.6px;color:var(--muted);line-height:1.9;">5-field syntax<br>crontab -e<br>/etc/cron.d<br>Special strings</div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:32px;">⚙️</div>
+      <div style="font-size:24px;font-weight:600;" class="l">systemd timer</div>
+      <div style="font-family:var(--mono);font-size:17.6px;color:var(--muted);line-height:1.9;">.timer unit files<br>OnCalendar=<br>journalctl logs<br>vs cron</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S3 APT ═══ -->
+<div class="slide" id="s3">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 3 — Theory</div>
+  <h2 style="margin-bottom: 22px;">apt &amp; dpkg — <span class="a">Package Management</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># update package index</span><br>
+<span class="cp">$ </span><span class="cm">apt update</span><br>
+<span class="cp">$ </span><span class="cm">apt upgrade</span>            <span class="cc">  # upgrade all</span><br>
+<span class="cp">$ </span><span class="cm">apt full-upgrade</span>        <span class="cc">  # + remove old deps</span><br>
+<span class="gap"></span>
+<span class="cc"># install / remove</span><br>
+<span class="cp">$ </span><span class="cm">apt install</span> <span class="ca">nginx</span><br>
+<span class="cp">$ </span><span class="cm">apt remove</span> <span class="ca">nginx</span>       <span class="cc">   # keep config</span><br>
+<span class="cp">$ </span><span class="cm">apt purge</span> <span class="ca">nginx</span>        <span class="cc">   # remove config too</span><br>
+<span class="cp">$ </span><span class="cm">apt autoremove</span>          <span class="cc">  # clean orphans</span><br>
+<span class="gap"></span>
+<span class="cc"># search and inspect</span><br>
+<span class="cp">$ </span><span class="cm">apt search</span> <span class="ca">nginx</span><br>
+<span class="cp">$ </span><span class="cm">apt show</span> <span class="ca">nginx</span><br>
+<span class="cp">$ </span><span class="cm">dpkg -l</span>                 <span class="cc">  # list all installed</span><br>
+<span class="cp">$ </span><span class="cm">dpkg -L</span> <span class="ca">nginx</span>          <span class="cc">   # list package files</span>
+      </div>
+      <div class="note">
+        <strong style="color:var(--teal);">apt vs dpkg:</strong> apt handles dependencies automatically. dpkg is the lower-level tool — use it to install .deb files directly or inspect installed packages.
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Version pinning — never accidentally upgrade</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># pin nginx to current version</span><br>
+<span class="cp">$ </span><span class="cm">apt-mark hold</span> <span class="ca">nginx</span><br>
+<span class="gap"></span>
+<span class="cc"># verify</span><br>
+<span class="cp">$ </span><span class="cm">apt-mark showhold</span><br>
+<span class="co">nginx</span><br>
+<span class="gap"></span>
+<span class="cc"># unpin when ready to upgrade</span><br>
+<span class="cp">$ </span><span class="cm">apt-mark unhold</span> <span class="ca">nginx</span><br>
+<span class="gap"></span>
+<span class="cc"># install specific version</span><br>
+<span class="cp">$ </span><span class="cm">apt install</span> <span class="ca">nginx=1.24.0-1</span>
+        </div>
+      </div>
+      <div class="warn">
+        <strong style="color:var(--amber);">Production rule:</strong> Always pin critical services (nginx, postgresql, docker) before running <code style="font-family:var(--mono);font-size:17.6px;">apt upgrade</code>. Unplanned upgrades break things.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S3b APT DEEP ═══ -->
+<div class="slide" id="s3b">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 4 — Theory</div>
+  <h2 style="margin-bottom: 22px;">apt &amp; dpkg — <span class="a">Repair, Inspect, Pin</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Repair a broken package state</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># an install got interrupted? finish it</span><br>
+<span class="cp">$ </span><span class="cm">dpkg --configure -a</span><br>
+<span class="cc"># unmet dependencies</span><br>
+<span class="cp">$ </span><span class="cm">apt --fix-broken install</span>   <span class="cc"> # = apt -f install</span><br>
+<span class="cc"># force a clean reinstall</span><br>
+<span class="cp">$ </span><span class="cm">apt install</span> <span class="cf">--reinstall</span> <span class="ca">nginx</span><br>
+<span class="cc"># roll back to an exact version</span><br>
+<span class="cp">$ </span><span class="cm">apt install</span> <span class="ca">nginx=1.24.0-1ubuntu1</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Inspect — who needs what</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cp">$ </span><span class="cm">apt-cache policy</span> <span class="ca">nginx</span>    <span class="cc"> # versions + source</span><br>
+<span class="cp">$ </span><span class="cm">apt-cache depends</span> <span class="ca">nginx</span>   <span class="cc"> # what it needs</span><br>
+<span class="cp">$ </span><span class="cm">apt-cache rdepends</span> <span class="ca">nginx</span>  <span class="cc"> # who needs it</span><br>
+<span class="cp">$ </span><span class="cm">dpkg -S</span> <span class="ca">/usr/sbin/nginx</span>     <span class="cc"> # which pkg owns a file</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Priority pinning — /etc/apt/preferences.d/</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># /etc/apt/preferences.d/nginx.pref</span><br>
+<span class="ck">Package:</span> <span class="cv">nginx*</span><br>
+<span class="ck">Pin:</span> <span class="cv">origin "nginx.org"</span><br>
+<span class="ck">Pin-Priority:</span> <span class="cv">1001</span>
+        </div>
+      </div>
+      <div class="note">
+        <strong style="color:var(--teal);">Priority guide:</strong> &lt;100 never auto-installed · 500 default · 990 target release · &gt;1000 <em>allows a downgrade</em>. Always confirm the result with <code style="font-family:var(--mono);font-size:17.6px;">apt-cache policy</code>.
+      </div>
+      <div class="card">
+        <div class="ctitle">Reclaim disk + auto security patches</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cp">$ </span><span class="cm">apt clean</span>      <span class="cc"> # wipe /var/cache/apt</span><br>
+<span class="cp">$ </span><span class="cm">apt autoremove</span> <span class="cf">--purge</span>  <span class="cc"> # drop orphans+config</span><br>
+<span class="cp">$ </span><span class="cm">apt install</span> <span class="ca">unattended-upgrades</span><br>
+<span class="cp">$ </span><span class="cm">dpkg-reconfigure</span> <span class="ca">unattended-upgrades</span>
+        </div>
+      </div>
+      <div class="tip">
+        <strong style="color:var(--lime);">Tip:</strong> packages on <code style="font-family:var(--mono);font-size:17.6px;">apt-mark hold</code> are skipped by unattended-upgrades too — pin critical services and they stay put automatically.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S4 SOURCE + PPA ═══ -->
+<div class="slide" id="s4">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 5 — Theory</div>
+  <h2 style="margin-bottom: 22px;">PPAs &amp; <span class="a">Build from Source</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">PPA — Personal Package Archive</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># add a PPA (e.g. newer PHP)</span><br>
+<span class="cp">$ </span><span class="cm">add-apt-repository</span> <span class="ca">ppa:ondrej/php</span><br>
+<span class="cp">$ </span><span class="cm">apt update</span><br>
+<span class="cp">$ </span><span class="cm">apt install</span> <span class="ca">php8.3</span><br>
+<span class="gap"></span>
+<span class="cc"># remove a PPA</span><br>
+<span class="cp">$ </span><span class="cm">add-apt-repository</span> <span class="cf">--remove</span> <span class="ca">ppa:ondrej/php</span><br>
+<span class="gap"></span>
+<span class="cc"># manual source entry</span><br>
+<span class="cc"># /etc/apt/sources.list.d/nginx.list:</span><br>
+deb https://nginx.org/packages/ubuntu <span class="ca">jammy nginx</span>
+        </div>
+      </div>
+      <div class="warn">
+        <strong style="color:var(--amber);">Trust PPAs carefully.</strong> Adding a PPA grants that maintainer the ability to push packages to your system. Use official or well-known PPAs only.
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Build from source — the classic way</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># install build tools first</span><br>
+<span class="cp">$ </span><span class="cm">apt install</span> <span class="ca">build-essential</span><br>
+<span class="gap"></span>
+<span class="cc"># download + extract source</span><br>
+<span class="cp">$ </span><span class="cm">wget</span> <span class="ca">https://example.com/app-1.0.tar.gz</span><br>
+<span class="cp">$ </span><span class="cm">tar xzf</span> <span class="ca">app-1.0.tar.gz</span><br>
+<span class="cp">$ </span><span class="cm">cd</span> <span class="ca">app-1.0/</span><br>
+<span class="gap"></span>
+<span class="cc"># configure → compile → install</span><br>
+<span class="cp">$ </span><span class="cm">./configure</span> <span class="cf">--prefix=/usr/local</span><br>
+<span class="cp">$ </span><span class="cm">make</span> <span class="cf">-j$(nproc)</span><br>
+<span class="cp">$ </span><span class="cm">sudo make install</span>
+        </div>
+      </div>
+      <div class="note">
+        <code style="font-family:var(--mono);font-size:17.6px;">./configure</code> checks system dependencies and generates a Makefile. Always check <code style="font-family:var(--mono);font-size:17.6px;">./configure --help</code> for available options before building.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S4b REPO KEYS ═══ -->
+<div class="slide" id="s4b">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 6 — Theory</div>
+  <h2 style="margin-bottom: 22px;">Signing Keys &amp; <span class="a">snap / flatpak</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Modern repo keys — apt-key is deprecated</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># download + dearmor the signing key</span><br>
+<span class="cp">$ </span><span class="cm">curl</span> <span class="cf">-fsSL</span> <span class="ca">https://nginx.org/keys/nginx_signing.key</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="cm">gpg --dearmor</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="cm">sudo tee</span> <span class="ca">/etc/apt/keyrings/nginx.gpg</span> &gt;/dev/null<br>
+<span class="gap"></span>
+<span class="cc"># bind the key to ONE repo via signed-by</span><br>
+<span class="cc"># /etc/apt/sources.list.d/nginx.list</span><br>
+deb [<span class="ck">signed-by</span>=<span class="cv">/etc/apt/keyrings/nginx.gpg</span>] \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ca">https://nginx.org/packages/ubuntu jammy nginx</span><br>
+<span class="cp">$ </span><span class="cm">apt update</span>
+        </div>
+      </div>
+      <div class="warn">
+        <strong style="color:var(--amber);">Why signed-by matters:</strong> a key in the global trust store can sign <em>any</em> package from <em>any</em> repo. <code style="font-family:var(--mono);font-size:17.6px;">signed-by</code> scopes trust to a single source — a compromised third-party repo can't impersonate Ubuntu's.
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">snap &amp; flatpak — beyond apt</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># snap — ships with Ubuntu, auto-updates</span><br>
+<span class="cp">$ </span><span class="cm">snap install</span> <span class="ca">node</span> <span class="cf">--classic</span><br>
+<span class="cp">$ </span><span class="cm">snap list</span> ; <span class="cm">snap refresh</span><br>
+<span class="cp">$ </span><span class="cm">snap revert</span> <span class="ca">node</span>      <span class="cc"> # undo a bad update</span><br>
+<span class="gap"></span>
+<span class="cc"># flatpak — sandboxed desktop apps</span><br>
+<span class="cp">$ </span><span class="cm">flatpak install</span> <span class="ca">flathub org.gimp.GIMP</span><br>
+<span class="cp">$ </span><span class="cm">flatpak run</span> <span class="ca">org.gimp.GIMP</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Which one when?</div>
+        <table class="ft">
+          <thead><tr><th></th><th>apt</th><th>snap</th><th>flatpak</th></tr></thead>
+          <tbody>
+            <tr><td style="color:#2f363d;">Scope</td><td style="color:var(--slate2);">system</td><td style="color:var(--slate2);">universal</td><td style="color:var(--slate2);">desktop</td></tr>
+            <tr><td style="color:#2f363d;">Updates</td><td style="color:var(--coral2);">manual</td><td style="color:var(--lime2);">auto</td><td style="color:var(--coral2);">manual</td></tr>
+            <tr><td style="color:#2f363d;">Sandbox</td><td style="color:var(--coral2);">no</td><td style="color:var(--lime2);">yes</td><td style="color:var(--lime2);">yes</td></tr>
+            <tr><td style="color:#2f363d;">Best for</td><td style="color:#2f363d;">servers</td><td style="color:#2f363d;">CLI/daemons</td><td style="color:#2f363d;">GUI apps</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S5 DISK + PARTITIONS ═══ -->
+<div class="slide" id="s5">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 7 — Theory</div>
+  <h2 style="margin-bottom: 22px;">Partitions, Format &amp; <span class="t">Mount</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># inspect disks</span><br>
+<span class="cp">$ </span><span class="cm">lsblk</span>                    <span class="cc">  # tree view</span><br>
+<span class="cp">$ </span><span class="cm">fdisk -l</span>                 <span class="cc">  # partition table</span><br>
+<span class="cp">$ </span><span class="cm">df -h</span>                    <span class="cc">  # disk usage</span><br>
+<span class="gap"></span>
+<span class="cc"># partition a new disk</span><br>
+<span class="cp">$ </span><span class="cm">fdisk</span> <span class="ca">/dev/sdb</span>         <span class="cc">   # interactive</span><br>
+<span class="cc">#  n → new partition</span><br>
+<span class="cc">#  w → write and exit</span><br>
+<span class="gap"></span>
+<span class="cc"># format</span><br>
+<span class="cp">$ </span><span class="cm">mkfs.ext4</span> <span class="ca">/dev/sdb1</span><br>
+<span class="cp">$ </span><span class="cm">mkfs.xfs</span>  <span class="ca">/dev/sdb1</span><br>
+<span class="gap"></span>
+<span class="cc"># mount manually</span><br>
+<span class="cp">$ </span><span class="cm">mkdir -p</span> <span class="ca">/mnt/data</span><br>
+<span class="cp">$ </span><span class="cm">mount</span> <span class="ca">/dev/sdb1 /mnt/data</span><br>
+<span class="cp">$ </span><span class="cm">umount</span> <span class="ca">/mnt/data</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">/etc/fstab — persistent mounts</div>
+        <div class="code" style="font-size:17.6px; padding:12px 14px;">
+<span class="cc"># device            mountpoint  fs     options      dump pass</span>
+        </div>
+        <div style="padding: 8px 0;">
+          <div class="fstab-row">
+            <span style="color:var(--teal);font-family:var(--mono);font-size:17.6px;">/dev/sdb1</span>
+            <span style="color:var(--slate2);font-family:var(--mono);font-size:17.6px;">/mnt/data</span>
+            <span style="color:var(--amber);font-family:var(--mono);font-size:17.6px;">ext4</span>
+            <span style="color:var(--lime2);font-family:var(--mono);font-size:16px;">defaults,nofail</span>
+            <span style="color:var(--muted);font-family:var(--mono);font-size:17.6px;">0</span>
+            <span style="color:var(--muted);font-family:var(--mono);font-size:17.6px;">2</span>
+          </div>
+          <div class="fstab-row">
+            <span style="color:var(--teal);font-family:var(--mono);font-size:17.6px;">UUID=abc-123</span>
+            <span style="color:var(--slate2);font-family:var(--mono);font-size:17.6px;">/opt/logs</span>
+            <span style="color:var(--amber);font-family:var(--mono);font-size:17.6px;">xfs</span>
+            <span style="color:var(--lime2);font-family:var(--mono);font-size:16px;">defaults</span>
+            <span style="color:var(--muted);font-family:var(--mono);font-size:17.6px;">0</span>
+            <span style="color:var(--muted);font-family:var(--mono);font-size:17.6px;">2</span>
+          </div>
+        </div>
+        <div class="code" style="font-size:19.2px;margin-top:8px;">
+<span class="cc"># get UUID (use instead of /dev path)</span><br>
+<span class="cp">$ </span><span class="cm">blkid</span> <span class="ca">/dev/sdb1</span><br>
+<span class="gap"></span>
+<span class="cc"># test fstab before reboot!</span><br>
+<span class="cp">$ </span><span class="cm">mount -a</span>
+        </div>
+      </div>
+      <div class="warn">
+        <strong style="color:var(--amber);">Use UUID, not /dev/sdX.</strong> Device names can change on reboot. UUIDs are stable. Always test with <code style="font-family:var(--mono);font-size:17.6px;">mount -a</code> before rebooting.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S5b GPT SWAP ═══ -->
+<div class="slide" id="s5b">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 8 — Theory</div>
+  <h2 style="margin-bottom: 22px;">GPT, parted &amp; <span class="t">Swap</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">GPT with parted — the modern default</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cp">$ </span><span class="cm">parted</span> <span class="ca">/dev/sdb</span><br>
+<span class="cp">(parted) </span><span class="cm">mklabel</span> <span class="ca">gpt</span>        <span class="cc"> # GPT: &gt;2TB, 128 parts</span><br>
+<span class="cp">(parted) </span><span class="cm">mkpart</span> <span class="ca">data ext4 0% 100%</span><br>
+<span class="cp">(parted) </span><span class="cm">print</span><br>
+<span class="cp">(parted) </span><span class="cm">quit</span><br>
+<span class="cp">$ </span><span class="cm">partprobe</span> <span class="ca">/dev/sdb</span>      <span class="cc"> # reload table, no reboot</span><br>
+<span class="cc"># gdisk = an fdisk that speaks GPT</span>
+        </div>
+      </div>
+      <div class="note">
+        <strong style="color:var(--teal);">MBR vs GPT:</strong> MBR caps at 2&nbsp;TB and 4 primary partitions. Use GPT for any large or new disk — and UEFI systems require it.
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Add swap — a file is the flexible choice</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cp">$ </span><span class="cm">fallocate</span> <span class="cf">-l 2G</span> <span class="ca">/swapfile</span><br>
+<span class="cp">$ </span><span class="cm">chmod</span> <span class="ca">600 /swapfile</span>   <span class="cc"> # holds memory — lock it down</span><br>
+<span class="cp">$ </span><span class="cm">mkswap</span> <span class="ca">/swapfile</span><br>
+<span class="cp">$ </span><span class="cm">swapon</span> <span class="ca">/swapfile</span><br>
+<span class="cp">$ </span><span class="cm">swapon --show</span> ; <span class="cm">free -h</span><br>
+<span class="cc"># persist in /etc/fstab:</span><br>
+<span class="ca">/swapfile</span>  <span class="ca">none</span>  <span class="cv">swap</span>  <span class="cv">sw</span>  <span class="cv">0</span>  <span class="cv">0</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Mount options worth knowing</div>
+        <table class="ft">
+          <tbody>
+            <tr><td style="font-family:var(--mono);color:var(--lime2);">noatime</td><td style="color:#2f363d;">Skip access-time writes — faster, less SSD wear</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--lime2);">nofail</td><td style="color:#2f363d;">Boot continues if the device is missing</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--lime2);">ro</td><td style="color:#2f363d;">Read-only mount</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--lime2);">nosuid,nodev</td><td style="color:#2f363d;">Harden a data-only disk</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--lime2);">discard</td><td style="color:#2f363d;">Online TRIM for SSDs</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S6 LVM CONCEPTS ═══ -->
+<div class="slide" id="s6">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 9 — Theory</div>
+  <h2 style="margin-bottom: 22px;">LVM — <span class="t">Logical Volume Manager</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card">
+        <div class="ctitle">The 3-layer stack</div>
+        <div class="lvm-stack" style="margin-top:8px;">
+          <div style="font-family:var(--mono);font-size:16px;color:var(--muted);text-align:center;letter-spacing:0.1em;margin-bottom:2px;">LOGICAL VOLUMES (what you use)</div>
+          <div class="lvm-row">
+            <div class="lvm-cell lvm-lv">lv-root<br><span style="font-size:16px;opacity:0.7;">20GB</span></div>
+            <div class="lvm-cell lvm-lv">lv-var<br><span style="font-size:16px;opacity:0.7;">40GB</span></div>
+            <div class="lvm-cell lvm-lv">lv-data<br><span style="font-size:16px;opacity:0.7;">80GB</span></div>
+          </div>
+          <div style="text-align:center;color:var(--dim);font-size:25.6px;">↕</div>
+          <div style="font-family:var(--mono);font-size:16px;color:var(--muted);text-align:center;letter-spacing:0.1em;margin-bottom:2px;">VOLUME GROUP (pool)</div>
+          <div class="lvm-row">
+            <div class="lvm-cell lvm-vg" style="flex:3;">vg-main — 200GB total</div>
+          </div>
+          <div style="text-align:center;color:var(--dim);font-size:25.6px;">↕</div>
+          <div style="font-family:var(--mono);font-size:16px;color:var(--muted);text-align:center;letter-spacing:0.1em;margin-bottom:2px;">PHYSICAL VOLUMES (real disks)</div>
+          <div class="lvm-row">
+            <div class="lvm-cell lvm-pv">/dev/sdb<br><span style="font-size:16px;opacity:0.7;">100GB</span></div>
+            <div class="lvm-cell lvm-pv">/dev/sdc<br><span style="font-size:16px;opacity:0.7;">100GB</span></div>
+          </div>
+          <div style="text-align:center;color:var(--dim);font-size:25.6px;">↕</div>
+          <div class="lvm-row">
+            <div class="lvm-cell lvm-disk">Physical Disk</div>
+            <div class="lvm-cell lvm-disk">Physical Disk</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># 1. create physical volume</span><br>
+<span class="cp">$ </span><span class="cm">pvcreate</span> <span class="ca">/dev/sdb</span><br>
+<span class="cp">$ </span><span class="cm">pvdisplay</span><br>
+<span class="gap"></span>
+<span class="cc"># 2. create volume group</span><br>
+<span class="cp">$ </span><span class="cm">vgcreate</span> <span class="ca">vg-main /dev/sdb</span><br>
+<span class="cp">$ </span><span class="cm">vgdisplay</span><br>
+<span class="gap"></span>
+<span class="cc"># 3. create logical volume (40GB)</span><br>
+<span class="cp">$ </span><span class="cm">lvcreate</span> <span class="cf">-L 40G -n</span> <span class="ca">lv-data vg-main</span><br>
+<span class="gap"></span>
+<span class="cc"># 4. format and mount</span><br>
+<span class="cp">$ </span><span class="cm">mkfs.ext4</span> <span class="ca">/dev/vg-main/lv-data</span><br>
+<span class="cp">$ </span><span class="cm">mount</span> <span class="ca">/dev/vg-main/lv-data /opt/data</span>
+      </div>
+      <div class="note">
+        <strong style="color:var(--teal);">Think of LVM as virtual partitions.</strong> PV = physical disk, VG = a pool of storage, LV = the "partition" you actually use. Resize without rebooting.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S7 LVM EXPAND ═══ -->
+<div class="slide" id="s7">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 10 — Theory</div>
+  <h2 style="margin-bottom: 22px;">LVM — <span class="a">Online Resize</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># scenario: /var is running out of space</span><br>
+<span class="cp">$ </span><span class="cm">df -h</span> <span class="ca">/var</span><br>
+<span class="co">Filesystem                  Size  Used Avail Use%</span><br>
+<span class="co">/dev/vg-main/lv-var          40G   38G  1.2G  97%</span><br>
+<span class="gap"></span>
+<span class="cc"># check available space in VG</span><br>
+<span class="cp">$ </span><span class="cm">vgdisplay</span> <span class="ca">vg-main</span> | grep Free<br>
+<span class="co">Free  PE / Size   1280 / 5.00 GiB</span><br>
+<span class="gap"></span>
+<span class="cc"># extend by 5GB — NO UMOUNT NEEDED</span><br>
+<span class="cp">$ </span><span class="cm">lvextend</span> <span class="cf">-L +5G</span> <span class="ca">/dev/vg-main/lv-var</span><br>
+<span class="gap"></span>
+<span class="cc"># resize filesystem to fill new space</span><br>
+<span class="cp">$ </span><span class="cm">resize2fs</span> <span class="ca">/dev/vg-main/lv-var</span>  <span class="cc"> # ext4</span><br>
+<span class="cc"># or: xfs_growfs /var              # xfs</span><br>
+<span class="gap"></span>
+<span class="cc"># verify</span><br>
+<span class="cp">$ </span><span class="cm">df -h</span> <span class="ca">/var</span><br>
+<span class="co">/dev/vg-main/lv-var          45G   38G  6.2G  86%</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Traditional disk vs LVM</div>
+        <table class="ft">
+          <thead><tr><th>Operation</th><th>Traditional</th><th>LVM</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="color:#2f363d;">Grow partition</td>
+              <td style="color:var(--coral2);">Unmount + tools</td>
+              <td style="color:var(--lime2);">Online, no umount</td>
+            </tr>
+            <tr>
+              <td style="color:#2f363d;">Span 2 disks</td>
+              <td style="color:var(--coral2);">RAID or impossible</td>
+              <td style="color:var(--lime2);">vgextend + lvextend</td>
+            </tr>
+            <tr>
+              <td style="color:#2f363d;">Snapshot</td>
+              <td style="color:var(--coral2);">Not available</td>
+              <td style="color:var(--lime2);">lvcreate --snapshot</td>
+            </tr>
+            <tr>
+              <td style="color:#2f363d;">Move data</td>
+              <td style="color:var(--coral2);">Manual copy</td>
+              <td style="color:var(--lime2);">pvmove (live)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="ctitle">Add a new disk to existing VG</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># hot-add new disk /dev/sdc</span><br>
+<span class="cp">$ </span><span class="cm">pvcreate</span> <span class="ca">/dev/sdc</span><br>
+<span class="cp">$ </span><span class="cm">vgextend</span> <span class="ca">vg-main /dev/sdc</span><br>
+<span class="cc"># VG now has more free space</span><br>
+<span class="cc"># extend any LV as needed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S7b LVM SNAPSHOT ═══ -->
+<div class="slide" id="s7b">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 11 — Theory</div>
+  <h2 style="margin-bottom: 22px;">LVM — <span class="t">Snapshots</span> &amp; <span class="c">Shrink</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Snapshot — an instant safety net</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># freeze state before a risky migration</span><br>
+<span class="cp">$ </span><span class="cm">lvcreate</span> <span class="cf">-L 5G -s -n</span> <span class="ca">data-snap</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ca">/dev/vg-main/lv-data</span><br>
+<span class="cc"># ...run the risky upgrade...</span><br>
+<span class="cc"># A) roll back to the snapshot</span><br>
+<span class="cp">$ </span><span class="cm">lvconvert --merge</span> <span class="ca">/dev/vg-main/data-snap</span><br>
+<span class="cc"># B) all good — drop the snapshot</span><br>
+<span class="cp">$ </span><span class="cm">lvremove</span> <span class="ca">/dev/vg-main/data-snap</span>
+        </div>
+      </div>
+      <div class="note">
+        <strong style="color:var(--teal);">DB backup pattern:</strong> snapshot → mount the snapshot read-only → back <em>that</em> up → remove it. The live database never pauses, and you get a consistent point-in-time copy.
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Shrink — offline, and order is everything</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># ext4: shrink the FILESYSTEM first, THEN the LV</span><br>
+<span class="cp">$ </span><span class="cm">umount</span> <span class="ca">/opt/data</span><br>
+<span class="cp">$ </span><span class="cm">e2fsck</span> <span class="cf">-f</span> <span class="ca">/dev/vg-main/lv-data</span><br>
+<span class="cp">$ </span><span class="cm">resize2fs</span> <span class="ca">/dev/vg-main/lv-data 30G</span><br>
+<span class="cp">$ </span><span class="cm">lvreduce</span> <span class="cf">-L 30G</span> <span class="ca">/dev/vg-main/lv-data</span><br>
+<span class="cp">$ </span><span class="cm">mount</span> <span class="ca">/opt/data</span><br>
+<span class="cc"># XFS cannot shrink — grow-only</span>
+        </div>
+      </div>
+      <div class="warn">
+        <strong style="color:var(--amber);">Reduce the LV below the filesystem and you lose data.</strong> Growing is the reverse order (lvextend → resize2fs) — which is why <code style="font-family:var(--mono);font-size:17.6px;">-r</code> automates growth but is never safe for shrink.
+      </div>
+      <div class="card">
+        <div class="ctitle">Tear it all down</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cp">$ </span><span class="cm">umount</span> <span class="ca">/opt/data</span> ; <span class="cm">lvremove</span> <span class="ca">/dev/vg-main/lv-data</span><br>
+<span class="cp">$ </span><span class="cm">vgremove</span> <span class="ca">vg-main</span> ; <span class="cm">pvremove</span> <span class="ca">/dev/sdb /dev/sdc</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S8 CRON ═══ -->
+<div class="slide" id="s8">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 12 — Theory</div>
+  <h2 style="margin-bottom: 22px;">Cron — <span class="s">Scheduled Tasks</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card">
+        <div class="ctitle">The 5-field syntax</div>
+        <div style="display:flex;align-items:flex-end;gap:8px;margin:14px 0 10px;">
+          <div class="cron-field"><div class="cron-val">*</div><div class="cron-label">minute<br>0–59</div></div>
+          <div class="cron-sep">·</div>
+          <div class="cron-field"><div class="cron-val">*</div><div class="cron-label">hour<br>0–23</div></div>
+          <div class="cron-sep">·</div>
+          <div class="cron-field"><div class="cron-val">*</div><div class="cron-label">day/month<br>1–31</div></div>
+          <div class="cron-sep">·</div>
+          <div class="cron-field"><div class="cron-val">*</div><div class="cron-label">month<br>1–12</div></div>
+          <div class="cron-sep">·</div>
+          <div class="cron-field"><div class="cron-val">*</div><div class="cron-label">day/week<br>0–7</div></div>
+          <div style="font-family:var(--mono);font-size:17.6px;color:var(--slate2);padding-bottom:20px;margin-left:8px;">command</div>
+        </div>
+      </div>
+      <div class="code">
+<span class="cc"># edit your crontab</span><br>
+<span class="cp">$ </span><span class="cm">crontab -e</span><br>
+<span class="cp">$ </span><span class="cm">crontab -l</span>   <span class="cc">  # list</span><br>
+<span class="gap"></span>
+<span class="cc"># examples</span><br>
+<span class="cv">0 2 * * *</span>      /opt/backup.sh<br>
+<span class="cv">*/5 * * * *</span>    /usr/bin/health-check.sh<br>
+<span class="cv">0 9 * * 1</span>      /opt/weekly-report.sh<br>
+<span class="cv">@reboot</span>        /opt/start-agent.sh<br>
+<span class="cv">@daily</span>         /usr/bin/certbot renew
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Reading examples</div>
+        <table class="ft">
+          <thead><tr><th>Expression</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td style="font-family:var(--mono);color:var(--amber2);">*/5 * * * *</td><td style="color:#2f363d;">Every 5 minutes</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--amber2);">0 2 * * *</td><td style="color:#2f363d;">Daily at 02:00</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--amber2);">0 9 * * 1</td><td style="color:#2f363d;">Every Monday at 09:00</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--amber2);">0 0 1 * *</td><td style="color:#2f363d;">1st of every month</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--amber2);">30 6 * * 1-5</td><td style="color:#2f363d;">Weekdays at 06:30</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="ctitle">System-wide cron — /etc/cron.d/</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># /etc/cron.d/myapp</span><br>
+<span class="cc"># user field is required here</span><br>
+<span class="cv">*/5 * * * *</span> <span class="ca">www-data</span> /opt/app/check.sh<br>
+<span class="gap"></span>
+<span class="cc"># also check /etc/cron.daily/ etc</span><br>
+<span class="cp">$ </span><span class="cm">ls</span> /etc/cron.{hourly,daily,weekly,monthly}/
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S8b CRON GOTCHAS ═══ -->
+<div class="slide" id="s8b">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 13 — Theory</div>
+  <h2 style="margin-bottom: 22px;">Cron — <span class="s">Gotchas &amp; Debugging</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Why it works in your shell but not in cron</div>
+        <p class="body" style="font-size:20.8px;margin-bottom:10px;">Cron runs with a near-empty environment — a minimal <code style="font-family:var(--mono);font-size:17.6px;">PATH</code> and no profile sourced. This is the single most common cron bug.</p>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># set the environment at the TOP of the crontab</span><br>
+<span class="ck">SHELL</span>=<span class="cv">/bin/bash</span><br>
+<span class="ck">PATH</span>=<span class="cv">/usr/local/bin:/usr/bin:/bin</span><br>
+<span class="ck">MAILTO</span>=<span class="cv">admin@example.com</span>  <span class="cc"> # mail all output</span><br>
+<span class="cc"># ALWAYS use absolute paths in the job</span><br>
+<span class="cv">0 2 * * *</span> /usr/bin/python3 /opt/job.py<br>
+<span class="cc"># % means newline in cron — escape it!</span><br>
+<span class="cv">0 0 * * *</span> tar czf /bak/db-$(date +\%F).tgz /data
+        </div>
+      </div>
+      <div class="warn">
+        <strong style="color:var(--amber);">The % trap:</strong> an unescaped <code style="font-family:var(--mono);font-size:17.6px;">%</code> silently truncates the command at that point. Always write <code style="font-family:var(--mono);font-size:17.6px;">\%</code> inside cron lines.
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Capture output &amp; stop overlap</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># log stdout AND stderr together</span><br>
+<span class="cv">*/5 * * * *</span> /opt/sync.sh &gt;&gt; /var/log/sync.log 2&gt;&amp;1<br>
+<span class="cc"># never let two runs overlap</span><br>
+<span class="cv">*/5 * * * *</span> flock -n /tmp/sync.lock /opt/sync.sh<br>
+<span class="cc"># silence success, still mail errors</span><br>
+<span class="cv">0 * * * *</span> /opt/job.sh &gt; /dev/null
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Where did my job go?</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cp">$ </span><span class="cm">grep</span> <span class="ca">CRON /var/log/syslog</span><br>
+<span class="cp">$ </span><span class="cm">journalctl -u</span> <span class="ca">cron</span> <span class="cf">--since</span> <span class="ca">today</span><br>
+<span class="cp">$ </span><span class="cm">systemctl status</span> <span class="ca">cron</span>   <span class="cc"> # is it even running?</span>
+        </div>
+      </div>
+      <div class="tip">
+        <strong style="color:var(--lime);">anacron</strong> runs jobs that were <em>missed</em> while the machine was off (laptops, dev boxes). Plain cron just skips them — use anacron or a systemd timer with <code style="font-family:var(--mono);font-size:17.6px;">Persistent=true</code>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S9 SYSTEMD TIMER ═══ -->
+<div class="slide" id="s9">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 14 — Theory</div>
+  <h2 style="margin-bottom: 22px;">systemd timer — <span class="l">Modern Scheduling</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Two unit files needed</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># /etc/systemd/system/backup.service</span><br>
+<span class="ck">[Unit]</span><br>
+Description=<span class="cv">Daily backup job</span><br>
+<span class="gap"></span>
+<span class="ck">[Service]</span><br>
+Type=<span class="cv">oneshot</span><br>
+ExecStart=<span class="cv">/opt/backup.sh</span><br>
+User=<span class="cv">backup</span>
+        </div>
+        <div class="code" style="font-size:19.2px; margin-top:8px;">
+<span class="cc"># /etc/systemd/system/backup.timer</span><br>
+<span class="ck">[Unit]</span><br>
+Description=<span class="cv">Run backup daily</span><br>
+<span class="gap"></span>
+<span class="ck">[Timer]</span><br>
+OnCalendar=<span class="cv">*-*-* 02:00:00</span>  <span class="cc"> # daily 2am</span><br>
+Persistent=<span class="cv">true</span>             <span class="cc"> # catch missed</span><br>
+<span class="gap"></span>
+<span class="ck">[Install]</span><br>
+WantedBy=<span class="cv">timers.target</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># enable and start the timer</span><br>
+<span class="cp">$ </span><span class="cm">systemctl daemon-reload</span><br>
+<span class="cp">$ </span><span class="cm">systemctl enable</span> <span class="cf">--now</span> <span class="ca">backup.timer</span><br>
+<span class="gap"></span>
+<span class="cc"># list all active timers</span><br>
+<span class="cp">$ </span><span class="cm">systemctl list-timers</span><br>
+<span class="gap"></span>
+<span class="cc"># check logs — this is the big advantage</span><br>
+<span class="cp">$ </span><span class="cm">journalctl -u</span> <span class="ca">backup.service</span><br>
+<span class="cp">$ </span><span class="cm">journalctl -u</span> <span class="ca">backup.service</span> <span class="cf">--since</span> <span class="ca">"1 week ago"</span><br>
+<span class="gap"></span>
+<span class="cc"># run manually to test</span><br>
+<span class="cp">$ </span><span class="cm">systemctl start</span> <span class="ca">backup.service</span>
+      </div>
+      <div class="card">
+        <div class="ctitle">cron vs systemd timer</div>
+        <table class="ft">
+          <thead><tr><th></th><th>cron</th><th>systemd timer</th></tr></thead>
+          <tbody>
+            <tr><td style="color:#2f363d;">Logging</td><td style="color:var(--coral2);">Manual/syslog</td><td style="color:var(--lime2);">journalctl built-in</td></tr>
+            <tr><td style="color:#2f363d;">Missed runs</td><td style="color:var(--coral2);">Silently skipped</td><td style="color:var(--lime2);">Persistent=true</td></tr>
+            <tr><td style="color:#2f363d;">Dependencies</td><td style="color:var(--coral2);">None</td><td style="color:var(--lime2);">After=, Wants=</td></tr>
+            <tr><td style="color:#2f363d;">Syntax</td><td style="color:var(--lime2);">Simpler</td><td style="color:var(--coral2);">More verbose</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S9b SYSTEMD ONCALENDAR ═══ -->
+<div class="slide" id="s9b">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 15 — Theory</div>
+  <h2 style="margin-bottom: 22px;">systemd timer — <span class="l">OnCalendar</span> &amp; Monotonic</h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">OnCalendar syntax — and how to test it</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># format: DOW YYYY-MM-DD HH:MM:SS  (* = any)</span><br>
+<span class="ck">OnCalendar</span>=<span class="cv">Mon *-*-* 09:00:00</span>   <span class="cc"> # Mondays 09:00</span><br>
+<span class="ck">OnCalendar</span>=<span class="cv">*-*-01 00:00:00</span>      <span class="cc"> # 1st of month</span><br>
+<span class="ck">OnCalendar</span>=<span class="cv">*-*-* *:0/15:00</span>      <span class="cc"> # every 15 min</span><br>
+<span class="ck">OnCalendar</span>=<span class="cv">daily</span>                <span class="cc"> # shorthand</span><br>
+<span class="gap"></span>
+<span class="cc"># VALIDATE before you trust it:</span><br>
+<span class="cp">$ </span><span class="cm">systemd-analyze calendar</span> <span class="ca">"Mon *-*-* 09:00:00"</span><br>
+<span class="co">  Next elapse: Mon 2026-06-08 09:00:00 ...</span>
+        </div>
+      </div>
+      <div class="tip">
+        <strong style="color:var(--lime);">Shorthands:</strong> <code style="font-family:var(--mono);font-size:17.6px;">minutely · hourly · daily · weekly · monthly</code> — each expands to a full OnCalendar expression.
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Monotonic timers — relative to events</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="ck">[Timer]</span><br>
+<span class="ck">OnBootSec</span>=<span class="cv">15min</span>        <span class="cc"> # 15m after boot</span><br>
+<span class="ck">OnUnitActiveSec</span>=<span class="cv">1h</span>     <span class="cc"> # then hourly after</span><br>
+<span class="ck">RandomizedDelaySec</span>=<span class="cv">5m</span>  <span class="cc"> # jitter</span><br>
+<span class="ck">AccuracySec</span>=<span class="cv">1min</span>       <span class="cc"> # coalescing window</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Make it robust</div>
+        <div class="code" style="font-size:19.2px;">
+<span class="ck">Persistent</span>=<span class="cv">true</span>   <span class="cc"> # run missed jobs after downtime</span><br>
+<span class="cc"># alert on failure — in the .service:</span><br>
+<span class="ck">[Unit]</span><br>
+<span class="ck">OnFailure</span>=<span class="cv">notify-admin@%n.service</span><br>
+<span class="cp">$ </span><span class="cm">systemctl list-timers</span> <span class="cf">--all</span>
+        </div>
+      </div>
+      <div class="note">
+        <strong style="color:var(--teal);">Fleet killer feature:</strong> 500 servers with the same <code style="font-family:var(--mono);font-size:17.6px;">02:00:00</code> cron line all hit your backup host at once. <code style="font-family:var(--mono);font-size:17.6px;">RandomizedDelaySec</code> spreads the load automatically.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S10 EXAMPLE LVM ═══ -->
+<div class="slide" id="s10">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 16 — Real-world example</div>
+  <h2 style="margin-bottom: 22px;">Example: <span class="t">/var full → expand online</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Scenario — 3am alert: /var at 97%</div>
+        <p class="body" style="margin-bottom:12px;">Without LVM, you'd need to: schedule downtime, boot from live CD, resize partition, fsck, reboot. With LVM — zero downtime.</p>
+        <div style="display:flex;flex-direction:column;gap:0;">
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--b);font-size:20.8px;">
+            <span style="font-family:var(--mono);font-size:17.6px;color:var(--amber);width:16px;">1</span>
+            <span style="color:#2f363d;">Alert fires: /var at 97% capacity</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--b);font-size:20.8px;">
+            <span style="font-family:var(--mono);font-size:17.6px;color:var(--amber);width:16px;">2</span>
+            <span style="color:#2f363d;">Check: VG has 5GB free → <code style="font-size:17.6px;font-family:var(--mono);">vgdisplay</code></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--b);font-size:20.8px;">
+            <span style="font-family:var(--mono);font-size:17.6px;color:var(--amber);width:16px;">3</span>
+            <span style="color:#2f363d;"><code style="font-size:17.6px;font-family:var(--mono);">lvextend -L +5G</code> while /var is mounted</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--b);font-size:20.8px;">
+            <span style="font-family:var(--mono);font-size:17.6px;color:var(--amber);width:16px;">4</span>
+            <span style="color:#2f363d;"><code style="font-size:17.6px;font-family:var(--mono);">resize2fs</code> to fill the new space</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;font-size:20.8px;">
+            <span style="font-family:var(--mono);font-size:17.6px;color:var(--teal);width:16px;">5</span>
+            <span style="color:var(--teal2);">/var is now 45GB — no downtime, zero restarts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># full flow — under 2 minutes</span><br>
+<span class="cp">$ </span><span class="cm">df -h</span> <span class="ca">/var</span><br>
+<span class="co">  /dev/vg-main/lv-var   40G  38.8G  774M  98%  /var</span><br>
+<span class="gap"></span>
+<span class="cp">$ </span><span class="cm">vgs</span> <span class="ca">vg-main</span><br>
+<span class="co">  VG      #PV #LV  VFree</span><br>
+<span class="co">  vg-main   2   4  5.00g</span><br>
+<span class="gap"></span>
+<span class="cp">$ </span><span class="cm">lvextend</span> <span class="cf">-L +5G</span> <span class="ca">/dev/vg-main/lv-var</span><br>
+<span class="co">  Logical volume lv-var successfully resized</span><br>
+<span class="gap"></span>
+<span class="cp">$ </span><span class="cm">resize2fs</span> <span class="ca">/dev/vg-main/lv-var</span><br>
+<span class="co">  Filesystem on lv-var is now 11796480 (4k) blocks</span><br>
+<span class="gap"></span>
+<span class="cp">$ </span><span class="cm">df -h</span> <span class="ca">/var</span><br>
+<span class="co">  /dev/vg-main/lv-var   45G  38.8G  5.2G  88%  /var</span>
+      </div>
+      <div class="note">
+        <strong style="color:var(--teal);">Shortcut:</strong> <code style="font-family:var(--mono);font-size:17.6px;">lvextend -r -L +5G</code> — the <code style="font-family:var(--mono);font-size:17.6px;">-r</code> flag runs resize2fs automatically. One command does both steps.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S11 EXAMPLE: PINNING + TIMER ═══ -->
+<div class="slide" id="s11">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 17 — Real-world examples</div>
+  <h2 style="margin-bottom: 22px;">Examples: <span class="a">Pinning &amp; Timers</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Version pinning nginx on production</div>
+        <p class="body" style="font-size:20.8px;margin-bottom:10px;">Your app relies on nginx 1.24 behavior. A junior admin runs <code style="font-size:17.6px;font-family:var(--mono);">apt upgrade</code> and nginx jumps to 1.26 — breaking a rewrite rule.</p>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># pin BEFORE first unattended-upgrade runs</span><br>
+<span class="cp">$ </span><span class="cm">apt-mark hold</span> <span class="ca">nginx nginx-common</span><br>
+<span class="gap"></span>
+<span class="cc"># verify hold is active</span><br>
+<span class="cp">$ </span><span class="cm">apt-mark showhold</span><br>
+<span class="co">nginx</span><br>
+<span class="co">nginx-common</span><br>
+<span class="gap"></span>
+<span class="cc"># apt upgrade now skips nginx</span><br>
+<span class="cp">$ </span><span class="cm">apt upgrade</span><br>
+<span class="co">The following packages have been kept back:</span><br>
+<span class="co">  nginx nginx-common</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">systemd timer: better debug than cron</div>
+        <p class="body" style="font-size:20.8px;margin-bottom:10px;">Cron ran your backup script — did it succeed? With cron you check a log file manually. With systemd timer:</p>
+        <div class="code" style="font-size:19.2px;">
+<span class="cc"># exact status of last run</span><br>
+<span class="cp">$ </span><span class="cm">systemctl status</span> <span class="ca">backup.service</span><br>
+<span class="co">  Active: inactive (dead)</span><br>
+<span class="co">  Process: 4821 ExecStart=/opt/backup.sh</span><br>
+<span class="co">  Main PID: 4821 (code=exited, status=0/SUCCESS)</span><br>
+<span class="gap"></span>
+<span class="cc"># full output with timestamps</span><br>
+<span class="cp">$ </span><span class="cm">journalctl -u</span> <span class="ca">backup.service</span> <span class="cf">-n 30</span><br>
+<span class="co">May 02 02:00:01 srv01 backup.sh: Backup complete</span><br>
+<span class="co">May 02 02:00:01 srv01 systemd: backup.service: Deactivated</span><br>
+<span class="gap"></span>
+<span class="cc"># next scheduled run</span><br>
+<span class="cp">$ </span><span class="cm">systemctl list-timers</span> <span class="ca">backup.timer</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S12 LABS ═══ -->
+<div class="slide" id="s12">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 18 — Hands-on labs</div>
+  <h2 style="margin-bottom: 22px;">Lab <span class="l">Exercises</span></h2>
+  <div class="grid2" style="flex:1;gap:12px;">
+    <div class="lab-card">
+      <div class="lab-num" style="color:rgba(179,92,0,0.15);">01</div>
+      <div class="lab-title a">Create LVM, format, mount &amp; fstab</div>
+      <div class="lab-steps">
+        1. Add a virtual disk in VirtualBox/VMware (/dev/sdb)<br>
+        2. pvcreate → vgcreate vg-lab → lvcreate 10G lv-data<br>
+        3. mkfs.ext4 /dev/vg-lab/lv-data<br>
+        4. Mount to /mnt/data<br>
+        5. Add to /etc/fstab using UUID<br>
+        <em style="color:var(--dim);">Test: reboot and verify mount persists</em>
+      </div>
+    </div>
+    <div class="lab-card">
+      <div class="lab-num" style="color:rgba(15,118,110,0.15);">02</div>
+      <div class="lab-title t">Extend LV by 5GB — no umount</div>
+      <div class="lab-steps">
+        1. While lv-data is mounted, write a test file<br>
+        2. lvextend -r -L +5G /dev/vg-lab/lv-data<br>
+        3. Verify: df -h /mnt/data shows new size<br>
+        4. Confirm test file is still intact<br>
+        <em style="color:var(--dim);">The -r flag does resize2fs automatically</em>
+      </div>
+    </div>
+    <div class="lab-card">
+      <div class="lab-num" style="color:rgba(31,111,163,0.15);">03</div>
+      <div class="lab-title s">Install nginx, pin version</div>
+      <div class="lab-steps">
+        1. apt install nginx, note the version<br>
+        2. apt-mark hold nginx<br>
+        3. Run apt upgrade — nginx should be held back<br>
+        4. Verify: apt-mark showhold<br>
+        5. Unhold: apt-mark unhold nginx<br>
+        <em style="color:var(--dim);">Confirm apt upgrade now shows nginx updatable</em>
+      </div>
+    </div>
+    <div class="lab-card">
+      <div class="lab-num" style="color:rgba(77,124,15,0.15);">04</div>
+      <div class="lab-title l">Cron job — timestamp every minute</div>
+      <div class="lab-steps">
+        1. crontab -e<br>
+        2. Add: */1 * * * * date &gt;&gt; /tmp/timestamps.log<br>
+        3. Wait 5 minutes<br>
+        4. cat /tmp/timestamps.log — should have 5 lines<br>
+        5. Convert to systemd timer (bonus)<br>
+        <em style="color:var(--dim);">Explain: why can't you do */1 in systemd OnCalendar for sub-minute?</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S12b LABS II ═══ -->
+<div class="slide" id="s12b">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 19 — Hands-on labs</div>
+  <h2 style="margin-bottom: 22px;">Lab <span class="l">Exercises II</span></h2>
+  <div class="grid2" style="flex:1;gap:12px;">
+    <div class="lab-card">
+      <div class="lab-num" style="color:rgba(179,92,0,0.15);">05</div>
+      <div class="lab-title a">LVM snapshot → safe rollback</div>
+      <div class="lab-steps">
+        1. lvcreate -L 2G -s -n snap /dev/vg-lab/lv-data<br>
+        2. Write then delete some files on lv-data<br>
+        3. lvconvert --merge to roll back<br>
+        4. Verify files returned to the snapshot state<br>
+        <em style="color:var(--dim);">Watch the COW fill up with lvs while you write</em>
+      </div>
+    </div>
+    <div class="lab-card">
+      <div class="lab-num" style="color:rgba(15,118,110,0.15);">06</div>
+      <div class="lab-title t">Shrink an ext4 LV safely</div>
+      <div class="lab-steps">
+        1. umount the test volume<br>
+        2. e2fsck -f, then resize2fs to 2G<br>
+        3. lvreduce -L 2G<br>
+        4. Remount and confirm data is intact<br>
+        <em style="color:var(--dim);">Use a SCRATCH volume — wrong order destroys data</em>
+      </div>
+    </div>
+    <div class="lab-card">
+      <div class="lab-num" style="color:rgba(31,111,163,0.15);">07</div>
+      <div class="lab-title s">Add a 1GB swap file</div>
+      <div class="lab-steps">
+        1. fallocate → chmod 600 → mkswap → swapon<br>
+        2. Verify with swapon --show and free -h<br>
+        3. Add the line to /etc/fstab<br>
+        4. swapoff, then mount -a to re-enable<br>
+        <em style="color:var(--dim);">Why chmod 600? Swap can hold sensitive memory</em>
+      </div>
+    </div>
+    <div class="lab-card">
+      <div class="lab-num" style="color:rgba(77,124,15,0.15);">08</div>
+      <div class="lab-title l">Cron PATH bug → fix → systemd</div>
+      <div class="lab-steps">
+        1. Write a job using a bare command — watch it fail<br>
+        2. Add PATH + absolute paths; confirm it runs<br>
+        3. Add MAILTO and 2&gt;&amp;1 logging<br>
+        4. Re-implement it as a .service + .timer<br>
+        <em style="color:var(--dim);">Compare: /var/log/syslog vs journalctl -u</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S13 SUMMARY ═══ -->
+<div class="slide" id="s13">
+  <div class="lbl"><span class="lbl-pip"></span>Slide 20 — Summary</div>
+  <h2 style="margin-bottom: 24px;">Key <span class="a">Takeaways</span></h2>
+  <div class="grid2" style="flex:1;gap:14px;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card" style="border-left:2px solid var(--amber);">
+        <p class="body"><strong style="color:var(--text);">Pin before you upgrade.</strong> Version holds are free. Unplanned package upgrades in production are not. Make pinning a default habit for critical services.</p>
+      </div>
+      <div class="card" style="border-left:2px solid var(--teal);">
+        <p class="body"><strong style="color:var(--text);">LVM is the standard.</strong> Any server that might need more disk space should use LVM. Resizing online is the difference between a 2-minute fix and a maintenance window.</p>
+      </div>
+      <div class="card" style="border-left:2px solid var(--slate);">
+        <p class="body"><strong style="color:var(--text);">UUID in fstab, always.</strong> /dev/sdb can become /dev/sdc after a reboot. UUIDs never change. A bad fstab entry can prevent boot.</p>
+      </div>
+      <div class="card" style="border-left:2px solid var(--lime);">
+        <p class="body"><strong style="color:var(--text);">systemd timer for new work.</strong> When writing new scheduled tasks, prefer systemd timers. journalctl integration makes debugging 10x easier than reading syslog.</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Commands to memorize</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;">
+          <span class="tag ta">apt-mark hold</span>
+          <span class="tag ta">apt show</span>
+          <span class="tag ta">dpkg -L</span>
+          <span class="tag ta">apt-cache policy</span>
+          <span class="tag tt">lvcreate</span>
+          <span class="tag tt">lvextend -r</span>
+          <span class="tag tt">lvcreate -s</span>
+          <span class="tag tt">lvreduce</span>
+          <span class="tag tt">vgdisplay</span>
+          <span class="tag tt">resize2fs</span>
+          <span class="tag ts">lsblk</span>
+          <span class="tag ts">blkid</span>
+          <span class="tag ts">parted</span>
+          <span class="tag ts">mount -a</span>
+          <span class="tag tl">crontab -e</span>
+          <span class="tag tl">flock</span>
+          <span class="tag tl">systemctl list-timers</span>
+          <span class="tag tl">systemd-analyze calendar</span>
+          <span class="tag tl">journalctl -u</span>
+        </div>
+      </div>
+      <div class="warn">
+        <strong style="color:var(--amber);">4 things that break systems:</strong><br>
+        1. <code style="font-size:17.6px;font-family:var(--mono);">apt upgrade</code> without pinning critical services<br>
+        2. /dev/sdX in fstab instead of UUID<br>
+        3. No <code style="font-size:17.6px;font-family:var(--mono);">mount -a</code> test before reboot<br>
+        4. Cron output going to /dev/null — errors silently lost<br>
+        5. <code style="font-size:17.6px;font-family:var(--mono);">lvreduce</code> before shrinking the filesystem — instant data loss
+      </div>
+      <div class="note">
+        <strong style="color:var(--teal);">Next session:</strong> Monitoring &amp; observability — metrics, alerting, log aggregation.
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<nav class="nav">
+  <button class="nbtn" onclick="go(-1)">&#8592;</button>
+  <div class="dots" id="dots"></div>
+  <span class="ncnt" id="cnt">1 / 20</span>
+  <button class="nbtn" onclick="go(1)">&#8594;</button>
+</nav>
+<div class="kbhint">← → chuyển slide · F toàn màn hình</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const N = slides.length;
+let cur = 0;
+const dotsEl = document.getElementById('dots');
+const cntEl  = document.getElementById('cnt');
+const prog   = document.getElementById('progress');
+
+for (let i = 0; i < N; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' on' : '');
+  d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+}
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  dotsEl.children[cur].classList.remove('on');
+  cur = Math.max(0, Math.min(n, N - 1));
+  slides[cur].style.display = 'flex';
+  requestAnimationFrame(() => requestAnimationFrame(() => slides[cur].classList.add('active')));
+  dotsEl.children[cur].classList.add('on');
+  cntEl.textContent = (cur + 1) + ' / ' + N;
+  prog.style.width = ((cur + 1) / N * 100) + '%';
+}
+
+function go(d) { goTo(cur + d); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+  if (e.key === 'Home') goTo(0);
+  if (e.key === 'End')  goTo(N - 1);
+});
+
+function fit(){ const k=Math.min(innerWidth/1600, innerHeight/900); document.documentElement.style.setProperty('--k',k); }
+addEventListener('resize',fit); fit();
+let idleT; function wake(){ document.body.classList.remove('idle'); clearTimeout(idleT); idleT=setTimeout(()=>document.body.classList.add('idle'),2500); }
+addEventListener('mousemove',wake); wake();
+document.addEventListener('keydown', e => {
+  if (e.key==='f'||e.key==='F') { if(!document.fullscreenElement) document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+  if (e.key===' '||e.key==='PageDown') { e.preventDefault(); go(1); }
+  if (e.key==='PageUp') go(-1);
+});
+goTo(0);
+</script>
+</body>
+</html>
