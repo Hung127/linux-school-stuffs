@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 01 — Linux Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Fraunces:ital,wght@0,300;0,600;0,700;1,300;1,600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0d12;
+  --surface: #111620;
+  --surface2: #161c28;
+  --border: #1e2840;
+  --teal: #00c9a7;
+  --teal-dim: #007d68;
+  --teal-glow: rgba(0,201,167,0.12);
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --purple: #a78bfa;
+  --white: #f0f4f8;
+  --muted: #64748b;
+  --text: #cbd5e1;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Fraunces', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ── SLIDE ENGINE ── */
+.deck { width: 100vw; height: 100vh; position: relative; }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  overflow: hidden;
+}
+.slide.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── NAV ── */
+.nav {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  z-index: 100;
+  background: rgba(10,13,18,0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 0.5rem 1.25rem;
+}
+.nav-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nav-btn:hover { border-color: var(--teal); color: var(--teal); }
+.slide-counter {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 60px;
+  text-align: center;
+}
+.progress-dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.dot.active { background: var(--teal); width: 18px; border-radius: 3px; }
+
+/* ── COMMON ELEMENTS ── */
+.tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--teal);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.mono { font-family: 'IBM Plex Mono', monospace; }
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  background: rgba(0,201,167,0.08);
+  color: var(--teal);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* ─────────────────────────────────────────
+   SLIDE 1 — TITLE
+───────────────────────────────────────── */
+#s1 { background: var(--bg); justify-content: center; align-items: center; }
+
+.s1-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.3;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+}
+.s1-glow {
+  position: absolute;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,201,167,0.06) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+.s1-content {
+  position: relative;
+  text-align: center;
+  z-index: 1;
+  animation: fadeUp 0.8s ease forwards;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.s1-session {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--teal);
+  margin-bottom: 1.5rem;
+}
+.s1-title {
+  font-size: clamp(48px, 7vw, 82px);
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.05;
+  margin-bottom: 1.25rem;
+  letter-spacing: -0.02em;
+}
+.s1-title em { color: var(--teal); font-style: normal; }
+.s1-sub {
+  font-size: 18px;
+  color: var(--muted);
+  font-style: italic;
+  font-weight: 300;
+  margin-bottom: 2.5rem;
+}
+.s1-chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 5px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.chip.hi { border-color: var(--teal-dim); color: var(--teal); }
+
+/* ─────────────────────────────────────────
+   SLIDE 2 — STORY HOOK
+───────────────────────────────────────── */
+#s2 {
+  background: var(--bg);
+  padding: 0;
+  flex-direction: row;
+}
+.s2-left {
+  width: 42%;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 3rem;
+}
+.s2-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 3.5rem;
+}
+.terminal-box {
+  background: #050709;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+}
+.term-bar {
+  background: #111620;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.term-dot { width: 10px; height: 10px; border-radius: 50%; }
+.term-body { padding: 1.25rem 1.5rem; line-height: 2; }
+.term-prompt { color: var(--teal); }
+.term-cmd { color: var(--white); }
+.term-out { color: var(--muted); }
+.term-err { color: var(--red); }
+.term-hi { color: var(--amber); }
+.blink { animation: blink 1s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ─────────────────────────────────────────
+   SLIDE 3 — UNIX HISTORY
+───────────────────────────────────────── */
+#s3 {
+  background: var(--bg);
+  padding: 3.5rem 5rem;
+  justify-content: center;
+}
+.timeline {
+  position: relative;
+  margin-top: 2.5rem;
+}
+.tl-line {
+  position: absolute;
+  top: 28px;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--teal-dim), var(--teal), var(--teal-dim));
+}
+.tl-events {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+.tl-event {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  flex: 1;
+}
+.tl-dot {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--teal-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--teal);
+  font-weight: 600;
+  transition: all 0.3s;
+  z-index: 1;
+  margin-bottom: 1rem;
+}
+.tl-event:hover .tl-dot, .tl-event.active .tl-dot {
+  background: var(--teal);
+  color: var(--bg);
+  border-color: var(--teal);
+  transform: scale(1.15);
+  box-shadow: 0 0 20px rgba(0,201,167,0.35);
+}
+.tl-label {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  max-width: 120px;
+  line-height: 1.5;
+  transition: color 0.3s;
+}
+.tl-event:hover .tl-label, .tl-event.active .tl-label { color: var(--white); }
+
+.tl-detail {
+  margin-top: 2.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--teal);
+  border-radius: 10px;
+  padding: 1.75rem 2rem;
+  min-height: 140px;
+  transition: all 0.3s;
+}
+.tl-detail h3 {
+  font-size: 20px;
+  color: var(--white);
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+}
+.tl-detail p { font-size: 15px; color: var(--text); line-height: 1.7; }
+.tl-detail .impact {
+  margin-top: 0.75rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--teal);
+}
+
+/* ─────────────────────────────────────────
+   SLIDE 4 — ARCHITECTURE LAYERS
+───────────────────────────────────────── */
+#s4 {
+  background: var(--bg);
+  padding: 3rem 5rem;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 3rem;
+}
+.layers-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
+}
+.layer {
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.25s;
+  position: relative;
+}
+.layer:hover, .layer.active {
+  transform: translateX(8px);
+}
+.layer-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.layer-desc { font-size: 12px; color: var(--muted); }
+.layer-apps  { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.25); }
+.layer-apps .layer-name { color: #60a5fa; }
+.layer-shell { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.25); }
+.layer-shell .layer-name { color: #4ade80; }
+.layer-libs  { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); }
+.layer-libs .layer-name { color: #fbbf24; }
+.layer-kernel{ background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); }
+.layer-kernel .layer-name { color: #f87171; }
+.layer-hw    { background: rgba(167,139,250,0.08); border-color: rgba(167,139,250,0.25); }
+.layer-hw .layer-name { color: #c4b5fd; }
+
+.layer-arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  color: var(--teal-dim);
+  font-size: 18px;
+}
+
+.layer-detail-col {
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.layer-detail-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  min-height: 320px;
+}
+.ld-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; }
+.ld-title { font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 0.75rem; }
+.ld-body { font-size: 14px; line-height: 1.75; color: var(--text); }
+.ld-example {
+  margin-top: 1rem;
+  background: #050709;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--teal);
+  line-height: 1.8;
+}
+.ld-syscall {
+  margin-top: 1rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ─────────────────────────────────────────
+   SLIDE 5 — DISTROS
+───────────────────────────────────────── */
+#s5 { background: var(--bg); padding: 3rem 4rem; }
+.distros-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-top: 2rem;
+}
+.distro-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+.distro-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.distro-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--border);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+.d-ubuntu::before { background: #e95420; }
+.d-debian::before { background: #d70a53; }
+.d-rocky::before  { background: #10b981; }
+.d-alpine::before { background: #0d597f; }
+.d-kali::before   { background: #268bd2; }
+
+.d-ubuntu:hover { border-color: #e95420; }
+.d-debian:hover { border-color: #d70a53; }
+.d-rocky:hover  { border-color: #10b981; }
+.d-alpine:hover { border-color: #0d597f; }
+.d-kali:hover   { border-color: #268bd2; }
+
+.distro-icon { font-size: 32px; margin-bottom: 0.75rem; }
+.distro-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 0.5rem;
+}
+.distro-use {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+.distro-tag {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  letter-spacing: 0.05em;
+}
+.distro-case {
+  margin-top: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+}
+.distro-case h4 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.distro-case p { font-size: 13px; line-height: 1.7; }
+
+/* ─────────────────────────────────────────
+   SLIDE 6 — FHS
+───────────────────────────────────────── */
+#s6 { background: var(--bg); padding: 2.5rem 4rem; }
+.fhs-layout { display: flex; gap: 2rem; margin-top: 1.5rem; height: calc(100% - 100px); }
+.fhs-tree {
+  width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  overflow-y: auto;
+}
+.fhs-tree-item {
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fhs-tree-item:hover { background: var(--surface2); color: var(--teal); }
+.fhs-tree-item.sel { background: rgba(0,201,167,0.1); color: var(--teal); }
+.fhs-tree-item .icon { font-size: 14px; }
+
+.fhs-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.fhs-info {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.75rem;
+  flex: 1;
+}
+.fhs-path {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--teal);
+  margin-bottom: 0.5rem;
+}
+.fhs-desc { font-size: 15px; line-height: 1.75; margin-bottom: 1rem; }
+.fhs-files {
+  background: #050709;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 2;
+}
+.fhs-warn {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--amber);
+}
+.fhs-virtual {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #f87171;
+}
+
+/* ─────────────────────────────────────────
+   SLIDE 7 — BOOT SEQUENCE (interactive)
+───────────────────────────────────────── */
+#s7 { background: var(--bg); padding: 3rem 4.5rem; }
+.boot-steps {
+  display: flex;
+  gap: 0;
+  margin-top: 2rem;
+  position: relative;
+}
+.boot-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+.boot-connector {
+  position: absolute;
+  top: 24px;
+  left: 50%; right: -50%;
+  height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+.boot-step:last-child .boot-connector { display: none; }
+.boot-step.done .boot-connector { background: var(--teal); }
+
+.boot-num {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px; font-weight: 600;
+  color: var(--muted);
+  z-index: 1;
+  transition: all 0.35s;
+  margin-bottom: 0.75rem;
+}
+.boot-step.active .boot-num {
+  border-color: var(--teal);
+  background: rgba(0,201,167,0.12);
+  color: var(--teal);
+  box-shadow: 0 0 16px rgba(0,201,167,0.3);
+}
+.boot-step.done .boot-num {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: var(--bg);
+}
+.boot-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  transition: color 0.3s;
+}
+.boot-step.active .boot-label { color: var(--teal); font-weight: 600; }
+.boot-step.done .boot-label { color: var(--text); }
+
+.boot-detail {
+  margin-top: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--teal);
+  border-radius: 10px;
+  padding: 1.75rem 2rem;
+}
+.bd-title { font-size: 20px; font-weight: 700; color: var(--white); margin-bottom: 0.5rem; }
+.bd-story { font-size: 14px; line-height: 1.75; margin-bottom: 1rem; }
+.bd-cmd {
+  background: #050709;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--teal);
+  line-height: 1.8;
+}
+.boot-nav-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 1.25rem;
+}
+.boot-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.boot-btn:hover { border-color: var(--teal); color: var(--teal); }
+.boot-btn.primary { border-color: var(--teal); color: var(--teal); background: rgba(0,201,167,0.08); }
+
+/* ─────────────────────────────────────────
+   SLIDE 8 — CASE STUDY: NETFLIX 3AM
+───────────────────────────────────────── */
+#s8 { background: var(--bg); padding: 0; flex-direction: row; }
+.s8-left {
+  width: 38%;
+  background: linear-gradient(135deg, #0a0d12 0%, #0f1520 100%);
+  border-right: 1px solid var(--border);
+  padding: 3.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.incident-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 100px;
+  padding: 4px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--red);
+  margin-bottom: 1.5rem;
+  width: fit-content;
+}
+.inc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.s8-right {
+  flex: 1;
+  padding: 3rem 3rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.timeline-incident {
+  position: relative;
+  padding-left: 2rem;
+}
+.timeline-incident::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 8px; bottom: 8px;
+  width: 1px;
+  background: var(--border);
+}
+.inc-event {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+.inc-event::before {
+  content: '';
+  position: absolute;
+  left: -1.65rem;
+  top: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.inc-event.crit::before { background: var(--red); }
+.inc-event.info::before { background: var(--teal); }
+.inc-event.fix::before  { background: var(--green); }
+.inc-time {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.inc-desc { font-size: 13px; line-height: 1.6; }
+.inc-cmd {
+  margin-top: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  color: var(--teal);
+  background: #050709;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+/* ─────────────────────────────────────────
+   SLIDE 9 — SYSTEMD
+───────────────────────────────────────── */
+#s9 { background: var(--bg); padding: 2.5rem 4rem; flex-direction: row; gap: 2.5rem; align-items: stretch; }
+.systemd-units {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+.unit-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.unit-card:hover, .unit-card.active {
+  border-color: var(--teal);
+  background: rgba(0,201,167,0.06);
+}
+.unit-type {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--teal);
+  margin-bottom: 3px;
+}
+.unit-mini { font-size: 11.5px; color: var(--muted); }
+
+.systemd-main { flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+.cmd-terminal {
+  background: #050709;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 1;
+}
+.cmd-list {
+  padding: 1.25rem 1.5rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  line-height: 2.2;
+}
+.cmd-row { display: flex; gap: 1rem; align-items: baseline; cursor: pointer; border-radius: 4px; padding: 0 4px; transition: background 0.15s; }
+.cmd-row:hover { background: rgba(255,255,255,0.03); }
+.cmd-name { color: var(--teal); min-width: 320px; }
+.cmd-note { color: var(--muted); font-size: 12px; }
+.cmd-row.highlight .cmd-name { color: var(--amber); }
+
+.unit-detail-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+.ud-title { font-size: 16px; font-weight: 700; color: var(--white); margin-bottom: 0.5rem; }
+.ud-body { font-size: 13px; line-height: 1.7; }
+.ud-file {
+  margin-top: 0.75rem;
+  background: #050709;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.ud-file .key { color: var(--blue); }
+.ud-file .val { color: var(--green); }
+.ud-file .comment { color: #374151; }
+
+/* ─────────────────────────────────────────
+   SLIDE 10 — LIVE QUIZ
+───────────────────────────────────────── */
+#s10 { background: var(--bg); padding: 3rem 5rem; }
+.quiz-wrap {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.quiz-q {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+}
+.q-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+.q-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-opt {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.q-opt:hover { border-color: var(--teal); color: var(--teal); }
+.q-opt.correct { border-color: var(--green); background: rgba(34,197,94,0.1); color: var(--green); }
+.q-opt.wrong { border-color: var(--red); background: rgba(239,68,68,0.1); color: var(--red); }
+.q-feedback {
+  margin-top: 0.75rem;
+  font-size: 13px;
+  line-height: 1.6;
+  display: none;
+}
+.q-feedback.show { display: block; }
+.q-feedback.ok { color: var(--green); }
+.q-feedback.no { color: #f87171; }
+
+/* ─────────────────────────────────────────
+   SLIDE 11 — LAB
+───────────────────────────────────────── */
+#s11 { background: var(--bg); padding: 3rem 4rem; }
+.labs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 1.75rem;
+}
+.lab-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.lab-card:hover { border-color: var(--teal-dim); }
+.lab-header {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lab-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(0,201,167,0.12);
+  border: 1px solid var(--teal-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--teal);
+}
+.lab-title { font-size: 14px; font-weight: 600; color: var(--white); }
+.lab-body { padding: 1.25rem 1.5rem; }
+.lab-task {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  align-items: flex-start;
+}
+.lab-task::before { content: '→'; color: var(--teal-dim); flex-shrink: 0; margin-top: 1px; }
+.lab-cmd {
+  margin-top: 10px;
+  background: #050709;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  color: var(--teal);
+  line-height: 1.9;
+}
+
+/* ─────────────────────────────────────────
+   SLIDE 12 — CLOSE / NEXT
+───────────────────────────────────────── */
+#s12 {
+  background: var(--bg);
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.s12-wrap { position: relative; z-index: 1; }
+.s12-glow {
+  position: absolute;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0,201,167,0.07) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+.s12-tag { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--teal); margin-bottom: 1rem; }
+.s12-title { font-size: 48px; font-weight: 700; color: var(--white); margin-bottom: 1rem; }
+.s12-sub { font-size: 16px; color: var(--muted); font-style: italic; margin-bottom: 3rem; }
+.s12-next {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 2.5rem;
+  display: inline-block;
+  text-align: left;
+  max-width: 500px;
+  width: 100%;
+}
+.s12-next h4 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber); margin-bottom: 0.75rem; }
+.s12-next-items { display: flex; flex-direction: column; gap: 6px; }
+.s12-ni { font-size: 14px; display: flex; gap: 8px; align-items: baseline; }
+.s12-ni::before { content: '▸'; color: var(--teal); flex-shrink: 0; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+<!-- ══════════════════════════════════════
+     SLIDE 1 — TITLE
+══════════════════════════════════════ -->
+<div class="slide active" id="s1">
+  <div class="s1-grid"></div>
+  <div class="s1-glow"></div>
+  <div class="s1-content">
+    <div class="s1-session">SESSION 01 · LINUX OS & APPLICATIONS</div>
+    <h1 class="s1-title">Linux<br><em>Architecture</em></h1>
+    <p class="s1-sub">Kernel · Shell · Filesystem · Boot Process</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 2 — STORY HOOK
+══════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="s2-left">
+    <div class="tag">The scene</div>
+    <h2 style="font-size:32px;font-weight:700;color:var(--white);line-height:1.25;margin-bottom:1.25rem;">It's 3:07 AM.<br>Your phone rings.</h2>
+    <p style="font-size:15px;line-height:1.8;margin-bottom:1.25rem;">The payment service is down. 50,000 transactions per minute — stopped. Your job tonight is to find out why and fix it, on a Linux server you've never touched before.</p>
+    <p style="font-size:15px;line-height:1.8;color:var(--muted);">Everything you need to know to survive this is what we cover today. By the end of this session, you'll understand exactly what's happening on that screen.</p>
+    <div style="margin-top:1.5rem;padding:12px 16px;background:rgba(0,201,167,0.06);border:1px solid var(--teal-dim);border-radius:8px;">
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal);">↳ Based on a real incident at a Vietnamese fintech company, 2023</p>
+    </div>
+  </div>
+  <div class="s2-right">
+    <div class="terminal-box">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57"></div>
+        <div class="term-dot" style="background:#febc2e"></div>
+        <div class="term-dot" style="background:#28c840"></div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-left:8px;">prod-payment-01 — ssh</span>
+      </div>
+      <div class="term-body">
+        <div><span class="term-prompt">devops@prod-payment-01:~$</span> <span class="term-cmd">systemctl status payment-api</span></div>
+        <div class="term-err">● payment-api.service - Payment Gateway API</div>
+        <div class="term-err">&nbsp;&nbsp;&nbsp;Loaded: loaded (/etc/systemd/system/payment-api.service)</div>
+        <div class="term-err">&nbsp;&nbsp;&nbsp;Active: <span style="color:#ef4444;font-weight:600;">failed</span> (Result: exit-code) since 03:01:44</div>
+        <div class="term-err">&nbsp;&nbsp;Process: ExecStart=/opt/payment/app (code=exited, status=1)</div>
+        <div>&nbsp;</div>
+        <div><span class="term-prompt">devops@prod-payment-01:~$</span> <span class="term-cmd">journalctl -u payment-api -n 20</span></div>
+        <div class="term-hi">Mar 15 03:01:44 app[8921]: Error: ENOSPC: no space left on device</div>
+        <div class="term-err">Mar 15 03:01:44 systemd[1]: payment-api.service: Main process exited</div>
+        <div>&nbsp;</div>
+        <div><span class="term-prompt">devops@prod-payment-01:~$</span> <span class="term-cmd">df -h /var</span></div>
+        <div class="term-err">Filesystem&nbsp;&nbsp;Size&nbsp;&nbsp;Used Avail Use%</div>
+        <div class="term-err">/dev/sda2&nbsp;&nbsp;&nbsp;20G&nbsp;&nbsp;&nbsp;20G&nbsp;&nbsp;&nbsp;&nbsp;0 <span style="color:#ef4444;font-weight:600;">100%</span> /var</div>
+        <div>&nbsp;</div>
+        <div><span class="term-prompt">devops@prod-payment-01:~$</span> <span class="blink">_</span></div>
+      </div>
+    </div>
+    <p style="margin-top:1rem;font-size:13px;color:var(--muted);text-align:center;font-style:italic;">The disk is full. But how? Where? And what's /var anyway?<br>You'll know by the end of this session.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 3 — UNIX HISTORY
+══════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div style="padding:3.5rem 5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Unix history & FOSS philosophy</div>
+    <h2 style="font-size:30px;font-weight:700;color:var(--white);">From a Bell Labs skunkworks project to powering the internet</h2>
+
+    <div class="timeline">
+      <div class="tl-line"></div>
+      <div class="tl-events">
+        <div class="tl-event active" onclick="showTlEvent(0,this)">
+          <div class="tl-dot">1969</div>
+          <div class="tl-label">Unix born<br>at Bell Labs</div>
+        </div>
+        <div class="tl-event" onclick="showTlEvent(1,this)">
+          <div class="tl-dot">1983</div>
+          <div class="tl-label">GNU Project<br>by Stallman</div>
+        </div>
+        <div class="tl-event" onclick="showTlEvent(2,this)">
+          <div class="tl-dot">1991</div>
+          <div class="tl-label">Linux kernel<br>0.01 by Linus</div>
+        </div>
+        <div class="tl-event" onclick="showTlEvent(3,this)">
+          <div class="tl-dot">2004</div>
+          <div class="tl-label">Ubuntu<br>first release</div>
+        </div>
+        <div class="tl-event" onclick="showTlEvent(4,this)">
+          <div class="tl-dot">Today</div>
+          <div class="tl-label">96% of top<br>500 servers</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-detail" id="tl-detail">
+      <h3>Unix at Bell Labs (1969)</h3>
+      <p>Ken Thompson and Dennis Ritchie built Unix at AT&T Bell Labs as an OS for the PDP-7. They invented the C programming language specifically to rewrite it — and that decision shaped every OS that followed. Unix introduced pipes, a hierarchical filesystem, and the "everything is a file" philosophy.</p>
+      <div class="impact">↳ Real impact: the pipe operator | you use every day was invented here.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 4 — ARCHITECTURE LAYERS
+══════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div style="padding:2.5rem 4rem 1rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Kernel space · User space · Shell</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);margin-bottom:0.25rem;">How Linux is structured — click a layer to explore</h2>
+    <div style="display:flex;gap:2rem;flex:1;min-height:0;margin-top:1.25rem;">
+      <div class="layers-col">
+        <div class="layer layer-apps active" onclick="showLayer('apps',this)">
+          <div class="layer-name">Applications</div>
+          <div class="layer-desc">Browser, editor, your Python script, nginx</div>
+        </div>
+        <div style="text-align:center;color:var(--teal-dim);font-size:18px;">⇅</div>
+        <div class="layer layer-shell" onclick="showLayer('shell',this)">
+          <div class="layer-name">Shell (bash / zsh)</div>
+          <div class="layer-desc">Interprets commands, calls kernel via syscalls</div>
+        </div>
+        <div style="text-align:center;color:var(--teal-dim);font-size:18px;">⇅</div>
+        <div class="layer layer-libs" onclick="showLayer('libs',this)">
+          <div class="layer-name">System Libraries</div>
+          <div class="layer-desc">glibc — wraps syscalls into usable C functions</div>
+        </div>
+        <div style="text-align:center;color:var(--teal-dim);font-size:18px;">⇅</div>
+        <div class="layer layer-kernel" onclick="showLayer('kernel',this)">
+          <div class="layer-name">Kernel</div>
+          <div class="layer-desc">Memory, scheduling, drivers, syscall gateway</div>
+        </div>
+        <div style="text-align:center;color:var(--teal-dim);font-size:18px;">⇅</div>
+        <div class="layer layer-hw" onclick="showLayer('hw',this)">
+          <div class="layer-name">Hardware</div>
+          <div class="layer-desc">CPU · RAM · Disk · NIC · Devices</div>
+        </div>
+      </div>
+      <div class="layer-detail-col">
+        <div class="layer-detail-box" id="layer-detail-box">
+          <div class="ld-tag" style="color:#60a5fa;">Applications</div>
+          <div class="ld-title">User Space</div>
+          <div class="ld-body">Applications run in user space — they cannot directly touch hardware. If your app crashes, the kernel kills the process. The rest of the system keeps running. This isolation is why a crashing browser doesn't take down your whole machine.</div>
+          <div class="ld-example">$ ps aux | grep nginx<br>nginx  1234  0.0  nginx: master process<br>nginx  1235  0.0  nginx: worker process</div>
+          <div class="ld-syscall">Every file read, network call, and fork goes through syscalls ↓</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 5 — DISTROS
+══════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div style="padding:2.5rem 4rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Linux distributions</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">Same kernel, very different choices — hover to explore</h2>
+    <div class="distros-grid">
+      <div class="distro-card d-ubuntu">
+        <div class="distro-icon">🟠</div>
+        <div class="distro-name">Ubuntu LTS</div>
+        <div class="distro-use">Servers, beginners, broad package support, 5-year security updates</div>
+        <span class="distro-tag" style="background:rgba(233,84,32,0.15);color:#e95420;border:1px solid rgba(233,84,32,0.3);">Our lab distro</span>
+      </div>
+      <div class="distro-card d-debian">
+        <div class="distro-icon">🔴</div>
+        <div class="distro-name">Debian</div>
+        <div class="distro-use">Extreme stability, minimal bloat, the base for Ubuntu. Battle-tested for production</div>
+        <span class="distro-tag" style="background:rgba(215,10,83,0.15);color:#d70a53;border:1px solid rgba(215,10,83,0.3);">Rock stable</span>
+      </div>
+      <div class="distro-card d-rocky">
+        <div class="distro-icon">🟢</div>
+        <div class="distro-name">Rocky Linux</div>
+        <div class="distro-use">1:1 RHEL compatible. Enterprise banking, government, telecoms. Free RHEL replacement</div>
+        <span class="distro-tag" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);">Enterprise</span>
+      </div>
+      <div class="distro-card d-alpine">
+        <div class="distro-icon">🔵</div>
+        <div class="distro-name">Alpine Linux</div>
+        <div class="distro-use">Under 5 MB. Ships in Docker containers at most cloud companies. Security-hardened by default</div>
+        <span class="distro-tag" style="background:rgba(13,89,127,0.15);color:#0d93d4;border:1px solid rgba(13,89,127,0.3);">&lt; 5 MB</span>
+      </div>
+      <div class="distro-card d-kali">
+        <div class="distro-icon">🖤</div>
+        <div class="distro-name">Kali Linux</div>
+        <div class="distro-use">600+ preinstalled security tools. Used by pentesters, CTF players, red teams</div>
+        <span class="distro-tag" style="background:rgba(38,139,210,0.15);color:#268bd2;border:1px solid rgba(38,139,210,0.3);">Security</span>
+      </div>
+    </div>
+    <div class="distro-case">
+      <h4>🏢 Real company choices</h4>
+      <p>Facebook runs <strong style="color:var(--white);">CentOS→Rocky</strong> on bare metal. Google uses an internal distro based on Gentoo. Shopify runs <strong style="color:var(--white);">Ubuntu LTS</strong> for developer machines. Banks in Vietnam typically run <strong style="color:var(--white);">RHEL or Rocky</strong> for regulatory compliance. Your university lab — Ubuntu 22.04, because it has the best documentation and community for learning.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 6 — FHS
+══════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div style="padding:2.5rem 4rem 1.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Filesystem Hierarchy Standard</div>
+    <h2 style="font-size:24px;font-weight:700;color:var(--white);">A map of the Linux filesystem — click any directory</h2>
+    <div class="fhs-layout">
+      <div class="fhs-tree">
+        <div style="color:var(--muted);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">/  (root)</div>
+        <div class="fhs-tree-item sel" onclick="showFhs('etc',this)"><span class="icon">⚙</span> /etc</div>
+        <div class="fhs-tree-item" onclick="showFhs('var',this)"><span class="icon">📊</span> /var</div>
+        <div class="fhs-tree-item" onclick="showFhs('bin',this)"><span class="icon">⚡</span> /bin &amp; /usr/bin</div>
+        <div class="fhs-tree-item" onclick="showFhs('home',this)"><span class="icon">🏠</span> /home</div>
+        <div class="fhs-tree-item" onclick="showFhs('proc',this)"><span class="icon">🔬</span> /proc</div>
+        <div class="fhs-tree-item" onclick="showFhs('sys',this)"><span class="icon">🔧</span> /sys</div>
+        <div class="fhs-tree-item" onclick="showFhs('tmp',this)"><span class="icon">🗑</span> /tmp</div>
+        <div class="fhs-tree-item" onclick="showFhs('opt',this)"><span class="icon">📦</span> /opt</div>
+        <div class="fhs-tree-item" onclick="showFhs('dev',this)"><span class="icon">💾</span> /dev</div>
+      </div>
+      <div class="fhs-detail" id="fhs-detail">
+        <div class="fhs-info">
+          <div class="fhs-path">/etc</div>
+          <div class="fhs-desc">System-wide <strong style="color:var(--white);">configuration files</strong>. Every installed service drops its config here. This is the first place you look when something misbehaves — the source of truth for how the system is configured.</div>
+          <div class="fhs-files">
+            /etc/nginx/nginx.conf&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← nginx web server config<br>
+            /etc/ssh/sshd_config&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← SSH daemon settings<br>
+            /etc/hosts&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← local DNS overrides<br>
+            /etc/fstab&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← filesystem mount table<br>
+            /etc/passwd&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← user account database<br>
+            /etc/shadow&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← hashed passwords (root only)
+          </div>
+        </div>
+        <div class="fhs-warn">⚠ Never delete files in /etc without a backup. A corrupt /etc/fstab can prevent the system from booting.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 7 — BOOT SEQUENCE
+══════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div style="padding:2.75rem 4.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Boot sequence</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">From power button to login prompt — step through the sequence</h2>
+
+    <div class="boot-steps">
+      <div class="boot-step done" id="bstep-0">
+        <div class="boot-connector"></div>
+        <div class="boot-num">✓</div>
+        <div class="boot-label">BIOS / UEFI</div>
+      </div>
+      <div class="boot-step active" id="bstep-1">
+        <div class="boot-connector"></div>
+        <div class="boot-num">2</div>
+        <div class="boot-label">GRUB</div>
+      </div>
+      <div class="boot-step" id="bstep-2">
+        <div class="boot-connector"></div>
+        <div class="boot-num">3</div>
+        <div class="boot-label">Kernel</div>
+      </div>
+      <div class="boot-step" id="bstep-3">
+        <div class="boot-connector"></div>
+        <div class="boot-num">4</div>
+        <div class="boot-label">initramfs</div>
+      </div>
+      <div class="boot-step" id="bstep-4">
+        <div class="boot-connector"></div>
+        <div class="boot-num">5</div>
+        <div class="boot-label">systemd</div>
+      </div>
+    </div>
+
+    <div class="boot-detail" id="boot-detail">
+      <div class="bd-title" id="bd-title">GRUB Bootloader</div>
+      <div class="bd-story" id="bd-story">GRUB (Grand Unified Bootloader) is the first piece of software with a human-readable interface. It reads <code>/boot/grub/grub.cfg</code>, presents a menu (hold Shift to see it), loads the chosen kernel image into RAM, and hands off control. This is where you select which kernel version to boot — critical for rollbacks after a bad kernel update.</div>
+      <div class="bd-cmd" id="bd-cmd">
+        # Edit GRUB config (never edit grub.cfg directly)<br>
+        $ sudo nano /etc/default/grub<br>
+        $ sudo update-grub<br><br>
+        # View available kernels<br>
+        $ ls /boot/vmlinuz-*
+      </div>
+    </div>
+    <div class="boot-nav-btns">
+      <button class="boot-btn" onclick="bootPrev()">← prev</button>
+      <button class="boot-btn primary" onclick="bootNext()">next step →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 8 — CASE STUDY: 3AM INCIDENT
+══════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="s8-left">
+    <div class="incident-badge"><div class="inc-dot"></div>INCIDENT REPORT</div>
+    <h2 style="font-size:28px;font-weight:700;color:var(--white);line-height:1.3;margin-bottom:1rem;">Back to 3 AM.<br>Here's how it unfolds.</h2>
+    <p style="font-size:14px;line-height:1.8;color:var(--text);margin-bottom:1.25rem;">The disk is full. But it's /var — the directory for variable data. Logs, application data, package cache. Something filled it up while you slept.</p>
+    <p style="font-size:14px;line-height:1.8;color:var(--text);">Everything you need — systemd, journalctl, df, du — is knowledge you now have. Let's walk through the real resolution.</p>
+    <div style="margin-top:1.5rem;padding:12px 16px;border:1px solid var(--border);border-radius:8px;">
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">Time to resolution: 14 minutes<br>Root cause: unbounded log rotation<br>Impact: $180K in failed transactions</p>
+    </div>
+  </div>
+  <div class="s8-right">
+    <div class="tag">Incident timeline</div>
+    <div class="timeline-incident">
+      <div class="inc-event crit">
+        <div class="inc-time">03:01:44</div>
+        <div class="inc-desc">payment-api crashes. systemd marks it <strong style="color:var(--red);">failed</strong>. Customers see 502 errors.</div>
+        <div class="inc-cmd">systemctl status payment-api</div>
+      </div>
+      <div class="inc-event info">
+        <div class="inc-time">03:07:21</div>
+        <div class="inc-desc">On-call engineer SSHs in. Reads journalctl logs. Spots <strong style="color:var(--amber);">ENOSPC: no space left on device</strong>.</div>
+        <div class="inc-cmd">journalctl -u payment-api -n 50 --no-pager</div>
+      </div>
+      <div class="inc-event info">
+        <div class="inc-time">03:08:05</div>
+        <div class="inc-desc">Checks disk usage. /var is 100%. Hunts for the culprit with du — finds 18 GB of unrotated nginx access logs in /var/log/nginx/.</div>
+        <div class="inc-cmd">du -sh /var/* | sort -rh | head -10</div>
+      </div>
+      <div class="inc-event fix">
+        <div class="inc-time">03:11:33</div>
+        <div class="inc-desc">Compresses old logs. Frees 16 GB. Restarts payment-api. Service comes back up. Transactions resume.</div>
+        <div class="inc-cmd">gzip /var/log/nginx/access.log.* && systemctl start payment-api</div>
+      </div>
+      <div class="inc-event fix">
+        <div class="inc-time">03:15:44</div>
+        <div class="inc-desc">Configures logrotate to cap nginx logs at 100 MB with weekly rotation. Sets up disk-usage alert at 80%. Goes back to sleep.</div>
+        <div class="inc-cmd">nano /etc/logrotate.d/nginx  # maxsize 100M, rotate 7</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 9 — SYSTEMD DEEP DIVE
+══════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div style="padding:2.5rem 3.5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">systemd — the init system</div>
+    <h2 style="font-size:24px;font-weight:700;color:var(--white);margin-bottom:1.25rem;">Unit files, targets, and journald</h2>
+    <div style="display:flex;gap:2rem;flex:1;min-height:0;">
+      <div class="systemd-units">
+        <div class="unit-card active" onclick="showUnit('service',this)">
+          <div class="unit-type">.service</div>
+          <div class="unit-mini">A daemon or one-shot process</div>
+        </div>
+        <div class="unit-card" onclick="showUnit('timer',this)">
+          <div class="unit-type">.timer</div>
+          <div class="unit-mini">Scheduled tasks — replaces cron</div>
+        </div>
+        <div class="unit-card" onclick="showUnit('socket',this)">
+          <div class="unit-type">.socket</div>
+          <div class="unit-mini">Socket-activated services</div>
+        </div>
+        <div class="unit-card" onclick="showUnit('mount',this)">
+          <div class="unit-type">.mount</div>
+          <div class="unit-mini">Filesystem mount points</div>
+        </div>
+        <div class="unit-card" onclick="showUnit('target',this)">
+          <div class="unit-type">.target</div>
+          <div class="unit-mini">Groups of units (like runlevels)</div>
+        </div>
+      </div>
+      <div class="systemd-main">
+        <div class="unit-detail-box" id="unit-detail-box">
+          <div class="ud-title">.service — Running a daemon</div>
+          <div class="ud-body">A service unit tells systemd how to start, stop and restart a process. The most important fields: <code>ExecStart</code> (what to run), <code>Restart</code> (when to restart), and <code>WantedBy</code> (which target pulls it in).</div>
+          <div class="ud-file">
+            <span class="comment"># /etc/systemd/system/payment-api.service</span><br>
+            [Unit]<br>
+            <span class="key">Description</span>=<span class="val">Payment Gateway API</span><br>
+            <span class="key">After</span>=<span class="val">network.target postgresql.service</span><br><br>
+            [Service]<br>
+            <span class="key">ExecStart</span>=<span class="val">/opt/payment/app</span><br>
+            <span class="key">Restart</span>=<span class="val">on-failure</span><br>
+            <span class="key">RestartSec</span>=<span class="val">5s</span><br>
+            <span class="key">EnvironmentFile</span>=<span class="val">/etc/payment.env</span><br><br>
+            [Install]<br>
+            <span class="key">WantedBy</span>=<span class="val">multi-user.target</span>
+          </div>
+        </div>
+        <div class="cmd-terminal">
+          <div class="term-bar">
+            <div class="term-dot" style="background:#ff5f57"></div>
+            <div class="term-dot" style="background:#febc2e"></div>
+            <div class="term-dot" style="background:#28c840"></div>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-left:8px;">systemctl commands</span>
+          </div>
+          <div class="cmd-list">
+            <div class="cmd-row"><span class="cmd-name">systemctl status nginx</span><span class="cmd-note">→ show current state + recent logs</span></div>
+            <div class="cmd-row"><span class="cmd-name">systemctl start|stop|restart nginx</span><span class="cmd-note">→ control service</span></div>
+            <div class="cmd-row"><span class="cmd-name">systemctl enable nginx</span><span class="cmd-note">→ auto-start on boot</span></div>
+            <div class="cmd-row"><span class="cmd-name">systemctl list-units --failed</span><span class="cmd-note">→ show all broken units</span></div>
+            <div class="cmd-row highlight"><span class="cmd-name">journalctl -u nginx -f</span><span class="cmd-note">→ live log tail (like tail -f)</span></div>
+            <div class="cmd-row"><span class="cmd-name">systemd-analyze blame</span><span class="cmd-note">→ boot time per service</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 10 — LIVE QUIZ
+══════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div style="padding:2.5rem 5rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Quick check — click your answer</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">Let's see what stuck</h2>
+    <div class="quiz-wrap">
+      <div class="quiz-q">
+        <div class="q-text">Q1 — You run <code>cat /proc/meminfo</code> on a freshly mounted USB drive and get "No such file or directory". Why?</div>
+        <div class="q-options">
+          <div class="q-opt" onclick="answer(this,'wrong','q1')">A) /proc requires root access</div>
+          <div class="q-opt" onclick="answer(this,'correct','q1')">B) /proc is a virtual FS generated in kernel memory, not stored on any disk</div>
+          <div class="q-opt" onclick="answer(this,'wrong','q1')">C) The USB drive is formatted as FAT32</div>
+          <div class="q-opt" onclick="answer(this,'wrong','q1')">D) meminfo is binary and can't be read with cat</div>
+        </div>
+        <div class="q-feedback ok" id="q1-ok">✓ Correct. /proc and /sys only exist while the system is running — they're generated live by the kernel. No disk, no file.</div>
+        <div class="q-feedback no" id="q1-no">✗ Not quite. /proc is a virtual filesystem that only exists in memory — it cannot be present on a physical storage device.</div>
+      </div>
+      <div class="quiz-q">
+        <div class="q-text">Q2 — Your server's disk is 100% full (from the 3 AM case). What is the first command you run to find the largest directory?</div>
+        <div class="q-options">
+          <div class="q-opt" onclick="answer(this,'wrong','q2')">A) ls -la /</div>
+          <div class="q-opt" onclick="answer(this,'wrong','q2')">B) find / -size +1G</div>
+          <div class="q-opt" onclick="answer(this,'correct','q2')">C) du -sh /* | sort -rh | head -10</div>
+          <div class="q-opt" onclick="answer(this,'wrong','q2')">D) df -h /</div>
+        </div>
+        <div class="q-feedback ok" id="q2-ok">✓ Correct. <code>du -sh</code> summarises each directory's size, <code>sort -rh</code> sorts human-readable sizes descending, <code>head -10</code> shows the top culprits.</div>
+        <div class="q-feedback no" id="q2-no">✗ <code>df</code> shows partition usage but not which directory is the culprit. <code>du -sh /* | sort -rh | head -10</code> finds the biggest directory trees.</div>
+      </div>
+      <div class="quiz-q">
+        <div class="q-text">Q3 — What is the correct boot sequence order?</div>
+        <div class="q-options">
+          <div class="q-opt" onclick="answer(this,'wrong','q3')">A) Kernel → GRUB → BIOS → systemd → initramfs</div>
+          <div class="q-opt" onclick="answer(this,'correct','q3')">B) BIOS → GRUB → Kernel → initramfs → systemd</div>
+          <div class="q-opt" onclick="answer(this,'wrong','q3')">C) GRUB → BIOS → initramfs → Kernel → systemd</div>
+          <div class="q-opt" onclick="answer(this,'wrong','q3')">D) BIOS → Kernel → GRUB → systemd → initramfs</div>
+        </div>
+        <div class="q-feedback ok" id="q3-ok">✓ Correct. BIOS does hardware check → GRUB loads the kernel → kernel initialises hardware → initramfs mounts temporary root → systemd starts services.</div>
+        <div class="q-feedback no" id="q3-no">✗ The correct order is BIOS → GRUB → Kernel → initramfs → systemd. GRUB must come before the kernel — it's the bootloader that loads it.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 11 — LAB
+══════════════════════════════════════ -->
+<div class="slide" id="s11">
+  <div style="padding:2.5rem 4rem;height:100%;display:flex;flex-direction:column;">
+    <div class="tag">Lab session</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--white);">4 tasks · work individually · submit before next session</h2>
+    <div class="labs-grid">
+      <div class="lab-card">
+        <div class="lab-header">
+          <div class="lab-num">1</div>
+          <div class="lab-title">Install Ubuntu 22.04 Server on VirtualBox</div>
+        </div>
+        <div class="lab-body">
+          <div class="lab-task">Create VM: 2 CPU, 2 GB RAM, 20 GB disk, NAT network adapter</div>
+          <div class="lab-task">During install: set hostname, create user, enable OpenSSH server</div>
+          <div class="lab-task">SSH from your host machine into the VM and verify connectivity</div>
+          <div class="lab-cmd">
+            # From your laptop<br>
+            ssh student@192.168.x.x<br>
+            uname -a  # verify kernel version
+          </div>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-header">
+          <div class="lab-num">2</div>
+          <div class="lab-title">Explore the FHS — map the filesystem</div>
+        </div>
+        <div class="lab-body">
+          <div class="lab-task">Navigate each top-level directory and write one-line purpose</div>
+          <div class="lab-task">Compare <code>/bin</code> vs <code>/usr/bin</code> — note the symlink relationship</div>
+          <div class="lab-task">Find which 3 directories use the most space with du</div>
+          <div class="lab-cmd">
+            ls -la /bin          # spot the symlink<br>
+            du -sh /* 2>/dev/null | sort -rh | head -5
+          </div>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-header">
+          <div class="lab-num">3</div>
+          <div class="lab-title">Read hardware info via /proc and /sys</div>
+        </div>
+        <div class="lab-body">
+          <div class="lab-task">Calculate total RAM in GB from <code>/proc/meminfo</code> — no <code>free</code> allowed</div>
+          <div class="lab-task">Find CPU model, core count, and whether virtualisation is enabled</div>
+          <div class="lab-task">Identify the network interface name from /sys/class/net/</div>
+          <div class="lab-cmd">
+            cat /proc/meminfo | grep MemTotal<br>
+            cat /proc/cpuinfo | grep "model name" | head -1<br>
+            ls /sys/class/net/
+          </div>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-header">
+          <div class="lab-num">4</div>
+          <div class="lab-title">Analyse boot time — find and fix slow services</div>
+        </div>
+        <div class="lab-body">
+          <div class="lab-task">Run systemd-analyze and record total boot time</div>
+          <div class="lab-task">List top 5 slowest services with systemd-analyze blame</div>
+          <div class="lab-task">Research each service — is it needed on a minimal server?</div>
+          <div class="lab-cmd">
+            systemd-analyze<br>
+            systemd-analyze blame | head -5<br>
+            systemd-analyze critical-chain
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 12 — CLOSE
+══════════════════════════════════════ -->
+<div class="slide" id="s12">
+  <div class="s12-glow"></div>
+  <div class="s12-wrap">
+    <div class="s12-tag">SESSION 01 COMPLETE</div>
+    <h2 class="s12-title">You now know<br>what's on that screen.</h2>
+    <p class="s12-sub">The 3 AM call? You understand every command the engineer ran.</p>
+    <div class="s12-next">
+      <h4>Next session — CLI & Text Processing</h4>
+      <div class="s12-next-items">
+        <div class="s12-ni">grep, sed, awk — parsing logs like the incident timeline</div>
+        <div class="s12-ni">Pipes and xargs — composing powerful one-liners</div>
+        <div class="s12-ni">Lab: analyse a real nginx access.log with 100K entries</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .deck -->
+
+<!-- ── NAVIGATION ── -->
+<div class="nav">
+  <button class="nav-btn" onclick="prev()">← prev</button>
+  <div class="progress-dots" id="dots"></div>
+  <span class="slide-counter" id="counter">1 / 12</span>
+  <button class="nav-btn" onclick="next()">next →</button>
+</div>
+
+<script>
+const TOTAL = 12;
+let cur = 1;
+
+// Build dots
+const dotsEl = document.getElementById('dots');
+for (let i = 1; i <= TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 1 ? ' active' : '');
+  d.onclick = () => go(i);
+  dotsEl.appendChild(d);
+}
+
+function go(n) {
+  document.getElementById('s' + cur).classList.remove('active');
+  cur = Math.max(1, Math.min(TOTAL, n));
+  document.getElementById('s' + cur).classList.add('active');
+  document.getElementById('counter').textContent = cur + ' / ' + TOTAL;
+  document.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('active', i + 1 === cur);
+  });
+}
+function next() { go(cur + 1); }
+function prev() { go(cur - 1); }
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'Space') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+});
+
+// ── TIMELINE (slide 3) ──
+const tlData = [
+  {
+    h: 'Unix at Bell Labs (1969)',
+    p: 'Ken Thompson and Dennis Ritchie built Unix at AT&T Bell Labs. They invented the C programming language to rewrite it. Unix introduced pipes, a hierarchical filesystem, and "everything is a file" — principles Linux still follows today.',
+    impact: '↳ The pipe operator | you use every day was invented here.'
+  },
+  {
+    h: 'GNU Project by Richard Stallman (1983)',
+    p: 'Stallman launched the GNU Project to create a completely free Unix-like OS. He wrote core tools (gcc, bash, glibc) but never finished the kernel. He defined the four software freedoms that became the foundation of FOSS.',
+    impact: '↳ Most tools you use on Linux (bash, gcc, ls, cat) are GNU software.'
+  },
+  {
+    h: 'Linux Kernel 0.01 by Linus Torvalds (1991)',
+    p: 'A 21-year-old Finnish student posted on Usenet: "I\'m doing a free operating system (just a hobby, won\'t be big and professional)." Combined with GNU tools, Linux + GNU became a complete free OS. His hobby now powers most of the world.',
+    impact: '↳ Linux kernel has 30M+ lines of code today, maintained by 4000+ developers.'
+  },
+  {
+    h: 'Ubuntu First Release (2004)',
+    p: 'Mark Shuttleworth funded Canonical and released Ubuntu 4.10 "Warty Warthog". The goal: make Linux accessible to everyone with a 6-month release cycle and long-term support versions for production. It became the dominant learning and server distro.',
+    impact: '↳ Ubuntu 22.04 LTS — what we use in this course — is supported until 2027.'
+  },
+  {
+    h: 'Linux Today — 96% of the Web',
+    p: 'Linux runs 96% of the world\'s top 1 million servers, all Android devices, most cloud infrastructure (AWS EC2, Google Cloud, Azure VMs are Linux underneath), and the International Space Station. Every major tech company runs Linux in production.',
+    impact: '↳ If you can admin Linux, you can work at any tech company on the planet.'
+  }
+];
+
+function showTlEvent(idx, el) {
+  document.querySelectorAll('.tl-event').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  const d = tlData[idx];
+  const box = document.getElementById('tl-detail');
+  box.innerHTML = `<h3>${d.h}</h3><p>${d.p}</p><div class="impact">${d.impact}</div>`;
+}
+
+// ── LAYERS (slide 4) ──
+const layerData = {
+  apps: {
+    tag: 'Applications — User Space',
+    title: 'What you interact with',
+    body: 'Applications run completely isolated from hardware. If nginx crashes, the kernel kills that process. Your database, SSH daemon, and cron jobs keep running. This isolation is why servers can have 200 processes without them interfering. Each process gets its own virtual memory space.',
+    example: '$ ps aux\nnginx   1234  nginx: master\nnginx   1235  nginx: worker\nmysql   2301  mysqld\nsshd    891   sshd: @pts/0',
+    syscall: 'Syscalls used: read(), write(), open(), socket(), fork(), exec()'
+  },
+  shell: {
+    tag: 'Shell — The Command Interpreter',
+    title: 'bash — your interface to the kernel',
+    body: 'The shell reads your commands, finds the executable (via $PATH), forks a child process, and calls exec() to run it. When you type ls, bash calls fork() to create a copy of itself, then exec() to replace that copy with the ls program. It captures the exit code and waits.',
+    example: '$ strace ls 2>&1 | head -5\nexecve("/usr/bin/ls", ["ls"], [...])\nbrk(NULL) = 0x...\nopen("/etc/ld.so.cache", ...) = 3',
+    syscall: 'Key syscalls: fork(), exec(), wait(), pipe(), dup2()'
+  },
+  libs: {
+    tag: 'System Libraries — glibc',
+    title: 'The bridge between code and kernel',
+    body: 'glibc wraps raw syscalls into friendly C functions. When your Python script calls open(), Python calls glibc\'s fopen(), which calls the kernel\'s open() syscall. Without glibc, every programmer would need to write raw assembly. It\'s installed at /lib/x86_64-linux-gnu/libc.so.6.',
+    example: '$ ldd /bin/ls\nlinux-vdso.so.1\nlibc.so.6 => /lib/x86_64.../libc.so.6\n/lib64/ld-linux-x86-64.so.2',
+    syscall: 'ldd shows which libraries any binary depends on'
+  },
+  kernel: {
+    tag: 'Kernel — The Core of Linux',
+    title: 'PID 1\'s parent — the kernel itself',
+    body: 'The kernel manages everything: memory allocation (virtual → physical mapping), CPU scheduling (who runs next), device drivers (talking to disks and NICs), and the syscall interface (the gateway between user and kernel space). It runs in privileged mode — bugs here crash the whole system.',
+    example: '$ cat /proc/version\nLinux 5.15.0-91-generic #101-Ubuntu\n\n$ uname -r\n5.15.0-91-generic',
+    syscall: 'The kernel has ~400 syscalls. Everything goes through them.'
+  },
+  hw: {
+    tag: 'Hardware — Physical Resources',
+    title: 'What the kernel manages on your behalf',
+    body: 'No user-space process ever touches hardware directly. The kernel abstracts everything: your disk becomes a file descriptor, your NIC becomes a socket, your RAM becomes pages. This abstraction is why the same Python script runs on a Raspberry Pi, a cloud VM, and a mainframe.',
+    example: '$ cat /proc/cpuinfo | grep "model name"\nIntel(R) Core(TM) i7-1165G7 @ 2.80GHz\n\n$ free -h\n           total  used  free\nMem:        15Gi   4Gi  10Gi',
+    syscall: 'Hardware is exposed via /proc, /sys, and /dev'
+  }
+};
+
+function showLayer(key, el) {
+  document.querySelectorAll('.layer').forEach(l => l.classList.remove('active'));
+  el.classList.add('active');
+  const d = layerData[key];
+  document.getElementById('layer-detail-box').innerHTML = `
+    <div class="ld-tag" style="color:var(--teal)">${d.tag}</div>
+    <div class="ld-title">${d.title}</div>
+    <div class="ld-body">${d.body}</div>
+    <div class="ld-example">${d.example}</div>
+    <div class="ld-syscall">${d.syscall}</div>
+  `;
+}
+
+// ── FHS (slide 6) ──
+const fhsData = {
+  etc: {
+    path: '/etc',
+    desc: 'System-wide <strong style="color:var(--white)">configuration files</strong>. Every service drops its config here. The first place you look when something misbehaves.',
+    files: '/etc/nginx/nginx.conf       ← nginx config\n/etc/ssh/sshd_config         ← SSH settings\n/etc/hosts                   ← DNS overrides\n/etc/fstab                   ← filesystem mounts\n/etc/passwd                  ← user accounts\n/etc/shadow                  ← hashed passwords',
+    extra: '<div class="fhs-warn">⚠ Corrupt /etc/fstab can prevent boot. Always backup before editing.</div>'
+  },
+  var: {
+    path: '/var',
+    desc: 'Variable data — things that <strong style="color:var(--white)">change while the system runs</strong>. Log files, application data, package cache, mail queues. This is what filled up in the 3 AM incident.',
+    files: '/var/log/nginx/access.log   ← web access logs (grew to 18 GB!)\n/var/log/syslog              ← system messages\n/var/log/auth.log            ← SSH login attempts\n/var/lib/mysql/              ← MySQL database files\n/var/cache/apt/              ← downloaded packages',
+    extra: '<div class="fhs-warn">⚠ /var/log can grow without bound. Always configure logrotate.</div>'
+  },
+  bin: {
+    path: '/bin → /usr/bin',
+    desc: 'Essential <strong style="color:var(--white)">user binaries</strong>. On modern Ubuntu, /bin is a symlink to /usr/bin. This is where ls, cat, grep, bash and all common commands live.',
+    files: '/usr/bin/python3            ← Python interpreter\n/usr/bin/bash                ← Bash shell\n/usr/bin/grep                ← text search\n/usr/bin/ssh                 ← SSH client\n/usr/sbin/nginx              ← nginx (sysadmin binary)',
+    extra: '<div class="fhs-warn">💡 <code>which grep</code> tells you exactly where a command lives.</div>'
+  },
+  home: {
+    path: '/home',
+    desc: 'User home directories. Each user gets <strong style="color:var(--white)">/home/username</strong> with their files, shell config, SSH keys, and personal settings.',
+    files: '/home/alice/.bashrc         ← shell configuration\n/home/alice/.ssh/            ← SSH keys\n/home/alice/.config/         ← app settings\n/root/                       ← root user\'s home (NOT /home/root)',
+    extra: '<div class="fhs-warn">💡 Root\'s home is /root, not /home/root. A common gotcha for beginners.</div>'
+  },
+  proc: {
+    path: '/proc',
+    desc: '<strong style="color:var(--red)">Virtual filesystem</strong> — not on disk. Generated live by the kernel. Reading these files reads live kernel state. Writing to some changes kernel behaviour in real time.',
+    files: '/proc/cpuinfo               ← CPU details (live)\n/proc/meminfo               ← RAM usage (live)\n/proc/1/                    ← info about PID 1 (systemd)\n/proc/net/tcp               ← active TCP connections\n/proc/sys/vm/drop_caches    ← writable: drop page cache',
+    extra: '<div class="fhs-virtual">🔬 These are NOT files on disk. Mount point: tmpfs. Size: 0 bytes on disk.</div>'
+  },
+  sys: {
+    path: '/sys',
+    desc: '<strong style="color:var(--red)">Virtual filesystem</strong> exposing the <strong style="color:var(--white)">hardware device tree</strong>. Structured as a hierarchy of kernel objects. More organised than /proc for hardware info.',
+    files: '/sys/class/net/eth0/        ← network interface info\n/sys/class/block/sda/       ← disk info\n/sys/bus/pci/devices/       ← PCI device list\n/sys/kernel/mm/             ← memory management\n/sys/power/state            ← power management',
+    extra: '<div class="fhs-virtual">🔬 Also virtual, also not on disk. Introduced in kernel 2.6 to replace /proc clutter.</div>'
+  },
+  tmp: {
+    path: '/tmp',
+    desc: 'Temporary files. <strong style="color:var(--white)">Cleared on every reboot</strong>. Any user can write here. Used by applications for scratch space. Often backed by RAM (tmpfs), making it fast but volatile.',
+    files: '/tmp/mysql.sock              ← MySQL socket file\n/tmp/.X11-unix/             ← X display sockets\n/tmp/ssh-XXXX/              ← SSH agent sockets\n# all cleared on reboot!',
+    extra: '<div class="fhs-warn">⚠ Never store anything important in /tmp. It will vanish on reboot.</div>'
+  },
+  opt: {
+    path: '/opt',
+    desc: 'Optional third-party software that doesn\'t follow standard package conventions. Commercial software, manually installed apps, and enterprise tools often land here.',
+    files: '/opt/google/chrome/         ← Google Chrome\n/opt/java/jdk-21/           ← manually installed JDK\n/opt/myapp/                 ← your custom app\n/opt/atlassian/jira/        ← Jira server',
+    extra: '<div class="fhs-warn">💡 Software in /opt manages its own directory structure independently of the system package manager.</div>'
+  },
+  dev: {
+    path: '/dev',
+    desc: 'Device files. In Linux, <strong style="color:var(--white)">everything is a file</strong> — including hardware. Disks, terminals, null, random — all represented as files you can read and write.',
+    files: '/dev/sda                    ← first SATA disk\n/dev/sda1                   ← first partition\n/dev/null                   ← the void (discard output)\n/dev/random                 ← cryptographic randomness\n/dev/tty                    ← current terminal',
+    extra: '<div class="fhs-warn">💡 <code>dd if=/dev/random of=key.bin bs=32 count=1</code> — generate a 32-byte random key.</div>'
+  }
+};
+
+function showFhs(key, el) {
+  document.querySelectorAll('.fhs-tree-item').forEach(i => i.classList.remove('sel'));
+  el.classList.add('sel');
+  const d = fhsData[key];
+  document.getElementById('fhs-detail').innerHTML = `
+    <div class="fhs-info">
+      <div class="fhs-path">${d.path}</div>
+      <div class="fhs-desc">${d.desc}</div>
+      <div class="fhs-files">${d.files}</div>
+    </div>
+    ${d.extra}
+  `;
+}
+
+// ── BOOT SEQUENCE (slide 7) ──
+let bootStep = 1;
+const bootData = [
+  {
+    title: 'BIOS / UEFI — Power-On Self Test',
+    story: 'The moment you press power, the BIOS (or modern UEFI) runs POST — it checks that RAM, CPU, and storage exist and aren\'t broken. Then it looks for a bootable device in order (SSD, then USB, then network). On cloud VMs, this takes milliseconds. On old servers, it can take 30+ seconds.',
+    cmd: '# On UEFI systems, you can inspect the boot config:\n$ efibootmgr -v\nBootCurrent: 0000\nBoot0000  Ubuntu HD(1,...)/File(\\EFI\\ubuntu\\shimx64.efi)\n\n# This is why servers sometimes appear to "hang" — they\'re in POST'
+  },
+  {
+    title: 'GRUB — Grand Unified Bootloader',
+    story: 'GRUB reads /boot/grub/grub.cfg (never edit this directly), displays a menu (hold Shift to see it on Ubuntu), loads the selected kernel image (vmlinuz) into RAM, loads the initial RAM disk (initrd), and hands off control. Critical for rollbacks — you can boot an older kernel from GRUB if an update breaks things.',
+    cmd: '# Edit GRUB settings (not grub.cfg directly)\n$ sudo nano /etc/default/grub\nGRUB_TIMEOUT=5\nGRUB_DEFAULT=0\n\n# Regenerate grub.cfg after changes\n$ sudo update-grub\n\n# List available kernels\n$ ls /boot/vmlinuz-*'
+  },
+  {
+    title: 'Kernel — Hardware Initialisation',
+    story: 'The kernel decompresses itself, initialises memory management, detects and sets up all hardware (drivers load), and mounts the root filesystem. It then starts exactly one process: PID 1. On modern Linux, that\'s systemd. The kernel itself runs in privileged mode forever after — you never interact with it directly.',
+    cmd: '# Kernel version\n$ uname -r\n5.15.0-91-generic\n\n# Kernel boot messages\n$ dmesg | head -30\n[    0.000000] Linux version 5.15.0-91-generic\n[    0.000000] BIOS-provided physical RAM map\n\n# Currently loaded drivers\n$ lsmod | head -10'
+  },
+  {
+    title: 'initramfs — Temporary Root Filesystem',
+    story: 'Before the real root filesystem can be mounted, the kernel needs drivers for the disk controller. initramfs (initial RAM filesystem) is a tiny compressed filesystem baked into /boot/initrd. It has just enough to mount the real root disk — then it disappears. Without it, the kernel couldn\'t find the disk to mount.',
+    cmd: '# View initramfs contents\n$ lsinitramfs /boot/initrd.img-$(uname -r) | head -20\n.\n./bin\n./bin/sh\n./lib\n./lib/modules\n./scripts\n\n# Rebuild initramfs (e.g. after adding drivers)\n$ sudo update-initramfs -u'
+  },
+  {
+    title: 'systemd — PID 1, the init system',
+    story: 'systemd is always PID 1 — the first real process, parent of everything else. It reads unit files, resolves dependencies, and starts services in parallel (much faster than old sequential init). It\'s also the logging daemon (journald), network time sync (timesyncd), and more. This is where your server finally becomes useful.',
+    cmd: '# systemd is always PID 1\n$ ps -p 1 -o comm=\nsystemd\n\n# See startup time breakdown\n$ systemd-analyze\nStartup finished in 1.2s (kernel) + 8.4s (userspace)\n\n$ systemd-analyze blame | head -5\n  4.2s apt-daily-upgrade.service\n  3.1s NetworkManager-wait-online.service'
+  }
+];
+
+function renderBoot() {
+  for (let i = 0; i < 5; i++) {
+    const el = document.getElementById('bstep-' + i);
+    el.classList.remove('active', 'done');
+    if (i < bootStep) el.classList.add('done');
+    else if (i === bootStep) el.classList.add('active');
+
+    // connector
+    const conn = el.querySelector('.boot-connector');
+    if (conn) conn.style.background = i < bootStep ? 'var(--teal)' : 'var(--border)';
+  }
+  const d = bootData[bootStep];
+  document.getElementById('bd-title').textContent = d.title;
+  document.getElementById('bd-story').textContent = d.story;
+  document.getElementById('bd-cmd').textContent = d.cmd;
+}
+function bootNext() { if (bootStep < 4) { bootStep++; renderBoot(); } }
+function bootPrev() { if (bootStep > 0) { bootStep--; renderBoot(); } }
+
+// ── QUIZ (slide 10) ──
+function answer(el, result, qid) {
+  const q = el.closest('.quiz-q');
+  q.querySelectorAll('.q-opt').forEach(o => o.style.pointerEvents = 'none');
+  el.classList.add(result);
+  const okEl = document.getElementById(qid + '-ok');
+  const noEl = document.getElementById(qid + '-no');
+  if (result === 'correct') { okEl.classList.add('show'); }
+  else { el.classList.add('wrong'); noEl.classList.add('show'); }
+}
+
+// ── UNIT TYPES (slide 9) ──
+const unitData = {
+  service: {
+    title: '.service — Running a daemon',
+    body: 'A service unit tells systemd how to start, stop and restart a process. <code>Restart=on-failure</code> means systemd auto-restarts if it crashes. <code>EnvironmentFile</code> keeps secrets out of the unit file itself.',
+    file: `<span class="comment"># /etc/systemd/system/payment-api.service</span>\n[Unit]\n<span class="key">Description</span>=<span class="val">Payment Gateway API</span>\n<span class="key">After</span>=<span class="val">network.target postgresql.service</span>\n\n[Service]\n<span class="key">ExecStart</span>=<span class="val">/opt/payment/app</span>\n<span class="key">Restart</span>=<span class="val">on-failure</span>\n<span class="key">RestartSec</span>=<span class="val">5s</span>\n<span class="key">EnvironmentFile</span>=<span class="val">/etc/payment.env</span>\n\n[Install]\n<span class="key">WantedBy</span>=<span class="val">multi-user.target</span>`
+  },
+  timer: {
+    title: '.timer — Scheduled tasks',
+    body: 'Timers replace cron with a major advantage: they log to journald. You can see exactly when they ran, whether they succeeded, and how long they took. <code>OnCalendar=*-*-* 02:00:00</code> runs at 2 AM every day.',
+    file: `<span class="comment"># /etc/systemd/system/backup.timer</span>\n[Unit]\n<span class="key">Description</span>=<span class="val">Daily backup timer</span>\n\n[Timer]\n<span class="key">OnCalendar</span>=<span class="val">*-*-* 02:00:00</span>\n<span class="key">Persistent</span>=<span class="val">true</span>\n\n[Install]\n<span class="key">WantedBy</span>=<span class="val">timers.target</span>\n\n<span class="comment"># Check timer status</span>\n<span class="val">systemctl list-timers</span>`
+  },
+  socket: {
+    title: '.socket — Socket activation',
+    body: 'Socket units start a service only when a connection arrives on a port. The service isn\'t running until needed — saving memory. systemd holds the socket open, so no connections are dropped during service restart.',
+    file: `<span class="comment"># /etc/systemd/system/nginx.socket</span>\n[Unit]\n<span class="key">Description</span>=<span class="val">Nginx HTTP socket</span>\n\n[Socket]\n<span class="key">ListenStream</span>=<span class="val">80</span>\n<span class="key">ListenStream</span>=<span class="val">443</span>\n<span class="key">Accept</span>=<span class="val">no</span>\n\n[Install]\n<span class="key">WantedBy</span>=<span class="val">sockets.target</span>\n\n<span class="comment"># Zero-downtime restarts via socket hold</span>`
+  },
+  mount: {
+    title: '.mount — Filesystem mounts',
+    body: 'Mount units manage filesystem mounts with dependency tracking. They\'re equivalent to /etc/fstab entries but with systemd\'s dependency graph. Automatically generated from fstab by systemd-fstab-generator.',
+    file: `<span class="comment"># /etc/systemd/system/mnt-data.mount</span>\n[Unit]\n<span class="key">Description</span>=<span class="val">Data volume</span>\n<span class="key">Before</span>=<span class="val">local-fs.target</span>\n\n[Mount]\n<span class="key">What</span>=<span class="val">/dev/sdb1</span>\n<span class="key">Where</span>=<span class="val">/mnt/data</span>\n<span class="key">Type</span>=<span class="val">ext4</span>\n<span class="key">Options</span>=<span class="val">defaults,noatime</span>\n\n[Install]\n<span class="key">WantedBy</span>=<span class="val">local-fs.target</span>`
+  },
+  target: {
+    title: '.target — Groups of units',
+    body: 'Targets are like runlevels — they group units together. <code>multi-user.target</code> is a server with networking but no GUI. Services declare <code>WantedBy=multi-user.target</code> to be included. <code>systemctl isolate rescue.target</code> drops to single-user mode.',
+    file: `<span class="comment"># Common targets and their meaning</span>\n<span class="val">poweroff.target</span>      <span class="comment">← shutdown (runlevel 0)</span>\n<span class="val">rescue.target</span>        <span class="comment">← single user mode (1)</span>\n<span class="val">multi-user.target</span>    <span class="comment">← server mode (2,3,4,5)</span>\n<span class="val">graphical.target</span>     <span class="comment">← desktop (5)</span>\n<span class="val">reboot.target</span>        <span class="comment">← reboot (6)</span>\n\n<span class="comment"># Get current target</span>\n<span class="val">systemctl get-default</span>`
+  }
+};
+
+function showUnit(key, el) {
+  document.querySelectorAll('.unit-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const d = unitData[key];
+  document.getElementById('unit-detail-box').innerHTML = `
+    <div class="ud-title">${d.title}</div>
+    <div class="ud-body">${d.body}</div>
+    <div class="ud-file">${d.file}</div>
+  `;
+}
+</script>
+</body>
+</html>
