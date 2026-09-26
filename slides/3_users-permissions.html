@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Users, Permissions & Processes — Module 2</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f6f8fa;
+    --bg3: #eaeef2;
+    --border: rgba(31,35,40,0.12);
+    --border2: rgba(31,35,40,0.24);
+    --text: #1f2328;
+    --muted: #57606a;
+    --accent: #0969da;
+    --accent2: #1a7f37;
+    --accent3: #b35900;
+    --accent4: #cf222e;
+    --accent5: #8250df;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+  .deck { width: 100vw; height: 100vh; position: relative; }
+  .slide { position: absolute; inset: 0; display: none; flex-direction: column; padding: 44px 60px; opacity: 0; transition: opacity 0.35s ease; overflow: hidden; }
+  .slide.active { display: flex; opacity: 1; }
+
+  .slide-label { font-family: var(--mono); font-size: 15.4px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .slide-label::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  h1 { font-size: 70px; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; }
+  h2 { font-size: 42px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em; }
+  h3 { font-size: 22.4px; font-weight: 500; }
+
+  .accent-blue  { color: var(--accent); }
+  .accent-green { color: var(--accent2); }
+  .accent-amber { color: var(--accent3); }
+  .accent-red   { color: var(--accent4); }
+  .accent-purple{ color: var(--accent5); }
+
+  code, .mono { font-family: var(--mono); font-size: 16.8px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 5px; padding: 2px 6px; color: var(--accent3); }
+
+  .tag { display: inline-block; font-family: var(--mono); font-size: 15.4px; padding: 3px 10px; border-radius: 20px; border: 1px solid; margin: 2px; }
+  .tag-blue   { border-color: var(--accent);  color: var(--accent); }
+  .tag-green  { border-color: var(--accent2); color: var(--accent2); }
+  .tag-amber  { border-color: var(--accent3); color: var(--accent3); }
+  .tag-red    { border-color: var(--accent4); color: var(--accent4); }
+  .tag-purple { border-color: var(--accent5); color: var(--accent5); }
+
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+  .card-title { font-size: 15.4px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+  .body-text { font-size: 19.6px; line-height: 1.75; color: #2f363d; }
+
+  .note-box { border-left: 3px solid var(--accent2); padding: 9px 14px; background: rgba(26,127,55,0.07); border-radius: 0 8px 8px 0; font-size: 16.8px; color: #2f363d; line-height: 1.6; }
+  .warn-box  { border-left: 3px solid var(--accent3); padding: 9px 14px; background: rgba(179,89,0,0.07); border-radius: 0 8px 8px 0; font-size: 16.8px; color: #2f363d; line-height: 1.6; }
+  .danger-box{ border-left: 3px solid var(--accent4); padding: 9px 14px; background: rgba(207,34,46,0.07); border-radius: 0 8px 8px 0; font-size: 16.8px; color: #2f363d; line-height: 1.6; }
+  .info-box  { border-left: 3px solid var(--accent5); padding: 9px 14px; background: rgba(130,80,223,0.07); border-radius: 0 8px 8px 0; font-size: 16.8px; color: #2f363d; line-height: 1.6; }
+
+  .perm-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 18.2px; font-weight: 600; border-radius: 6px; }
+  .perm-on  { background: rgba(9,105,218,0.15); color: var(--accent); border: 1px solid rgba(9,105,218,0.3); }
+  .perm-off { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+
+  .cmd-block { background: #f6f8fa; border: 1px solid var(--border2); border-radius: 10px; padding: 14px 18px; font-family: var(--mono); font-size: 16.8px; line-height: 1.9; }
+  .cmd-comment { color: #6e7781; }
+  .cmd-prompt  { color: var(--muted); }
+  .cmd-main    { color: var(--accent2); }
+  .cmd-flag    { color: var(--accent3); }
+  .cmd-arg     { color: var(--accent); }
+  .cmd-output  { color: #57606a; }
+  .cmd-err     { color: var(--accent4); }
+
+  .file-table { width: 100%; border-collapse: collapse; font-size: 16.8px; }
+  .file-table th { font-family: var(--mono); font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .file-table td { padding: 8px 10px; border-bottom: 1px solid rgba(31,35,40,0.08); }
+  .file-table tr:last-child td { border-bottom: none; }
+
+  .special-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; flex: 1; }
+  .special-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .special-badge { display: inline-block; font-family: var(--mono); font-size: 28px; font-weight: 600; padding: 7px 12px; border-radius: 8px; letter-spacing: 0.05em; width: fit-content; }
+
+  .acl-box { background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; padding: 8px 14px; font-family: var(--mono); font-size: 16.8px; text-align: center; }
+  .acl-arrow { color: var(--muted); font-size: 22.4px; }
+
+  .state-badge { display: inline-block; font-family: var(--mono); font-size: 15.4px; padding: 2px 10px; border-radius: 20px; }
+
+  .lab-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .lab-num { font-family: var(--mono); font-size: 28px; font-weight: 600; color: var(--border2); float: right; }
+  .lab-title { font-size: 19.6px; font-weight: 500; margin-bottom: 7px; }
+  .lab-steps { font-size: 16.8px; color: var(--muted); line-height: 1.9; }
+
+  /* Title slide */
+  #s1 { justify-content: center; }
+  .title-eyebrow { font-family: var(--mono); font-size: 16.8px; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 20px; }
+  .title-sub { font-size: 25.2px; color: var(--muted); margin-top: 14px; font-weight: 300; }
+  .title-meta { display: flex; gap: 24px; margin-top: 44px; font-size: 18.2px; color: var(--muted); }
+  .title-meta span { display: flex; align-items: center; gap: 6px; }
+  .meta-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+  #s1::before { content: ''; position: absolute; top: -100px; right: -100px; width: 500px; height: 500px; border-radius: 50%; background: radial-gradient(circle, rgba(9,105,218,0.07) 0%, transparent 70%); pointer-events: none; }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex: 1; }
+  .ov-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.25s, background 0.25s; cursor: pointer; }
+  .ov-card:hover { border-color: var(--border2); background: var(--bg3); }
+  .ov-icon { font-size: 28px; }
+  .ov-title { font-size: 21px; font-weight: 500; }
+  .ov-items { font-size: 15.4px; color: var(--muted); line-height: 1.8; font-family: var(--mono); }
+
+  /* nav */
+  .nav { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; background: var(--bg2); border: 1px solid var(--border2); border-radius: 40px; padding: 9px 18px; z-index: 100; }
+  .nav-btn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 25.2px; line-height: 1; padding: 4px 8px; border-radius: 6px; transition: color 0.2s, background 0.2s; }
+  .nav-btn:hover { color: var(--text); background: var(--bg3); }
+  .nav-counter { font-family: var(--mono); font-size: 16.8px; color: var(--muted); min-width: 52px; text-align: center; }
+  .dot-nav { display: flex; gap: 5px; flex-wrap: wrap; max-width: 280px; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); cursor: pointer; transition: background 0.2s, transform 0.2s; }
+  .dot.active { background: var(--accent); transform: scale(1.4); }
+  .kbd-hint { position: fixed; bottom: 28px; right: 36px; font-family: var(--mono); font-size: 15.4px; color: var(--muted); opacity: 0.5; }
+  .progress-bar { position: fixed; top: 0; left: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent5)); transition: width 0.35s ease; z-index: 200; }
+
+  .section-header { display: inline-block; font-family: var(--mono); font-size: 14px; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; margin-bottom: 14px; }
+
+  /* process row */
+  .process-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 18.2px; }
+  .process-row:last-child { border-bottom: none; }
+  .pid { font-family: var(--mono); font-size: 15.4px; color: var(--muted); width: 46px; }
+  .pname { font-family: var(--mono); font-size: 16.8px; color: var(--accent3); flex: 1; }
+  .pcpu { font-family: var(--mono); font-size: 15.4px; color: var(--accent2); width: 46px; text-align: right; }
+
+  /* presentation stage: fixed 16:9 canvas scaled to screen */
+  html, body { background:#ffffff; }
+  .deck { width:1600px; height:900px; position:absolute; left:50%; top:50%; transform-origin:center center; transform:translate(-50%,-50%) scale(var(--k,1)); background:#fff; }
+  .slide { padding: 40px 64px 44px; }
+  strong { font-weight:600; }
+  .cmd-block { line-height:1.55; padding:14px 20px; }
+  .lab-steps { line-height:1.65; }
+  .body-text { line-height:1.6; }
+  .slide-label { margin-bottom:14px; }
+  .file-table td { padding: 6px 10px; }
+  #s1 h1 { font-size: 92px; }
+  #s1 .title-eyebrow { font-size: 20px; }
+  #s1 .title-sub { font-size: 30px; }
+  #s1 .title-meta { font-size: 21px; }
+  .ov-icon { font-size: 40px; }
+  .ov-title { font-size: 28px; font-weight: 600; }
+  .ov-items { font-size: 20px; line-height: 1.9; color: #2f363d; }
+  .ov-card { padding: 26px; gap: 14px; }
+  .gap { display:block; height:0.55em; }
+  .file-table th { padding: 5px 10px; }
+  .card { padding: 14px 20px; }
+  .card-title { margin-bottom: 8px; }
+  .nav, .kbd-hint { transition: opacity .4s; }
+  body.idle .nav, body.idle .kbd-hint { opacity:0; pointer-events:none; }
+  .nav { bottom: 14px; box-shadow: 0 2px 10px rgba(31,35,40,0.08); }
+  .kbd-hint { bottom: 18px; }
+  .progress-bar { height:4px; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress"></div>
+<div class="deck">
+
+  <!-- ═══ SLIDE 1 — TITLE ═══ -->
+  <div class="slide active" id="s1">
+    <div class="title-eyebrow">Module 2 · System Administration</div>
+    <h1>Users, Permissions<br><span class="accent-blue">&amp; Processes</span></h1>
+    <p class="title-sub">Controlling who does what on the system</p>
+    <div class="title-meta">
+      <span><span class="meta-dot"></span>18 Slides</span>
+      <span><span class="meta-dot"></span>Theory + Examples + Case Studies + Labs</span>
+      <span><span class="meta-dot"></span>~120 min</span>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 2 — OVERVIEW ═══ -->
+  <div class="slide" id="s2">
+    <div class="slide-label">Slide 2 — What we'll cover</div>
+    <h2 style="margin-bottom:22px;">Session <span class="accent-blue">Overview</span></h2>
+    <div class="overview-grid">
+      <div class="ov-card">
+        <div class="ov-icon">👤</div>
+        <div class="ov-title accent-blue">Users &amp; Groups</div>
+        <div class="ov-items">useradd / usermod<br>userdel / groupadd<br>/etc/passwd · /etc/shadow<br>primary vs supplementary</div>
+      </div>
+      <div class="ov-card">
+        <div class="ov-icon">🔒</div>
+        <div class="ov-title accent-green">File Permissions</div>
+        <div class="ov-items">chmod (octal + symbolic)<br>chown / chgrp / umask<br>SUID / SGID / Sticky<br>permission evaluation order</div>
+      </div>
+      <div class="ov-card">
+        <div class="ov-icon">📋</div>
+        <div class="ov-title accent-amber">ACL &amp; sudo</div>
+        <div class="ov-items">setfacl / getfacl<br>mask, default ACL<br>visudo / sudoers syntax<br>least privilege principle</div>
+      </div>
+      <div class="ov-card">
+        <div class="ov-icon">⚡</div>
+        <div class="ov-title accent-purple">Processes</div>
+        <div class="ov-items">ps / top / htop / kill<br>signals (SIGTERM/SIGKILL)<br>nice / renice / jobs<br>tmux · nohup · screen</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 3 — USER MANAGEMENT ═══ -->
+  <div class="slide" id="s3">
+    <div class="slide-label">Slide 3 — Theory</div>
+    <h2 style="margin-bottom:18px;">User &amp; Group <span class="accent-blue">Management</span></h2>
+    <div class="grid2" style="flex:1; align-items:start; gap:16px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="cmd-block">
+<span class="cmd-comment"># create user with home dir + bash shell</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">useradd</span> <span class="cmd-flag">-m -s</span> <span class="cmd-arg">/bin/bash alice</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">passwd</span> <span class="cmd-arg">alice</span><br><span class="gap"></span>
+<span class="cmd-comment"># create user, set expiry, comment</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">useradd</span> <span class="cmd-flag">-m -s</span> <span class="cmd-arg">/bin/bash</span> <span class="cmd-flag">-c</span> <span class="cmd-arg">"Dev User"</span> <span class="cmd-flag">-e</span> <span class="cmd-arg">2025-12-31 bob</span><br><span class="gap"></span>
+<span class="cmd-comment"># create group, then add alice</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">groupadd</span> <span class="cmd-arg">dev</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-aG</span> <span class="cmd-arg">dev alice</span><br><span class="gap"></span>
+<span class="cmd-comment"># change primary group (-g lowercase)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-g</span> <span class="cmd-arg">developers alice</span><br><span class="gap"></span>
+<span class="cmd-comment"># verify memberships</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">id</span> <span class="cmd-arg">alice</span><br>
+<span class="cmd-output">uid=1001(alice) gid=1001(alice) groups=1001(alice),1002(dev)</span><br><span class="gap"></span>
+<span class="cmd-comment"># lock / unlock an account</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-L</span> <span class="cmd-arg">alice</span>  <span class="cmd-comment"># lock</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-U</span> <span class="cmd-arg">alice</span>  <span class="cmd-comment"># unlock</span><br><span class="gap"></span>
+<span class="cmd-comment"># delete user + home dir</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">userdel</span> <span class="cmd-flag">-r</span> <span class="cmd-arg">alice</span>
+        </div>
+        <div class="warn-box"><strong style="color:var(--accent3);">-aG is critical.</strong> Without <code>-a</code>, <code>usermod -G</code> <em>replaces</em> all existing groups — potentially revoking sudo access silently.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Key System Files</div>
+          <table class="file-table">
+            <thead><tr><th>File</th><th>Contains</th><th>Access</th></tr></thead>
+            <tbody>
+              <tr><td><code>/etc/passwd</code></td><td style="color:#2f363d;">username, UID, GID, home, shell</td><td><span class="tag tag-green">all users</span></td></tr>
+              <tr><td><code>/etc/shadow</code></td><td style="color:#2f363d;">hashed passwords, aging policy</td><td><span class="tag tag-red">root only</span></td></tr>
+              <tr><td><code>/etc/group</code></td><td style="color:#2f363d;">group names, GIDs, members</td><td><span class="tag tag-green">all users</span></td></tr>
+              <tr><td><code>/etc/gshadow</code></td><td style="color:#2f363d;">group passwords, admins</td><td><span class="tag tag-red">root only</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">/etc/passwd format — 7 fields</div>
+          <div class="cmd-block" style="font-size:15.4px; line-height:2;">
+<span class="cmd-arg">alice</span>:<span class="cmd-output">x</span>:<span class="cmd-main">1001</span>:<span class="cmd-main">1001</span>:<span class="cmd-flag">Dev User</span>:<span class="cmd-arg">/home/alice</span>:<span class="cmd-output">/bin/bash</span><br>
+<span class="cmd-comment">#name  :x  :uid :gid :comment     :home         :shell</span>
+          </div>
+        </div>
+        <div class="note-box"><strong style="color:var(--accent2);">System users</strong> (UIDs 0–999) run services like nginx, postgres, www-data — they typically have <code>/usr/sbin/nologin</code> as their shell to prevent interactive login.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 4 — FILE PERMISSIONS ═══ -->
+  <div class="slide" id="s4">
+    <div class="slide-label">Slide 4 — Theory</div>
+    <h2 style="margin-bottom:18px;">File <span class="accent-green">Permissions</span></h2>
+    <div class="grid2" style="gap:16px;flex:1;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Permission Breakdown — 755</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0;">
+            <div style="text-align:center;">
+              <div style="font-size:14px;color:var(--muted);font-family:var(--mono);margin-bottom:5px;">Owner</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;">
+                <div class="perm-cell perm-on">r</div><div class="perm-cell perm-on">w</div><div class="perm-cell perm-on">x</div>
+              </div>
+              <div style="font-family:var(--mono);font-size:22.4px;color:var(--accent);margin-top:6px;">7</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:14px;color:var(--muted);font-family:var(--mono);margin-bottom:5px;">Group</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;">
+                <div class="perm-cell perm-on">r</div><div class="perm-cell perm-off">-</div><div class="perm-cell perm-on">x</div>
+              </div>
+              <div style="font-family:var(--mono);font-size:22.4px;color:var(--accent2);margin-top:6px;">5</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:14px;color:var(--muted);font-family:var(--mono);margin-bottom:5px;">Others</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;">
+                <div class="perm-cell perm-on">r</div><div class="perm-cell perm-off">-</div><div class="perm-cell perm-on">x</div>
+              </div>
+              <div style="font-family:var(--mono);font-size:22.4px;color:var(--muted);margin-top:6px;">5</div>
+            </div>
+          </div>
+        </div>
+        <div class="cmd-block">
+<span class="cmd-comment"># octal — assign exact bits</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">755 script.sh</span>   <span class="cmd-comment"># rwxr-xr-x</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">644 index.html</span> <span class="cmd-comment"># rw-r--r--</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">600 .ssh/id_rsa</span><span class="cmd-comment"># rw-------</span><br><span class="gap"></span>
+<span class="cmd-comment"># symbolic — modify bits relatively</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">u+x</span> <span class="cmd-arg">deploy.sh</span>      <span class="cmd-comment"># add exec for owner</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">g-w,o-rwx</span> <span class="cmd-arg">secret</span>  <span class="cmd-comment"># strip group write, all others</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">a+r</span> <span class="cmd-arg">README.md</span>      <span class="cmd-comment"># all: add read</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">-R</span> <span class="cmd-arg">750 /opt/app</span>    <span class="cmd-comment"># recursive</span><br><span class="gap"></span>
+<span class="cmd-comment"># change owner and group</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chown</span> <span class="cmd-arg">alice:dev /opt/project</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chown</span> <span class="cmd-flag">-R</span> <span class="cmd-arg">www-data:www-data /var/www</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">umask — default permission mask</div>
+          <p class="body-text" style="font-size:18.2px;margin-bottom:8px;">New files inherit: <code>base − umask</code>. Files base = 666, Dirs base = 777.</p>
+          <table class="file-table">
+            <thead><tr><th>umask</th><th>Files get</th><th>Dirs get</th><th>Use case</th></tr></thead>
+            <tbody>
+              <tr><td><code>022</code></td><td style="color:#2f363d;">644</td><td style="color:#2f363d;">755</td><td style="color:var(--muted);">default (most systems)</td></tr>
+              <tr><td><code>027</code></td><td style="color:#2f363d;">640</td><td style="color:#2f363d;">750</td><td style="color:var(--muted);">stricter, no world read</td></tr>
+              <tr><td><code>077</code></td><td style="color:#2f363d;">600</td><td style="color:#2f363d;">700</td><td style="color:var(--muted);">private (ssh keys)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">Permission Evaluation Order</div>
+          <p style="font-size:16.8px;color:#2f363d;line-height:1.8;">Linux checks in this exact order — <strong>first match wins</strong>:</p>
+          <div style="font-family:var(--mono);font-size:15.4px;margin-top:8px;display:flex;flex-direction:column;gap:5px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);">
+              <span style="color:var(--accent);width:16px;">1</span>
+              <span style="color:var(--accent3);">Are you root?</span>
+              <span style="color:var(--muted);margin-left:auto;">→ access granted always</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);">
+              <span style="color:var(--accent);width:16px;">2</span>
+              <span style="color:var(--accent3);">UID matches owner?</span>
+              <span style="color:var(--muted);margin-left:auto;">→ apply owner bits</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);">
+              <span style="color:var(--accent);width:16px;">3</span>
+              <span style="color:var(--accent3);">GID matches group?</span>
+              <span style="color:var(--muted);margin-left:auto;">→ apply group bits</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;">
+              <span style="color:var(--accent);width:16px;">4</span>
+              <span style="color:var(--accent3);">Otherwise</span>
+              <span style="color:var(--muted);margin-left:auto;">→ apply other bits</span>
+            </div>
+          </div>
+        </div>
+        <div class="warn-box"><strong style="color:var(--accent3);">Avoid chmod 777.</strong> World-writable files let any local user overwrite them — a critical security risk in production.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 5 — SPECIAL BITS ═══ -->
+  <div class="slide" id="s5">
+    <div class="slide-label">Slide 5 — Theory</div>
+    <h2 style="margin-bottom:18px;">Special Permission <span class="accent-amber">Bits</span></h2>
+    <div class="special-grid">
+      <div class="special-card">
+        <div class="special-badge" style="background:rgba(9,105,218,0.12);color:var(--accent);">SUID</div>
+        <h3>Set User ID</h3>
+        <p class="body-text" style="font-size:18.2px;">Run the file with the <strong>file owner's</strong> privileges, not the caller's.</p>
+        <div class="divider"></div>
+        <div class="cmd-block" style="font-size:15.4px;padding:10px 14px;">
+<span class="cmd-comment"># set SUID (octal: 4xxx)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">u+s</span> <span class="cmd-arg">/usr/bin/passwd</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">4755</span> <span class="cmd-arg">myapp</span><br>
+<span class="cmd-output">-rw<strong>s</strong>r-xr-x  /usr/bin/passwd</span><br>
+<span class="cmd-comment"># 's' = SUID set + exec</span><br>
+<span class="cmd-comment"># 'S' = SUID set, NO exec</span>
+        </div>
+        <div class="note-box" style="font-size:15.4px;"><code>/usr/bin/passwd</code> must run as root to write <code>/etc/shadow</code>, but any user should be able to change their own password.</div>
+        <div class="danger-box" style="font-size:15.4px;margin-top:4px;"><strong style="color:var(--accent4);">Security:</strong> SUID on shell binaries is a privilege escalation vector. Audit with: <code>find / -perm -4000 2>/dev/null</code></div>
+      </div>
+      <div class="special-card">
+        <div class="special-badge" style="background:rgba(26,127,55,0.12);color:var(--accent2);">SGID</div>
+        <h3>Set Group ID</h3>
+        <p class="body-text" style="font-size:18.2px;">On <strong>files</strong>: runs with owner's group. On <strong>directories</strong>: new files inherit the dir's group.</p>
+        <div class="divider"></div>
+        <div class="cmd-block" style="font-size:15.4px;padding:10px 14px;">
+<span class="cmd-comment"># SGID on directory (octal: 2xxx)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">g+s</span> <span class="cmd-arg">/opt/project</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">2775</span> <span class="cmd-arg">/opt/project</span><br>
+<span class="cmd-output">drwxrw<strong>s</strong>r-x  /opt/project</span><br><span class="gap"></span>
+<span class="cmd-comment"># alice (in dev) creates a file:</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">touch</span> <span class="cmd-arg">/opt/project/notes.txt</span><br>
+<span class="cmd-output">-rw-r--r-- alice <strong>dev</strong> notes.txt</span>
+        </div>
+        <div class="note-box" style="font-size:15.4px;">Without SGID, new files would belong to alice's primary group — breaking team access to shared directories.</div>
+      </div>
+      <div class="special-card">
+        <div class="special-badge" style="background:rgba(179,89,0,0.12);color:var(--accent3);">Sticky</div>
+        <h3>Sticky Bit</h3>
+        <p class="body-text" style="font-size:18.2px;">On directories: users can only <strong>delete their own files</strong>, even if they have write access to the dir.</p>
+        <div class="divider"></div>
+        <div class="cmd-block" style="font-size:15.4px;padding:10px 14px;">
+<span class="cmd-comment"># set sticky bit (octal: 1xxx)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">+t</span> <span class="cmd-arg">/shared</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">1777</span> <span class="cmd-arg">/shared</span><br>
+<span class="cmd-output">drwxrwxrw<strong>t</strong>  /tmp</span><br><span class="gap"></span>
+<span class="cmd-comment"># bob can NOT delete alice's file:</span><br>
+<span class="cmd-prompt">bob$ </span><span class="cmd-main">rm</span> <span class="cmd-arg">/tmp/alice.txt</span><br>
+<span class="cmd-err">rm: cannot remove: Operation not permitted</span>
+        </div>
+        <div class="note-box" style="font-size:15.4px;"><code>/tmp</code> has sticky bit by default. Everyone writes temp files, but only each user can delete their own.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 6 — ACL ═══ -->
+  <div class="slide" id="s6">
+    <div class="slide-label">Slide 6 — Theory</div>
+    <h2 style="margin-bottom:16px;">Extended ACLs — <span class="accent-purple">Fine-Grained Access</span></h2>
+    <div class="grid2" style="flex:1;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="body-text" style="font-size:18.2px;">Traditional chmod only supports <strong>owner / group / others</strong>. ACLs let you define permissions for <em>any specific user or group</em>.</div>
+        <div class="cmd-block">
+<span class="cmd-comment"># grant specific user access</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-m u:alice:rwx</span> <span class="cmd-arg">/opt/project</span><br><span class="gap"></span>
+<span class="cmd-comment"># grant group access</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-m g:dev:rwx</span> <span class="cmd-arg">/opt/project</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-m g:ops:r-x</span> <span class="cmd-arg">/opt/project</span><br><span class="gap"></span>
+<span class="cmd-comment"># default ACL (new files inherit)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-d -m g:dev:rwx</span> <span class="cmd-arg">/opt/project</span><br><span class="gap"></span>
+<span class="cmd-comment"># recursive apply</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-R -m u:alice:rx</span> <span class="cmd-arg">/var/log/app</span><br><span class="gap"></span>
+<span class="cmd-comment"># remove a specific entry</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-x u:alice</span> <span class="cmd-arg">/opt/project</span><br><span class="gap"></span>
+<span class="cmd-comment"># remove ALL ACLs</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-b</span> <span class="cmd-arg">/opt/project</span><br><span class="gap"></span>
+<span class="cmd-comment"># view ACLs</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">getfacl</span> <span class="cmd-arg">/opt/project</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">getfacl output explained</div>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-output"># file: opt/project</span><br>
+<span class="cmd-output"># owner: alice</span><br>
+<span class="cmd-output"># group: dev</span><br>
+<span class="cmd-main">user</span>::rwx           <span class="cmd-comment"># owner permissions</span><br>
+<span class="cmd-main">user</span>:<span class="cmd-arg">bob</span>:r-x       <span class="cmd-comment"># named user ACL</span><br>
+<span class="cmd-main">group</span>::rwx          <span class="cmd-comment"># owning group</span><br>
+<span class="cmd-main">group</span>:<span class="cmd-arg">ops</span>:r-x      <span class="cmd-comment"># named group ACL</span><br>
+<span class="cmd-main">mask</span>::rwx           <span class="cmd-comment"># effective max for ACL entries</span><br>
+<span class="cmd-main">other</span>::---          <span class="cmd-comment"># everyone else: no access</span>
+          </div>
+        </div>
+        <div class="warn-box"><strong style="color:var(--accent3);">The mask trap.</strong> Running <code>chmod g-x /opt/project</code> after setting ACLs silently reduces the mask, capping all named entries' effective permissions — even if their ACL says rwx.</div>
+        <div class="note-box"><strong style="color:var(--accent2);">The + indicator.</strong> <code>ls -l</code> shows a trailing <code>+</code> on files with ACLs: <code>drwxrwxr-x<strong>+</strong></code></div>
+        <div class="info-box"><strong style="color:var(--accent5);">chmod vs setfacl.</strong> Use chmod for simple owner/group/other rules. Reach for setfacl when you need different access for multiple distinct users or groups on the same path.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 7 — SUDO & VISUDO ═══ -->
+  <div class="slide" id="s7">
+    <div class="slide-label">Slide 7 — Theory</div>
+    <h2 style="margin-bottom:16px;">sudo &amp; <span class="accent-red">Least Privilege</span></h2>
+    <div class="grid2" style="flex:1;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">The Principle</div>
+          <p style="font-size:18.2px;color:#2f363d;line-height:1.7;">Every user should have access to exactly what they need — <strong>nothing more</strong>. sudo is the enforcement mechanism with a full audit trail.</p>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;">
+            <span class="tag tag-red">no root login</span><span class="tag tag-amber">granular control</span><span class="tag tag-green">full audit trail</span>
+          </div>
+        </div>
+        <div class="cmd-block">
+<span class="cmd-comment"># NEVER edit sudoers directly!</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">visudo</span>                 <span class="cmd-comment"># validates syntax on save</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">visudo</span> <span class="cmd-flag">-f</span> <span class="cmd-arg">/etc/sudoers.d/deploy</span><br><span class="gap"></span>
+<span class="cmd-comment"># Syntax: user host=(runas:group) cmds</span><br>
+<span class="cmd-comment"># Full sudo access</span><br>
+<span class="cmd-arg">alice</span>    ALL=(ALL:ALL) ALL<br><span class="gap"></span>
+<span class="cmd-comment"># Group sudo (% prefix)</span><br>
+%<span class="cmd-arg">admin</span>   ALL=(ALL:ALL) ALL<br><span class="gap"></span>
+<span class="cmd-comment"># No-password for specific command</span><br>
+<span class="cmd-arg">deploy</span>  ALL=(root) NOPASSWD: /bin/systemctl restart nginx<br><span class="gap"></span>
+<span class="cmd-comment"># Multiple commands</span><br>
+<span class="cmd-arg">bob</span>     ALL=(root) NOPASSWD: /bin/systemctl restart nginx, /bin/systemctl reload nginx<br><span class="gap"></span>
+<span class="cmd-comment"># Run as specific user</span><br>
+<span class="cmd-arg">carol</span>   ALL=(www-data) /usr/bin/php /var/www/cron.php
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Sudoers rule anatomy</div>
+          <div style="font-family:var(--mono);font-size:15.4px;line-height:2.2;color:#2f363d;">
+            <div><span style="color:var(--accent3);">deploy</span> &nbsp; <span style="color:var(--accent);">ALL</span> = ( <span style="color:var(--accent2);">root</span> ) &nbsp; <span style="color:var(--accent5);">NOPASSWD:</span> &nbsp; <span style="color:var(--accent4);">/bin/systemctl restart nginx</span></div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:14px;color:var(--muted);text-align:center;margin-top:4px;">
+              <div>who</div><div>from host</div><div>run as</div><div>no passwd</div><div>which command</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Real-world — CI/CD deploy user</div>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># deploy script runs automatically</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">sudo systemctl restart nginx</span><br>
+<span class="cmd-output">  ✓ Restarted (no password prompt)</span><br><span class="gap"></span>
+<span class="cmd-comment"># any other command is denied</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">sudo rm -rf /</span><br>
+<span class="cmd-err">Sorry, user deploy is not allowed to</span><br>
+<span class="cmd-err">execute '/bin/rm -rf /'</span>
+          </div>
+        </div>
+        <div class="warn-box"><strong style="color:var(--accent3);">Always use visudo.</strong> A single typo in sudoers can lock everyone out of sudo. visudo validates before saving and locks the file to prevent concurrent edits.</div>
+        <div class="note-box"><strong style="color:var(--accent2);">Prefer /etc/sudoers.d/.</strong> Add separate files per user/service. Easier to audit, easier to remove — and you never touch the base sudoers file.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 8 — TMUX ═══ -->
+  <div class="slide" id="s8">
+    <div class="slide-label">Slide 8 — Theory</div>
+    <h2 style="margin-bottom:16px;">tmux — <span class="accent-green">Persistent Terminal Sessions</span></h2>
+    <div class="grid2" style="flex:1;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">The Problem</div>
+          <p class="body-text" style="font-size:18.2px;">SSH connection drops → all running processes in that session die. Compilation, migrations, log tailing — all lost.</p>
+        </div>
+        <div class="cmd-block">
+<span class="cmd-comment"># session management</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">tmux new -s</span> <span class="cmd-arg">mysession</span>      <span class="cmd-comment"># create named session</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">tmux ls</span>                       <span class="cmd-comment"># list sessions</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">tmux attach -t</span> <span class="cmd-arg">mysession</span>   <span class="cmd-comment"># reattach</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">tmux kill-session -t</span> <span class="cmd-arg">mysession</span><br><span class="gap"></span>
+<span class="cmd-comment"># rename current session</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">tmux rename-session</span> <span class="cmd-arg">deploy</span><br><span class="gap"></span>
+<span class="cmd-comment"># switch between sessions</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">tmux switch -t</span> <span class="cmd-arg">other-session</span>
+        </div>
+        <div class="card">
+          <div class="card-title">tmux workflow — survive SSH drops</div>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:16.8px;font-family:var(--mono);">
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);"><span style="color:var(--accent);width:18px;">1</span><span style="color:var(--accent3);">tmux new -s migration</span><span style="color:var(--muted);margin-left:auto;">create session</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);"><span style="color:var(--accent);width:18px;">2</span><span style="color:var(--accent3);">./db-migrate.sh</span><span style="color:var(--muted);margin-left:auto;">run long job</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);"><span style="color:var(--accent);width:18px;">3</span><span style="color:var(--accent3);">Ctrl+B  D</span><span style="color:var(--muted);margin-left:auto;">detach safely</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);"><span style="color:var(--accent);width:18px;">4</span><span style="color:var(--accent3);">internet drops...</span><span style="color:var(--muted);margin-left:auto;">session stays alive</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0;"><span style="color:var(--accent);width:18px;">5</span><span style="color:var(--accent3);">tmux attach -t migration</span><span style="color:var(--muted);margin-left:auto;">still running!</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Essential keyboard shortcuts</div>
+          <table class="file-table">
+            <thead><tr><th>Prefix + Key</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td><code>Ctrl+B  c</code></td><td style="color:#2f363d;">New window</td></tr>
+              <tr><td><code>Ctrl+B  %</code></td><td style="color:#2f363d;">Split pane vertically</td></tr>
+              <tr><td><code>Ctrl+B  "</code></td><td style="color:#2f363d;">Split pane horizontally</td></tr>
+              <tr><td><code>Ctrl+B  arrows</code></td><td style="color:#2f363d;">Navigate between panes</td></tr>
+              <tr><td><code>Ctrl+B  z</code></td><td style="color:#2f363d;">Zoom/unzoom pane</td></tr>
+              <tr><td><code>Ctrl+B  [</code></td><td style="color:#2f363d;">Scroll mode (q to exit)</td></tr>
+              <tr><td><code>Ctrl+B  d</code></td><td style="color:#2f363d;">Detach session</td></tr>
+              <tr><td><code>Ctrl+B  $</code></td><td style="color:#2f363d;">Rename session</td></tr>
+              <tr><td><code>Ctrl+B  s</code></td><td style="color:#2f363d;">List/switch sessions</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note-box"><strong style="color:var(--accent2);">tmux vs nohup.</strong> <code>nohup cmd &amp;</code> keeps one command running after logout. tmux gives you a full interactive shell, multiple windows/panes, and named sessions — far more powerful for real workflows.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 9 — PROCESS MANAGEMENT ═══ -->
+  <div class="slide" id="s9">
+    <div class="slide-label">Slide 9 — Theory</div>
+    <h2 style="margin-bottom:16px;">Process <span class="accent-purple">Management</span></h2>
+    <div class="grid2" style="flex:1;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Viewing &amp; inspecting processes</div>
+          <div class="cmd-block">
+<span class="cmd-comment"># snapshot — all processes</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">ps</span> <span class="cmd-flag">aux</span><br>
+<span class="cmd-comment"># process tree</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">ps</span> <span class="cmd-flag">auxf</span><br>
+<span class="cmd-comment"># find process by name</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">ps</span> <span class="cmd-flag">aux</span> | <span class="cmd-main">grep</span> <span class="cmd-arg">nginx</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">pgrep</span> <span class="cmd-arg">nginx</span>       <span class="cmd-comment"># returns PIDs only</span><br><span class="gap"></span>
+<span class="cmd-comment"># live monitoring</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">top</span>               <span class="cmd-comment"># classic (q to quit)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">htop</span>              <span class="cmd-comment"># visual, mouse-friendly</span><br><span class="gap"></span>
+<span class="cmd-comment"># show process file handles</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">lsof</span> <span class="cmd-flag">-p</span> <span class="cmd-arg">1234</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Signals — communicating with processes</div>
+          <table class="file-table">
+            <thead><tr><th>Signal</th><th>Number</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>SIGTERM</code></td><td style="color:var(--accent2);">15</td><td style="color:#2f363d;">Graceful shutdown (default)</td></tr>
+              <tr><td><code>SIGKILL</code></td><td style="color:var(--accent4);">9</td><td style="color:#2f363d;">Force kill — cannot be caught</td></tr>
+              <tr><td><code>SIGHUP</code></td><td style="color:var(--accent3);">1</td><td style="color:#2f363d;">Reload config (no restart)</td></tr>
+              <tr><td><code>SIGSTOP</code></td><td style="color:var(--accent5);">19</td><td style="color:#2f363d;">Pause process (Ctrl+Z)</td></tr>
+              <tr><td><code>SIGCONT</code></td><td style="color:var(--accent5);">18</td><td style="color:#2f363d;">Resume paused process</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="cmd-block">
+<span class="cmd-comment"># kill by PID</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">kill</span> <span class="cmd-arg">1234</span>          <span class="cmd-comment"># SIGTERM (graceful)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">kill</span> <span class="cmd-flag">-9</span> <span class="cmd-arg">1234</span>      <span class="cmd-comment"># SIGKILL (force)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">kill</span> <span class="cmd-flag">-HUP</span> <span class="cmd-arg">1234</span>    <span class="cmd-comment"># reload config</span><br><span class="gap"></span>
+<span class="cmd-comment"># kill by name</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">pkill</span> <span class="cmd-arg">nginx</span>         <span class="cmd-comment"># SIGTERM to all nginx</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">pkill</span> <span class="cmd-flag">-9</span> <span class="cmd-arg">nginx</span>    <span class="cmd-comment"># force kill</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">killall</span> <span class="cmd-arg">nginx</span>       <span class="cmd-comment"># same effect</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Priority — nice &amp; renice</div>
+          <p style="font-size:16.8px;color:#2f363d;margin-bottom:8px;">Nice values: <strong style="color:var(--accent2);">-20</strong> (highest priority) to <strong style="color:var(--accent4);">+19</strong> (lowest). Default = 0. Only root can set negative values.</p>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># start with low priority</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">nice</span> <span class="cmd-flag">-n 10</span> <span class="cmd-arg">./heavy-job.sh</span><br><span class="gap"></span>
+<span class="cmd-comment"># change running process priority</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">renice</span> <span class="cmd-flag">-n 5</span> <span class="cmd-flag">-p</span> <span class="cmd-arg">1234</span><br><span class="gap"></span>
+<span class="cmd-comment"># background / foreground jobs</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">./build.sh</span> &amp;         <span class="cmd-comment"># start in background</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">jobs</span>                 <span class="cmd-comment"># list bg jobs</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">fg</span> <span class="cmd-arg">%1</span>              <span class="cmd-comment"># bring job 1 to fg</span><br>
+<span class="cmd-comment"># Ctrl+Z suspends, then 'bg' resumes</span>
+          </div>
+        </div>
+        <div class="warn-box"><strong style="color:var(--accent3);">SIGKILL last resort.</strong> It skips cleanup — open files may be left in inconsistent state. Always try SIGTERM first and give the process a few seconds.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 10 — DEEP DIVE: usermod FLAGS ═══ -->
+  <div class="slide" id="s10">
+    <div class="slide-label">Slide 10 — Deep Dive</div>
+    <h2 style="margin-bottom:16px;">usermod <span class="accent-blue">Flag Reference</span></h2>
+    <div class="grid2" style="flex:1;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Complete flag breakdown</div>
+          <table class="file-table">
+            <thead><tr><th>Flag</th><th>Meaning</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td><code>-aG</code></td><td style="color:#2f363d;">Append supplementary groups</td><td style="color:var(--muted);">-aG sudo,dev alice</td></tr>
+              <tr><td><code>-G</code></td><td style="color:var(--accent4);">Replace ALL supplementary groups</td><td style="color:var(--muted);">⚠️ dangerous alone</td></tr>
+              <tr><td><code>-g</code></td><td style="color:#2f363d;">Change primary group</td><td style="color:var(--muted);">-g developers alice</td></tr>
+              <tr><td><code>-s</code></td><td style="color:#2f363d;">Change login shell</td><td style="color:var(--muted);">-s /bin/zsh alice</td></tr>
+              <tr><td><code>-d</code></td><td style="color:#2f363d;">Change home directory</td><td style="color:var(--muted);">-d /data/alice -m alice</td></tr>
+              <tr><td><code>-l</code></td><td style="color:#2f363d;">Rename username</td><td style="color:var(--muted);">-l alice_new alice</td></tr>
+              <tr><td><code>-L</code></td><td style="color:#2f363d;">Lock account (prefix !)</td><td style="color:var(--muted);">-L alice</td></tr>
+              <tr><td><code>-U</code></td><td style="color:#2f363d;">Unlock account</td><td style="color:var(--muted);">-U alice</td></tr>
+              <tr><td><code>-e</code></td><td style="color:#2f363d;">Set expiry date</td><td style="color:var(--muted);">-e 2025-12-31 alice</td></tr>
+              <tr><td><code>-c</code></td><td style="color:#2f363d;">Update GECOS comment</td><td style="color:var(--muted);">-c "Alice Dev" alice</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="danger-box"><strong style="color:var(--accent4);">The -G trap — demonstrated:</strong><br>alice currently in: sudo, docker, dev<br><code>usermod -G newgroup alice</code> → now ONLY in: newgroup<br>Alice just lost sudo and docker access silently.</div>
+        <div class="note-box"><strong style="color:var(--accent2);">Re-login required.</strong> After <code>usermod -aG</code>, the user must log out and back in (or run <code>newgrp groupname</code>) for the new group to appear in their active session.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Primary (-g) vs Supplementary (-aG)</div>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># -g changes PRIMARY group</span><br>
+<span class="cmd-comment"># Affects ownership of NEW files</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-g</span> <span class="cmd-arg">developers alice</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">touch</span> <span class="cmd-arg">/tmp/test</span><br>
+<span class="cmd-output">-rw-r--r-- alice developers test</span><br>
+<span class="cmd-comment">#                 ^^^^^^^^^^^ primary group</span><br><span class="gap"></span>
+<span class="cmd-comment"># -aG adds SUPPLEMENTARY group</span><br>
+<span class="cmd-comment"># Affects what resources you can access</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-aG</span> <span class="cmd-arg">docker alice</span><br>
+<span class="cmd-comment"># now alice can run docker commands</span><br>
+<span class="cmd-comment"># (docker socket owned by docker group)</span>
+          </div>
+        </div>
+        <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># Move home dir safely</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-d</span> <span class="cmd-arg">/data/alice</span> <span class="cmd-flag">-m</span> <span class="cmd-arg">alice</span><br>
+<span class="cmd-comment"># -m also moves the existing home contents</span><br><span class="gap"></span>
+<span class="cmd-comment"># Rename user (login name only)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-l</span> <span class="cmd-arg">alice_smith alice</span><br>
+<span class="cmd-comment"># home dir and files still say 'alice'</span><br>
+<span class="cmd-comment"># use -d -m to fix home dir too</span><br><span class="gap"></span>
+<span class="cmd-comment"># Verify group membership</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">groups</span> <span class="cmd-arg">alice</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">id</span> <span class="cmd-arg">alice</span><br>
+<span class="cmd-comment"># changes take effect on NEXT login</span>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 11 — DEEP DIVE: chmod OCTAL ═══ -->
+  <div class="slide" id="s11">
+    <div class="slide-label">Slide 11 — Deep Dive</div>
+    <h2 style="margin-bottom:16px;">chmod <span class="accent-green">Octal Reference</span></h2>
+    <div class="grid2" style="flex:1;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Bit values — r=4, w=2, x=1</div>
+          <table class="file-table">
+            <thead><tr><th>Octal</th><th>Bits</th><th>Symbolic</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--accent);">7</td><td style="color:#2f363d;">111</td><td style="color:var(--accent2);">rwx</td><td style="color:var(--muted);">full access</td></tr>
+              <tr><td style="color:var(--accent);">6</td><td style="color:#2f363d;">110</td><td style="color:var(--accent2);">rw-</td><td style="color:var(--muted);">read &amp; write</td></tr>
+              <tr><td style="color:var(--accent);">5</td><td style="color:#2f363d;">101</td><td style="color:var(--accent2);">r-x</td><td style="color:var(--muted);">read &amp; execute</td></tr>
+              <tr><td style="color:var(--accent);">4</td><td style="color:#2f363d;">100</td><td style="color:var(--accent2);">r--</td><td style="color:var(--muted);">read only</td></tr>
+              <tr><td style="color:var(--accent);">3</td><td style="color:#2f363d;">011</td><td style="color:var(--accent2);">-wx</td><td style="color:var(--muted);">write &amp; execute</td></tr>
+              <tr><td style="color:var(--accent);">2</td><td style="color:#2f363d;">010</td><td style="color:var(--accent2);">-w-</td><td style="color:var(--muted);">write only</td></tr>
+              <tr><td style="color:var(--accent);">1</td><td style="color:#2f363d;">001</td><td style="color:var(--accent2);">--x</td><td style="color:var(--muted);">execute only</td></tr>
+              <tr><td style="color:var(--accent);">0</td><td style="color:#2f363d;">000</td><td style="color:var(--accent2);">---</td><td style="color:var(--muted);">no access</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">Common permission patterns</div>
+          <table class="file-table">
+            <thead><tr><th>Mode</th><th>Use case</th></tr></thead>
+            <tbody>
+              <tr><td><code>600</code></td><td style="color:#2f363d;">Private key files (.ssh/id_rsa)</td></tr>
+              <tr><td><code>644</code></td><td style="color:#2f363d;">Web files, config files</td></tr>
+              <tr><td><code>700</code></td><td style="color:#2f363d;">Private scripts, home dirs</td></tr>
+              <tr><td><code>750</code></td><td style="color:#2f363d;">Group-accessible scripts</td></tr>
+              <tr><td><code>755</code></td><td style="color:#2f363d;">Public scripts, web dirs</td></tr>
+              <tr><td><code>770</code></td><td style="color:#2f363d;">Shared team directory</td></tr>
+              <tr><td><code>640</code></td><td style="color:#2f363d;">Config with group read</td></tr>
+              <tr><td style="color:var(--accent4);"><code>777</code></td><td style="color:var(--accent4);">⚠️ World writable — NEVER in prod</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Symbolic mode — operators &amp; targets</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div>
+              <p style="font-size:15.4px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);">TARGETS</p>
+              <div style="font-size:16.8px;color:#2f363d;line-height:2;font-family:var(--mono);">
+                <span style="color:var(--accent);">u</span> = user (owner)<br>
+                <span style="color:var(--accent2);">g</span> = group<br>
+                <span style="color:var(--accent3);">o</span> = others<br>
+                <span style="color:var(--accent5);">a</span> = all (u+g+o)
+              </div>
+            </div>
+            <div>
+              <p style="font-size:15.4px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);">OPERATORS</p>
+              <div style="font-size:16.8px;color:#2f363d;line-height:2;font-family:var(--mono);">
+                <span style="color:var(--accent2);">+</span> = add permission<br>
+                <span style="color:var(--accent4);">-</span> = remove permission<br>
+                <span style="color:var(--accent3);">=</span> = set exactly
+              </div>
+            </div>
+          </div>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">u+x</span> <span class="cmd-arg">run.sh</span>       <span class="cmd-comment"># owner: add exec</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">g=rx</span> <span class="cmd-arg">script</span>      <span class="cmd-comment"># group: exactly rx</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">o-rwx</span> <span class="cmd-arg">private</span>    <span class="cmd-comment"># others: remove all</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">a-x</span> <span class="cmd-arg">data.csv</span>    <span class="cmd-comment"># all: remove exec</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-flag">ug+rw,o=r</span> <span class="cmd-arg">doc</span> <span class="cmd-comment"># combo</span>
+          </div>
+        </div>
+        <div class="note-box"><strong style="color:var(--accent2);">Execute on directories.</strong> The <code>x</code> bit on a directory means "enter" (traverse). Without it, even <code>r</code> lets you list file names but not access them. This is how you create a directory that's listable but not traversable.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 12 — REAL-WORLD EXAMPLES ═══ -->
+  <div class="slide" id="s12">
+    <div class="slide-label">Slide 12 — Real-world Examples</div>
+    <h2 style="margin-bottom:18px;">Putting It All <span class="accent-amber">Together</span></h2>
+    <div class="grid2" style="flex:1;gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Scenario 1 — /tmp sticky bit</div>
+          <p style="font-size:16.8px;color:#2f363d;line-height:1.7;margin-bottom:8px;">Every user writes temp files to /tmp. Without sticky bit, anyone could delete anyone else's files.</p>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-prompt">$ </span><span class="cmd-main">ls -ld</span> <span class="cmd-arg">/tmp</span><br>
+<span class="cmd-output">drwxrwxrwt — 't' = sticky bit</span><br><span class="gap"></span>
+<span class="cmd-comment"># bob cannot delete alice's file</span><br>
+<span class="cmd-prompt">bob$ </span><span class="cmd-main">rm</span> <span class="cmd-arg">/tmp/alice-report.txt</span><br>
+<span class="cmd-err">rm: cannot remove: Operation not permitted</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Scenario 2 — Shared project dir with ACL</div>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># setup once by admin</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">mkdir</span> <span class="cmd-arg">/opt/project</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chown</span> <span class="cmd-arg">root:dev /opt/project</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">2770</span> <span class="cmd-arg">/opt/project</span>    <span class="cmd-comment"># SGID + rwx for group</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-m g:dev:rwx</span> <span class="cmd-arg">/opt/project</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-m g:ops:r-x</span> <span class="cmd-arg">/opt/project</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-d -m g:dev:rwx</span> <span class="cmd-arg">/opt/project</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-title">Scenario 3 — Limited sudo for deploy user</div>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># /etc/sudoers.d/deploy (via visudo -f)</span><br>
+<span class="cmd-arg">deploy</span> ALL=(root) NOPASSWD:<br>
+  /bin/systemctl restart nginx,<br>
+  /bin/systemctl reload nginx<br><span class="gap"></span>
+<span class="cmd-comment"># deploy script can now do:</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">sudo systemctl restart nginx</span>  <span class="cmd-output">✓</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">sudo systemctl stop nginx</span>     <span class="cmd-err">✗ denied</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Scenario 4 — Long-running job via tmux</div>
+          <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-prompt">$ </span><span class="cmd-main">tmux new -s</span> <span class="cmd-arg">migration</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">./db-migrate.sh</span>  <span class="cmd-comment"># takes 2 hours</span><br><span class="gap"></span>
+<span class="cmd-comment"># internet drops — no problem</span><br>
+<span class="cmd-comment"># ssh back in and:</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">tmux attach -t</span> <span class="cmd-arg">migration</span><br>
+<span class="cmd-output">  Migration still running: 73% complete</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 13 — CASE STUDY: WEB SERVER ═══ -->
+  <div class="slide" id="s13">
+    <div class="slide-label">Slide 13 — Case Study</div>
+    <h2 style="margin-bottom:16px;">Case Study: <span class="accent-blue">Hardening a Web Server</span></h2>
+    <p class="body-text" style="font-size:18.2px;margin-bottom:14px;">A new Ubuntu server running nginx needs to be configured so developers can deploy code, operations can monitor logs, and the web process runs with minimal privilege.</p>
+    <div class="grid3" style="flex:1;gap:12px;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="section-header" style="background:rgba(9,105,218,0.1);color:var(--accent);">Step 1 — Users &amp; Groups</div>
+        <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># nginx runs as www-data (system user)</span><br>
+<span class="cmd-comment"># already exists: uid=33</span><br><span class="gap"></span>
+<span class="cmd-comment"># create groups</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">groupadd</span> <span class="cmd-arg">webdev</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">groupadd</span> <span class="cmd-arg">webops</span><br><span class="gap"></span>
+<span class="cmd-comment"># create deploy user (no home needed)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">useradd</span> <span class="cmd-flag">-r -s</span> <span class="cmd-arg">/usr/sbin/nologin deploy</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-aG</span> <span class="cmd-arg">webdev deploy</span><br><span class="gap"></span>
+<span class="cmd-comment"># add human users</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-aG</span> <span class="cmd-arg">webdev alice</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-aG</span> <span class="cmd-arg">webops carol</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="section-header" style="background:rgba(26,127,55,0.1);color:var(--accent2);">Step 2 — Directory Permissions</div>
+        <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># web root — www-data reads, dev writes</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">mkdir</span> <span class="cmd-arg">/var/www/myapp</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chown</span> <span class="cmd-arg">www-data:webdev /var/www/myapp</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">2775</span> <span class="cmd-arg">/var/www/myapp</span><br>
+<span class="cmd-comment"># SGID: new files inherit webdev group</span><br><span class="gap"></span>
+<span class="cmd-comment"># config — only root writes, www-data reads</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">640</span> <span class="cmd-arg">/etc/nginx/nginx.conf</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chown</span> <span class="cmd-arg">root:www-data /etc/nginx/nginx.conf</span><br><span class="gap"></span>
+<span class="cmd-comment"># logs — ops reads, nginx writes</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chown</span> <span class="cmd-arg">www-data:webops /var/log/nginx</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">chmod</span> <span class="cmd-arg">750</span> <span class="cmd-arg">/var/log/nginx</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="section-header" style="background:rgba(179,89,0,0.1);color:var(--accent3);">Step 3 — ACL &amp; sudo</div>
+        <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># ops: read-only on web root</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">setfacl</span> <span class="cmd-flag">-Rm g:webops:r-x</span> <span class="cmd-arg">/var/www/myapp</span><br><span class="gap"></span>
+<span class="cmd-comment"># deploy sudo — only restart/reload</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">visudo</span> <span class="cmd-flag">-f</span> <span class="cmd-arg">/etc/sudoers.d/deploy</span><br>
+<span class="cmd-arg">deploy</span> ALL=(root) NOPASSWD:<br>
+  /bin/systemctl restart nginx,<br>
+  /bin/systemctl reload nginx<br><span class="gap"></span>
+<span class="cmd-comment"># verify final state</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">getfacl</span> <span class="cmd-arg">/var/www/myapp</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">ls -la</span> <span class="cmd-arg">/var/www/myapp</span>
+        </div>
+        <div class="note-box" style="font-size:15.4px;"><strong style="color:var(--accent2);">Result:</strong> www-data serves files. webdev deploys code. webops monitors logs. deploy restarts nginx. No user has more than they need.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 14 — CASE STUDY: COMPROMISED ACCOUNT ═══ -->
+  <div class="slide" id="s14">
+    <div class="slide-label">Slide 14 — Case Study</div>
+    <h2 style="margin-bottom:16px;">Case Study: <span class="accent-red">Responding to a Compromised Account</span></h2>
+    <p class="body-text" style="font-size:18.2px;margin-bottom:14px;">You discover that user <code>bob</code>'s credentials were leaked. He has sudo access and is in the docker group. Walk through containment and recovery.</p>
+    <div class="grid2" style="flex:1;gap:14px;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="section-header" style="background:rgba(207,34,46,0.1);color:var(--accent4);">Phase 1 — Immediate Containment</div>
+        <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># 1. Lock account immediately</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-L</span> <span class="cmd-arg">bob</span><br>
+<span class="cmd-comment"># prepends '!' to hash in /etc/shadow</span><br><span class="gap"></span>
+<span class="cmd-comment"># 2. Kill active sessions</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">pkill</span> <span class="cmd-flag">-u</span> <span class="cmd-arg">bob</span>            <span class="cmd-comment"># kill all bob's procs</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">who</span>                     <span class="cmd-comment"># check active logins</span><br><span class="gap"></span>
+<span class="cmd-comment"># 3. Revoke sudo immediately</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">visudo</span> <span class="cmd-flag">-f</span> <span class="cmd-arg">/etc/sudoers.d/bob</span><br>
+<span class="cmd-comment"># comment out or delete bob's entry</span><br><span class="gap"></span>
+<span class="cmd-comment"># 4. Remove from sensitive groups</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">gpasswd</span> <span class="cmd-flag">-d</span> <span class="cmd-arg">bob docker</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">gpasswd</span> <span class="cmd-flag">-d</span> <span class="cmd-arg">bob sudo</span>
+        </div>
+        <div class="danger-box"><strong style="color:var(--accent4);">Why lock, not delete?</strong> Deleting immediately destroys audit evidence. Lock first, investigate, delete only after forensics are complete.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="section-header" style="background:rgba(130,80,223,0.1);color:var(--accent5);">Phase 2 — Audit &amp; Recovery</div>
+        <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># Check what bob ran recently</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">last</span> <span class="cmd-arg">bob</span>               <span class="cmd-comment"># login history</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">grep</span> <span class="cmd-arg">bob /var/log/auth.log</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">grep</span> <span class="cmd-arg">bob /var/log/sudo.log</span><br><span class="gap"></span>
+<span class="cmd-comment"># Check for files created/modified</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">find</span> <span class="cmd-arg">/ -user bob -newer /tmp/marker</span><br><span class="gap"></span>
+<span class="cmd-comment"># Check crontabs for persistence</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">crontab</span> <span class="cmd-flag">-u</span> <span class="cmd-arg">bob -l</span><br><span class="gap"></span>
+<span class="cmd-comment"># After investigation — reset &amp; restore</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-U</span> <span class="cmd-arg">bob</span>           <span class="cmd-comment"># unlock</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">passwd</span> <span class="cmd-flag">-e</span> <span class="cmd-arg">bob</span>           <span class="cmd-comment"># force password change</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">usermod</span> <span class="cmd-flag">-aG</span> <span class="cmd-arg">docker bob</span> <span class="cmd-comment"># restore groups</span>
+        </div>
+        <div class="note-box"><strong style="color:var(--accent2);">Lesson:</strong> Least privilege limits blast radius. If bob only had access to his project dir and one sudo command, a compromise would be far less damaging than if he had full sudo.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 15 — CASE STUDY: PROCESS RUNAWAY ═══ -->
+  <div class="slide" id="s15">
+    <div class="slide-label">Slide 15 — Case Study</div>
+    <h2 style="margin-bottom:16px;">Case Study: <span class="accent-purple">Runaway Process Investigation</span></h2>
+    <p class="body-text" style="font-size:18.2px;margin-bottom:14px;">A server is slow and unresponsive. CPU at 99%. Walk through diagnosis and resolution without rebooting.</p>
+    <div class="grid2" style="flex:1;gap:14px;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="section-header" style="background:rgba(130,80,223,0.1);color:var(--accent5);">Phase 1 — Identify</div>
+        <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># Find the CPU hog</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">top</span>         <span class="cmd-comment"># press P to sort by CPU</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">ps</span> <span class="cmd-flag">aux --sort=-%cpu</span> | <span class="cmd-main">head</span> <span class="cmd-arg">-10</span><br><span class="gap"></span>
+<span class="cmd-comment"># Identify what the process is</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">ps</span> <span class="cmd-flag">-p</span> <span class="cmd-arg">8432</span> <span class="cmd-flag">-o</span> <span class="cmd-arg">comm,args,user</span><br>
+<span class="cmd-output">COMMAND   ARGS                    USER</span><br>
+<span class="cmd-output">python3   /home/alice/ml-train.py  alice</span><br><span class="gap"></span>
+<span class="cmd-comment"># How long has it been running?</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">ps</span> <span class="cmd-flag">-p</span> <span class="cmd-arg">8432</span> <span class="cmd-flag">-o</span> <span class="cmd-arg">etime,pcpu,pmem</span><br>
+<span class="cmd-output">   ELAPSED %CPU %MEM</span><br>
+<span class="cmd-output">  06:42:11 98.7  31.2</span><br><span class="gap"></span>
+<span class="cmd-comment"># Check open files / network</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">lsof</span> <span class="cmd-flag">-p</span> <span class="cmd-arg">8432</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">strace</span> <span class="cmd-flag">-p</span> <span class="cmd-arg">8432</span> <span class="cmd-comment"># what syscalls is it making?</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="section-header" style="background:rgba(26,127,55,0.1);color:var(--accent2);">Phase 2 — Resolve</div>
+        <div class="cmd-block" style="font-size:15.4px;">
+<span class="cmd-comment"># Option A: deprioritize (keep running)</span><br>
+<span class="cmd-comment"># Lower CPU priority — system stays responsive</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">renice</span> <span class="cmd-flag">-n 19</span> <span class="cmd-flag">-p</span> <span class="cmd-arg">8432</span><br>
+<span class="cmd-output">8432 (process ID) old priority 0, new priority 19</span><br><span class="gap"></span>
+<span class="cmd-comment"># Option B: graceful stop</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">kill</span> <span class="cmd-arg">8432</span>     <span class="cmd-comment"># SIGTERM — wait a few sec</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">ps</span> <span class="cmd-flag">-p</span> <span class="cmd-arg">8432</span>  <span class="cmd-comment"># check if it exited</span><br><span class="gap"></span>
+<span class="cmd-comment"># Option C: force kill (last resort)</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">kill</span> <span class="cmd-flag">-9</span> <span class="cmd-arg">8432</span><br><span class="gap"></span>
+<span class="cmd-comment"># Prevent recurrence — use nice at launch</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">nice</span> <span class="cmd-flag">-n 15</span> <span class="cmd-arg">python3 ml-train.py</span> &amp;
+        </div>
+        <div class="note-box"><strong style="color:var(--accent2);">Best practice.</strong> Long CPU-intensive jobs should always be launched with <code>nice -n 10</code> or higher. This reserves priority for interactive and service processes.</div>
+        <div class="warn-box"><strong style="color:var(--accent3);">Root vs user renice.</strong> Only root can set negative nice values (increase priority). Regular users can only lower their own process priorities.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 16 — SECURITY BEST PRACTICES ═══ -->
+  <div class="slide" id="s16">
+    <div class="slide-label">Slide 16 — Best Practices</div>
+    <h2 style="margin-bottom:16px;">Security <span class="accent-amber">Best Practices</span></h2>
+    <div class="grid3" style="flex:1;gap:12px;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card" style="border-top:2px solid var(--accent);">
+          <div class="card-title" style="color:var(--accent);">Users &amp; Groups</div>
+          <div style="font-size:16.8px;color:#2f363d;line-height:1.9;">
+            ✓ Never use root for daily work<br>
+            ✓ One user per service (www-data, postgres)<br>
+            ✓ Use <code>-r</code> flag for system users<br>
+            ✓ Set <code>nologin</code> shell for service accounts<br>
+            ✓ Lock unused accounts (<code>usermod -L</code>)<br>
+            ✓ Manage via groups, not individuals<br>
+            ✗ Never share accounts between people<br>
+            ✗ Never add service users to sudoers
+          </div>
+        </div>
+        <div class="warn-box"><strong style="color:var(--accent3);">Audit regularly:</strong><br><code>cat /etc/passwd | awk -F: '$3 == 0'</code><br>Should only show root (UID 0).</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card" style="border-top:2px solid var(--accent2);">
+          <div class="card-title" style="color:var(--accent2);">Permissions</div>
+          <div style="font-size:16.8px;color:#2f363d;line-height:1.9;">
+            ✓ Use 600 for private keys<br>
+            ✓ Use 644/755 as sensible defaults<br>
+            ✓ SGID on all shared directories<br>
+            ✓ Sticky bit on world-writable dirs<br>
+            ✓ Verify with <code>ls -la</code> + <code>getfacl</code><br>
+            ✗ Never <code>chmod 777</code> in production<br>
+            ✗ Don't SUID scripts (only binaries)<br>
+            ✗ Audit SUID/SGID files periodically
+          </div>
+        </div>
+        <div class="cmd-block" style="font-size:14px;">
+<span class="cmd-comment"># find all SUID binaries</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">find</span> <span class="cmd-arg">/ -perm -4000 2>/dev/null</span><br>
+<span class="cmd-comment"># find world-writable files</span><br>
+<span class="cmd-prompt">$ </span><span class="cmd-main">find</span> <span class="cmd-arg">/ -perm -o+w -type f 2>/dev/null</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card" style="border-top:2px solid var(--accent3);">
+          <div class="card-title" style="color:var(--accent3);">sudo &amp; Processes</div>
+          <div style="font-size:16.8px;color:#2f363d;line-height:1.9;">
+            ✓ Always use <code>visudo</code> to edit sudoers<br>
+            ✓ One file per user in <code>sudoers.d/</code><br>
+            ✓ Specify full command paths in sudoers<br>
+            ✓ Use NOPASSWD only for automation<br>
+            ✓ Run jobs with <code>nice</code> to be kind to the system<br>
+            ✓ Use tmux for all remote long-running jobs<br>
+            ✗ Never <code>NOPASSWD: ALL</code> for humans<br>
+            ✗ Never use <code>kill -9</code> as first resort
+          </div>
+        </div>
+        <div class="note-box"><strong style="color:var(--accent2);">Audit sudo:</strong><br><code>grep sudo /var/log/auth.log</code><br>Every sudo command is logged with timestamp, user, and full command.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 17 — LABS ═══ -->
+  <div class="slide" id="s17">
+    <div class="slide-label">Slide 17 — Hands-on Labs</div>
+    <h2 style="margin-bottom:18px;">Lab <span class="accent-green">Exercises</span></h2>
+    <div class="grid2" style="flex:1;gap:12px;">
+      <div class="lab-card">
+        <div class="lab-num">01</div>
+        <div class="lab-title accent-blue">Users, groups &amp; group flags</div>
+        <div class="lab-steps">
+          1. Create groups: <code>dev</code> and <code>ops</code><br>
+          2. Create users: alice, bob (dev) / carol, dave (ops)<br>
+          3. Add alice to both groups with <code>-aG</code>. Verify with <code>id alice</code><br>
+          4. <em>Experiment: run <code>usermod -G newgroup alice</code> — what groups does she have now?</em><br>
+          5. Fix it. Add alice back with <code>-aG</code>.
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-num">02</div>
+        <div class="lab-title accent-purple">chmod &amp; special bits</div>
+        <div class="lab-steps">
+          1. Create <code>/opt/shared</code>, set SGID + sticky (octal: <code>3775</code>)<br>
+          2. Set owner to <code>root:dev</code><br>
+          3. As alice (dev), create a file — verify group ownership<br>
+          4. <em>As carol (ops), try to delete alice's file — should fail</em><br>
+          5. Find all SUID binaries: <code>find / -perm -4000 2>/dev/null</code>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-num">03</div>
+        <div class="lab-title accent-amber">ACL — fine-grained access</div>
+        <div class="lab-steps">
+          1. Create <code>/opt/project</code>, set <code>dev</code> as group owner<br>
+          2. <code>setfacl -m g:dev:rwx,g:ops:r-x /opt/project</code><br>
+          3. Set default ACL so new files inherit permissions<br>
+          4. Verify with <code>getfacl /opt/project</code><br>
+          5. <em>Test: log in as carol (ops), try to create a file</em>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-num">04</div>
+        <div class="lab-title accent-red">sudo + visudo</div>
+        <div class="lab-steps">
+          1. Create user <code>deploy</code> with <code>nologin</code> shell<br>
+          2. <code>visudo -f /etc/sudoers.d/deploy</code><br>
+          3. Allow only: <code>systemctl restart nginx</code> — no password<br>
+          4. <em>Test as deploy: run allowed command ✓</em><br>
+          5. <em>Test: try <code>sudo rm /etc/passwd</code> — should be denied ✗</em>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-num">05</div>
+        <div class="lab-title accent-green">tmux session survival</div>
+        <div class="lab-steps">
+          1. <code>tmux new -s workshop</code><br>
+          2. Run: <code>watch -n1 date</code> (continuous output)<br>
+          3. Detach: <code>Ctrl+B</code> then <code>D</code><br>
+          4. Close your terminal window — reopen and reattach<br>
+          5. <em>Bonus: split into 2 panes, run different commands in each</em>
+        </div>
+      </div>
+      <div class="lab-card">
+        <div class="lab-num">06</div>
+        <div class="lab-title accent-purple">Process management</div>
+        <div class="lab-steps">
+          1. Run: <code>stress --cpu 2 &amp;</code> (or <code>yes &gt; /dev/null &amp;</code>)<br>
+          2. Observe CPU in <code>top</code> — note the PID<br>
+          3. <code>renice -n 19 -p &lt;PID&gt;</code> — observe priority change<br>
+          4. Send SIGTERM: <code>kill &lt;PID&gt;</code><br>
+          5. <em>If it ignores SIGTERM, use SIGKILL as last resort</em>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 18 — SUMMARY ═══ -->
+  <div class="slide" id="s18">
+    <div class="slide-label">Slide 18 — Summary</div>
+    <h2 style="margin-bottom:22px;">Key <span class="accent-blue">Takeaways</span></h2>
+    <div class="grid2" style="flex:1;gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card" style="border-left:3px solid var(--accent);">
+          <p style="font-size:19.6px;line-height:1.8;color:#2f363d;"><strong style="color:var(--text);">Every user is an identity.</strong> Use groups to manage collective permissions. Never assign rights to individuals one by one — that doesn't scale and is error-prone.</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--accent2);">
+          <p style="font-size:19.6px;line-height:1.8;color:#2f363d;"><strong style="color:var(--text);">chmod is binary.</strong> When you need different access levels for different groups on the same resource, ACLs with setfacl/getfacl are the right tool.</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--accent3);">
+          <p style="font-size:19.6px;line-height:1.8;color:#2f363d;"><strong style="color:var(--text);">Least privilege is a mindset.</strong> sudo entries should be as specific as possible — one command, one path, not full root. Compromise is contained by narrow access.</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--accent5);">
+          <p style="font-size:19.6px;line-height:1.8;color:#2f363d;"><strong style="color:var(--text);">tmux is insurance.</strong> Develop the habit of running anything long-running inside a tmux session on remote servers — it takes 5 seconds to set up.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card">
+          <div class="card-title">Commands you must know</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;">
+            <span class="tag tag-blue">useradd</span><span class="tag tag-blue">usermod</span><span class="tag tag-blue">userdel</span><span class="tag tag-blue">groupadd</span>
+            <span class="tag tag-green">chmod</span><span class="tag tag-green">chown</span><span class="tag tag-green">chgrp</span><span class="tag tag-green">umask</span>
+            <span class="tag tag-purple">setfacl</span><span class="tag tag-purple">getfacl</span>
+            <span class="tag tag-amber">visudo</span><span class="tag tag-amber">sudo</span><span class="tag tag-amber">gpasswd</span>
+            <span class="tag tag-red">ps</span><span class="tag tag-red">kill</span><span class="tag tag-red">pkill</span><span class="tag tag-red">nice</span><span class="tag tag-red">renice</span>
+            <span class="tag tag-green">tmux</span><span class="tag tag-green">nohup</span><span class="tag tag-green">jobs</span><span class="tag tag-green">fg</span><span class="tag tag-green">bg</span>
+          </div>
+        </div>
+        <div class="warn-box">
+          <strong style="color:var(--accent3);">Common mistakes to avoid:</strong><br>
+          • <code>chmod 777</code> — never in production<br>
+          • <code>usermod -G</code> without <code>-a</code> — silently removes other groups<br>
+          • Editing <code>/etc/sudoers</code> directly — always use visudo<br>
+          • Running long remote jobs without tmux<br>
+          • Using SIGKILL before trying SIGTERM<br>
+          • Giving humans NOPASSWD: ALL in sudoers
+        </div>
+        <div class="note-box">
+          <strong style="color:var(--accent2);">Next module:</strong> Networking — interfaces, routing, firewall, SSH hardening.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<nav class="nav">
+  <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">&#8592;</button>
+  <div class="dot-nav" id="dots"></div>
+  <span class="nav-counter" id="counter">1 / 18</span>
+  <button class="nav-btn" id="nextBtn" onclick="navigate(1)">&#8594;</button>
+</nav>
+<div class="kbd-hint">← → chuyển slide · F toàn màn hình</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let cur = 0;
+
+  const dotsEl = document.getElementById('dots');
+  const counterEl = document.getElementById('counter');
+  const progressEl = document.getElementById('progress');
+
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotsEl.appendChild(d);
+  }
+
+  function goTo(n) {
+    slides[cur].classList.remove('active');
+    dotsEl.children[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(n, total - 1));
+    slides[cur].style.display = 'flex';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => { slides[cur].classList.add('active'); });
+    });
+    dotsEl.children[cur].classList.add('active');
+    counterEl.textContent = (cur + 1) + ' / ' + total;
+    progressEl.style.width = ((cur + 1) / total * 100) + '%';
+    document.getElementById('prevBtn').style.opacity = cur === 0 ? '0.3' : '1';
+    document.getElementById('nextBtn').style.opacity = cur === total - 1 ? '0.3' : '1';
+  }
+
+  function navigate(dir) { goTo(cur + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   navigate(-1);
+    if (e.key === 'Home') goTo(0);
+    if (e.key === 'End')  goTo(total - 1);
+  });
+
+  function fit(){ const k=Math.min(innerWidth/1600, innerHeight/900); document.documentElement.style.setProperty('--k',k); }
+  addEventListener('resize',fit); fit();
+  let idleT; function wake(){ document.body.classList.remove('idle'); clearTimeout(idleT); idleT=setTimeout(()=>document.body.classList.add('idle'),2500); }
+  addEventListener('mousemove',wake); wake();
+  document.addEventListener('keydown', e => {
+    if (e.key==='f'||e.key==='F') { if(!document.fullscreenElement) document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+    if (e.key===' '||e.key==='PageDown') { e.preventDefault(); navigate(1); }
+    if (e.key==='PageUp') navigate(-1);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
