@@ -1,2 +1,290 @@
-# linux-school-stuffs
-a repo for sharing my linux course material
+# Linux Operating System & Applications — Course Materials
+
+Personal study notes, slide decks and lab reports for the **Linux Operating System &
+Applications** course at HCMUS. Shared openly so my classmates can use, reuse and
+build on any of it — take whatever is useful, ignore the rest.
+
+Everything here is written from my own work. Lab reports follow a
+*command → explanation → screenshot* pattern, so you can see not just *what* to run
+but *why* each flag is there.
+
+---
+
+## Contents
+
+- [What's in here](#whats-in-here)
+- [Repository layout](#repository-layout)
+- [Command cheat-sheet](#command-cheat-sheet)
+  - [Log analysis](#log-analysis)
+  - [Finding and inspecting files](#finding-and-inspecting-files)
+  - [Text processing](#text-processing)
+  - [Links and inodes](#links-and-inodes)
+  - [Shell productivity](#shell-productivity)
+- [Slides](#slides)
+- [Labs](#labs)
+- [Seminar topics](#seminar-topics)
+- [Books](#books)
+- [Contributing](#contributing)
+
+---
+
+## What's in here
+
+- **4 interactive slide decks** covering Sessions 01–04 — self-contained HTML, just
+  open them in a browser.
+- **1 complete lab report** (Lab 01) with a written explanation for every single
+  command, plus the dataset it was written against.
+- **A command cheat-sheet** — the reusable pipelines from those labs, distilled and
+  copy-pasteable.
+- **A list of 13 seminar topics** with the infrastructure each one needs, so you can
+  pick a topic and know the scope before committing to it.
+
+---
+
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| `syllabus.html` | Full course syllabus — 5 modules, 11 sessions, assessment breakdown, capstone tracks |
+| `slides/` | Interactive HTML slide decks, one file per session |
+| `labs/lab01/` | Lab 01 — assignment sheet, dataset, report and screenshots |
+| `seminar/` | Seminar topic list with per-topic infrastructure requirements |
+| `books/` | Reference books — **not in the repo**, see [Books](#books) |
+
+---
+
+## Command cheat-sheet
+
+The commands that actually earned their place in the lab reports. Every example below
+is written to be run **from the repository root** and has been verified against the
+real data.
+
+> **Note:** the original `labs/lab01/report.md` refers to the log as `lab01/access.log`.
+> That path is stale — the file is at `labs/lab01/access.log`. The commands below use
+> the correct path.
+
+### Log analysis
+
+Dataset: `labs/lab01/access.log` — 100,000 lines of nginx combined-format log.
+
+```bash
+# Top 10 client IPs by request count
+awk '{print $1}' labs/lab01/access.log | sort | uniq -c | sort -k1 -nr | head -10
+
+# Top 5 URLs returning 404 — check for vulnerability scanners
+awk '$9 == 404 {print $7}' labs/lab01/access.log | sort | uniq -c | sort -rn | head -5
+
+# Count requests per hour of day
+awk '{split($4,a,":"); h=a[2]; arr[h]++}
+     END {for (k in arr) print k, arr[k]}' labs/lab01/access.log | sort -n -k1
+
+# Status code breakdown with percentage share
+awk 'BEGIN{sum=0} {c[$9]++; sum++}
+     END {for (k in c) printf "%s %d %.1f%%\n", k, c[k], c[k]*100/sum}' \
+    labs/lab01/access.log
+
+# Total requests that returned 5xx
+awk '$9>=500 && $9<=599' labs/lab01/access.log | wc -l
+```
+
+Two things worth internalising:
+
+- **Match fields, not substrings.** `awk '$9 == 404'` is correct where `grep 404` is
+  not — `grep` would also match a byte count of `40428`.
+- **Aggregate on the field you care about, not the whole line.** Extracting `$1` before
+  `sort | uniq -c` is what turns 100,000 lines into a ranked list.
+
+### Finding and inspecting files
+
+```bash
+# 10 largest files under a directory, human-readable
+find . -type f -printf '%s %p\n' | sort -nr -k1 | numfmt --to=iec | head -10
+
+# Files modified in the last 24 hours
+find . -type f -mtime -1
+
+# World-writable files (audit only — do not change)
+sudo find /tmp -type f -perm -o+w
+
+# Empty files and empty directories, listed separately
+find . -type f -empty
+find . -type d -empty
+```
+
+Use `-empty`, **not** `-size 0`, to find empty directories — a directory always
+occupies space for its own metadata, so `-size 0` silently misses every one of them.
+
+### Text processing
+
+```bash
+# Recursive search, skipping noise, counting matching files
+grep -lir --exclude-dir=.git --exclude-dir=node_modules -e "TODO" . | wc -l
+
+# Bulk replace across many files, with automatic backups
+find ./configs -type f -print0 | xargs -0 sed -i.bak 's/old-server\.local/10.5.0.2/'
+
+# Verify: no output means every file was changed
+grep -r -e "old-server.local" ./configs
+```
+
+- Always pair `find -print0` with `xargs -0`. Plain `xargs` splits on whitespace, so a
+  filename containing a space will be treated as two files and the command will fail.
+- `-i.bak` leaves a `.bak` next to every file it edits. The backup *keeps the old
+  value*, so verify with `grep -r` before you start wondering why old values still
+  appear.
+- Escape the dot (`old-server\.local`) or it matches any character.
+
+### Links and inodes
+
+```bash
+touch original.txt
+ln    original.txt hard.txt     # hard link — another name for the same inode
+ln -s original.txt soft.txt     # symlink — a small file holding a path
+
+ls -li original.txt hard.txt soft.txt
+```
+
+`hard.txt` and `original.txt` share one inode; `soft.txt` has its own and points at a
+path. Delete `original.txt` and the hard link still reads fine, while the symlink is
+left broken — because the data lives in the inode, which the hard link still
+references, and in the path string, which no longer resolves.
+
+### Shell productivity
+
+```bash
+# create a directory and cd into it
+mkcd() { mkdir "$1" && cd "$1"; }
+
+# unpack by extension
+extract() {
+    case "$1" in
+        *.zip)     unzip "$1";  return 0 ;;
+        *.tar.gz)  tar -xzf "$1"; return 0 ;;
+        *.tar.bz2) tar -xjf "$1"; return 0 ;;
+        *) echo "extract: Unsupported file type: $1" >&2; return 1 ;;
+    esac
+}
+
+alias l='ls -al'
+alias li='ls -li'
+alias ..='cd ..'
+alias nvimrc='cd ~/.config/nvim'
+alias runcpp='g++ -std=c++23 -Wall -Werror *.cpp -o main && ./main'
+
+HISTTIMEFORMAT="%Y-%m-%d %H:%M:%S || "
+```
+
+`mkcd` and `extract` are functions rather than aliases because they run several
+commands and use their arguments. Add them to `~/.bashrc` and they apply to every new
+shell — or run `source ~/.bashrc` in the current one.
+
+---
+
+## Slides
+
+Four self-contained interactive decks. **No setup or build step** — open the `.html`
+file directly in a browser.
+
+| Session | Deck | Covers |
+|---|---|---|
+| 01 | [Linux Architecture](slides/1_linux_architecture.html) | Unix history, kernel/user/shell layers, distro choice, FHS, boot sequence, systemd |
+| 02 | [CLI & Text Processing](slides/2_cli-text-processing.html) | Navigation, redirection, pipes, `xargs`, and the text tools — `grep`, `sed`, `awk`, `sort`, `uniq` |
+| 03 | [Users, Permissions & Processes](slides/3_users-permissions.html) | `useradd`/`usermod`, `/etc/passwd`/`shadow`/`group`, `chmod`, SUID/SGID/sticky, ACLs, process management |
+| 04 | [Software, Storage & Tasks](slides/4-software-storage-tasks.html) | `apt`/`dpkg`, PPAs, building from source, partitioning and `fstab`, LVM, cron, systemd timers |
+
+The decks are clickable rather than slide-by-slide — use the navigation on each page
+to move between sections.
+
+---
+
+## Labs
+
+### Lab 01 — CLI & text processing
+
+Everything for this lab lives in [`labs/lab01/`](labs/lab01/).
+
+| File | What it is |
+|---|---|
+| `linux_lab_1.html` | The assignment sheet — 10 labs plus stretch goals and questions |
+| `access.log` | The dataset: 100,000 lines, ~17 MB, nginx combined format |
+| `report.md` | My write-up — source format |
+| `report.pdf` | Same report, PDF |
+| `screenshots/` | 20 terminal captures, referenced from the report |
+
+Topics covered: directory navigation and brace expansion, stdout/stderr redirection
+and `tee`, `grep` pattern hunting, `awk` log analytics, `sed` bulk replacement,
+disk-hog hunting and permission auditing, hard links vs symlinks, shell customisation,
+and a capstone that chases down a failing deploy using nothing but
+`grep · awk · sed · sort · uniq`.
+
+Each task in the report follows the same shape:
+
+1. the command
+2. an **Explain:** paragraph covering each flag and why it is there
+3. a screenshot of the actual output
+4. a written answer where the sheet asks a question
+
+`access.log` is committed so that every command in the report runs exactly as written,
+with identical results. Fields are positional — `$1` is the client IP, `$7` the request
+URL, `$9` the status code, `$10` the response size.
+
+---
+
+## Seminar topics
+
+Thirteen topics, each with the infrastructure it assumes. Pick based on what you want
+to learn and what you can spin up.
+
+> The course `syllabus.html` contains a shorter, different table of 10 topics. This
+> list is the expanded one, with the infrastructure requirements attached.
+
+| # | Topic | Infrastructure |
+|---|---|---|
+| 1 | **Nginx Web Server & Reverse Proxy** — event-driven vs Apache's process/thread model, server blocks, `access.log`/`error.log`, 502/503/504, rate limiting with `burst`/`nodelay` | 1 VM (512 MB) |
+| 2 | **MongoDB Document Database Server** — document model vs RDBMS, `bindIp`, authentication and RBAC, single/compound indexes, `.explain()`, `mongodump`/`mongorestore` | 1 VM (1 GB) |
+| 3 | **MySQL Database Server** — server layer vs storage engine, InnoDB vs MyISAM, `GRANT`/`REVOKE`, binary log, slow query log, ACID transactions | 1 VM (1 GB) |
+| 4 | **Docker CE (Single Node)** — containers vs VMs, namespaces and cgroups, image layers and build cache, multi-stage builds, bind mounts vs named volumes | 1 VM (1 GB) |
+| 5 | **Docker Swarm Orchestration** — manager/worker roles, desired state and reconciliation, routing mesh and overlay networks, rolling updates | 2 VMs (1 GB each) |
+| 6 | **HAProxy Load Balancer** — `roundrobin` vs `leastconn` vs `source`, sticky sessions, health checks (`inter`/`rise`/`fall`), custom error pages | 3 VMs (512 MB each) |
+| 7 | **Redis In-Memory Data Store** — cache-aside, why single-threaded is fast, RDB vs AOF persistence, eviction policies (`noeviction`, `allkeys-lru`, `volatile-ttl`) | 1 VM (512 MB) |
+| 8 | **NFS Network File System** — NFS vs SMB/CIFS, UID/GID-based permissions, `root_squash` vs `no_root_squash`, hard vs soft mounts | 2 VMs (512 MB each) |
+| 9 | **Ansible Configuration Management** — idempotency, agentless over SSH, inventories, playbooks, roles, handlers, Jinja2 templates, `ansible-vault` | 2 VMs (512 MB each) |
+| 10 | **Prometheus & Grafana Monitoring** — pull vs push, Counter/Gauge/Histogram, PromQL with `rate()`, alert lifecycle, Alertmanager | 2 VMs (1.5 GB + 512 MB) |
+| 11 | **ELK Stack (Centralized Logging)** — Filebeat → Elasticsearch → Kibana, the inverted index, parsing unstructured logs into structured fields | 1 VM (3 GB) |
+| 12 | **BorgBackup (Deduplicated Backup)** — full/incremental/differential, deduplication, the 3-2-1 rule, RPO/RTO, `--append-only` against ransomware | 2 VMs (512 MB each) |
+| 13 | **BIND9 Domain Name System** — recursive vs authoritative DNS, record types, forward and reverse zones, zone transfer (AXFR/IXFR) | 2 VMs (512 MB each) |
+
+The original topic descriptions — including the theory outline and the required demos
+for each — are in [`seminar/de_tai_seminar.md`](seminar/de_tai_seminar.md) (Vietnamese).
+
+---
+
+## Books
+
+Two reference books are useful for this course but are **not committed to this
+repository** — they are large and under copyright:
+
+- *How Linux Works* — what every superuser should know (Brian Ward)
+- *Linux Command Line and Shell Scripting Bible* (3rd edition)
+
+Look for your own copies. The syllabus references them as background reading.
+
+---
+
+## Contributing
+
+This is not a curated collection — take whatever you want, and add whatever you want.
+If you solved a lab differently, found a cleaner pipeline, or built a deck for a
+session that isn't here yet, please put it up.
+
+If you'd like things to stay consistent, the pattern that already works is:
+
+- **One folder per lab** — `labs/labNN/`
+- **Keep the assignment sheet, the dataset, and your write-up together** in that folder
+- **Write the report in Markdown** (`report.md`) so diffs stay readable
+- **Reference screenshots relatively** (`screenshots/lab1_1.png`) so the report renders
+  on GitHub
+- **Explain every command** — a command someone cannot understand is worth much less
+  than the one that opened their eyes
+
+There are no rules beyond that, and no pull request is too small.
