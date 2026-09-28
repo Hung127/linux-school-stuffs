@@ -8,7 +8,6 @@ what those colours are, so a theme change never re-parses Markdown.
 from __future__ import annotations
 
 from pygments.formatters import HtmlFormatter
-from pygments.styles import get_style_by_name
 
 # Two hand-tuned palettes rather than an inversion. The dark theme is a warm
 # charcoal, not black, and the accent is a single restrained green used only
@@ -74,56 +73,80 @@ def _vars(tokens: dict, scheme: str) -> str:
     return f'[data-theme="{scheme}"] {{\n{block}\n}}'
 
 
-def _code_vars() -> str:
-    """Map Pygments token colours onto both site themes.
+def _code_theme_rules(style: str) -> str:
+    """Token colour rules for one theme, scoped to the shell's code element.
 
-    Emits the light value only when it differs from the dark one, which is the
-    case for the minority of tokens. Emitting both unconditionally doubled the
-    stylesheet to ~40 KB for no benefit.
+    Delegated to Pygments rather than rebuilt by walking `styles` by hand,
+    because flattening tokens onto CSS classes is not a bijection: a single
+    token maps to several classes, and distinct tokens collide on the same short
+    class -- both `Token.Text.Whitespace` and `Token.Operator.Word` claim `.w`.
+    Equal specificity means the winner is decided purely by rule order, so a
+    hand-rolled loop settles those collisions by sort position rather than by
+    intent. Pygments' generator emits them in its own canonical order, which is
+    why it, and not this loop, is the authority on which token wins.
+
+    A style entry is also a *string* carrying optional styling flags around the
+    colour -- `'#ABB2BF'`, `'bold #61AFEF'`, `'noitalic #9C6500'`, or
+    `'nobold'` with no colour at all. Subscripting one does not yield a colour,
+    it yields the first character: an earlier hand-rolled loop produced
+    `color: #;` and `color: b;` for every token, which the browser discarded
+    outright. Both themes were flat, while the rules sat in the stylesheet and
+    the token spans sat in the HTML, so every structural test still passed.
+
+    Only `.hl .<token>` lines are kept. That drops the `.hl` base block, whose
+    hardcoded `background: #282C34` painted a near-black block on light pages
+    and leaked onto the hand-written pages outside the shell -- the block's own
+    background comes from `--cn-code-bg` instead -- along with the linenos
+    rules, for markup this build does not emit.
     """
-    from pygments.formatters.html import _get_ttype_class
-
-    dark = get_style_by_name(CODE_THEME).styles
-    light = get_style_by_name(CODE_LIGHT_THEME).styles
-
     rules: list[str] = []
-    for token in sorted(dark, key=str):
-        dark_entry = dark[token]
-        dark_colour = dark_entry[0] if dark_entry else ""
-        if not dark_colour:
-            continue
-        light_entry = light.get(token)
-        light_colour = (light_entry[0] if light_entry else "") or dark_colour
-        for cls in _get_ttype_class(token):
-            if not cls:
-                continue
-            if light_colour != dark_colour:
-                rules.append(
-                    f".course-shell .hl .{cls} {{ color: {light_colour}; }}"
-                )
-            # `data-theme` is set on <html> by the bootstrap in app.js, while
-            # `.course-shell` is the <body> -- so the attribute selector has to
-            # come first. Written as `.course-shell[data-theme="dark"]` it never
-            # matched, and dark mode silently kept the light token colours.
-            rules.append(
-                f'[data-theme="dark"] .course-shell .hl .{cls}'
-                f" {{ color: #{dark_colour}; }}"
-            )
-
+    for raw in HtmlFormatter(style=style).get_style_defs(".hl").splitlines():
+        line = raw.strip()
+        # `.hll` marks the line Pygments was asked to highlight; this build
+        # never highlights one, and its hardcoded `#ffffcc` would sit as a
+        # yellow band in dark mode.
+        if line.startswith(".hl .") and not line.startswith(".hl .hll"):
+            rules.append(f".course-shell {line}")
     return "\n".join(rules)
+
+
+def _code_vars() -> str:
+    """Pygments token colours for both themes.
+
+    Each theme's rules are generated unconditionally. An earlier version
+    emitted the light rule only where it differed from the dark one, on the
+    reasoning that one rule would then serve both -- but the dark rule is
+    scoped to `[data-theme="dark"]`, so a token skipped as "the same in both
+    themes" was left with no colour at all in light mode and inherited the body
+    text colour. Eight of the nine token classes the lab report uses fell back
+    that way.
+
+    `data-theme` is set on <html> by the bootstrap in app.js, while
+    `.course-shell` is the <body>, so the attribute selector has to come first.
+    Written as `.course-shell[data-theme="dark"]` it never matched, and dark
+    mode kept the light colours.
+    """
+    light = _code_theme_rules(CODE_LIGHT_THEME)
+    dark = _code_theme_rules(CODE_THEME)
+    return "\n".join(
+        [
+            light,
+            "/* dark */",
+            "\n".join(
+                line.replace(".course-shell ", '[data-theme="dark"] .course-shell ', 1)
+                for line in dark.splitlines()
+            ),
+        ]
+    )
 
 
 def stylesheet() -> str:
     """The complete app.css, as a single string."""
-    # Pygments' own rules are emitted for a bare `.hl`, which leaks onto any
-    # Pygments' own base rules are emitted for a bare `.hl`, which now resolves
-    # to the code element itself, and they carry Pygments' dark palette --
-    # `background: #282C34` would paint a near-black block on a light page.
-    # Only the token colours are kept, and they are re-targeted onto the code
-    # element in `_code_vars`. The block's own background comes from
-    # `--cn-code-bg`, so it follows the theme.
-    pygments_base = ""
-
+    # Pygments' base rules used to be spliced in here under a bare `.hl`, which
+    # leaked onto the hand-written pages outside the shell and painted
+    # `#282C34` -- its own dark palette -- behind every block. `_code_vars` now
+    # emits only the token colours, re-targeted onto the code element; the
+    # block's background comes from `--cn-code-bg` and follows the theme.
     return f"""
 /* Generated by docker/theme.py -- edit the tokens at the top, not here. */
 

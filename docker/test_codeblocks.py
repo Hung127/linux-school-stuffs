@@ -27,8 +27,56 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import theme
+from pygments.styles import get_style_by_name
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FENCE_LANGUAGES = {"bash", "text"}
+CODE_LIGHT_THEME = theme.CODE_LIGHT_THEME
+CODE_THEME = theme.CODE_THEME
+
+# Light and dark selectors for the token rules, as they appear in app.css.
+LIGHT_PREFIX = ".course-shell"
+DARK_PREFIX = '[data-theme="dark"] .course-shell'
+
+
+def _normalise_hex(colour: str) -> str:
+    """Expand CSS shorthand so `#666` and `#666666` compare equal.
+
+    Pygments shortens hex values when it writes CSS (`#666666` becomes
+    `#666`) but stores them expanded in the style, so a straight comparison
+    reports a palette member as foreign.
+    """
+    value = colour.strip().lower()
+    if re.fullmatch(r"#[0-9a-f]{3}", value):
+        return "#" + "".join(ch * 2 for ch in value[1:])
+    return value
+
+
+def _pygments_colours(style_name: str) -> set[str]:
+    """Every hex colour the palette assigns, normalised for comparison."""
+    colours: set[str] = set()
+    for entry in get_style_by_name(style_name).styles.values():
+        found = re.search(r"#([0-9a-fA-F]{3,8})\b", entry or "")
+        if found:
+            colours.add(_normalise_hex(f"#{found.group(1)}"))
+    return colours
+
+
+def _palette_gives_colour(cls: str, prefix: str) -> bool:
+    """True when Pygments emits no rule for `cls` in this theme's palette.
+
+    A token the palette leaves uncoloured is meant to inherit, so the absence
+    of a rule is correct. Pygments' own output is the oracle here rather than
+    the raw style dict: several tokens share a short class, so one of them
+    carrying a colour says nothing about whether the class as a whole gets a
+    rule. Punctuation is the case in point -- `Token.Punctuation.Marker` has a
+    colour, but Pygments emits `.pm` and not `.p`, so a plain punctuation span
+    is meant to inherit.
+    """
+    style_name = CODE_LIGHT_THEME if prefix == LIGHT_PREFIX else CODE_THEME
+    generated = theme._code_theme_rules(style_name)
+    return not re.search(rf"^\.course-shell \.hl \.{cls} \{{", generated, re.MULTILINE)
 
 
 class CodeBlockTestCase(unittest.TestCase):
@@ -169,6 +217,152 @@ class TestTokensAreEmitted(CodeBlockTestCase):
                     self.assertNotIn("&lt;", inner.group(1).replace("&amp;lt;", ""))
 
 
+class TestEveryTokenIsColoured(CodeBlockTestCase):
+    """The tests that should have caught the flat-looking blocks.
+
+    Three checks passed in a row while the code was visibly monochrome. Each
+    asked whether colour was *defined*, never whether the browser *received*
+    one. A `dockerfile` block satisfied the first, 5 of 24 token rules satisfied
+    the second, and 106 well-formed-looking rules satisfied the third -- when
+    every one of them read `color: #;` or `color: b;`, because a Pygments style
+    entry is a string like `'bold #61AFEF'` and `entry[0]` is the character
+    `'b'`. The browser discards those declarations silently, so the block fell
+    back to body text in both themes while every structural assertion held.
+
+    So the assertions below are about what the cascade ends up with: that each
+    colour is a colour, that it came from the palette for the theme it is
+    scoped to, and that each token the reader actually sees resolves to one.
+    """
+
+    def token_classes(self, html: str) -> set[str]:
+        classes: set[str] = set()
+        for block in re.findall(
+            r'<code class="hl language-\w+">(.*?)</code>', html, re.DOTALL
+        ):
+            classes |= set(re.findall(r'<span class="([a-z]+)"', block))
+        return classes
+
+    def rules_for(self, prefix: str) -> dict[str, str]:
+        pattern = rf'^{re.escape(prefix)} \.hl \.([a-z]+) \{{([^}}]*)\}}'
+        return dict(re.findall(pattern, self.css, re.MULTILINE))
+
+    def test_the_report_uses_enough_tokens_to_be_meaningful(self):
+        classes = self.token_classes(self.lab)
+        self.assertGreaterEqual(
+            len(classes), 5,
+            f"only {sorted(classes)} found; the fixture is not exercising much",
+        )
+
+    def test_no_colour_declaration_in_the_stylesheet_is_malformed(self):
+        # The direct check on the defect: `color: #;` and `color: b;` are what a
+        # Pygments style string misread as a tuple produces, and the browser
+        # drops both without a word.
+        allowed = r"(#[0-9a-fA-F]{3,8}|var\(--[a-z-]+\)|currentColor|inherit|transparent)"
+        malformed = [
+            value for value in re.findall(r"color:\s*([^;}]+)", self.css)
+            if not re.fullmatch(allowed, value.strip())
+        ]
+        self.assertEqual(
+            malformed, [],
+            f"these declarations are not colours and will be discarded: "
+            f"{sorted(set(malformed))[:10]}",
+        )
+
+    def test_token_colours_come_from_the_palette_for_their_theme(self):
+        # A light rule carrying a dark-palette colour renders the wrong theme's
+        # colours on a white background, which is legible enough to ship.
+        palettes = {
+            ".course-shell": CODE_LIGHT_THEME,
+            '[data-theme="dark"] .course-shell': CODE_THEME,
+        }
+        for prefix, style_name in palettes.items():
+            expected = {
+                colour.lower()
+                for colour in _pygments_colours(style_name)
+            }
+            for cls, body in self.rules_for(prefix).items():
+                for colour in re.findall(r"color:\s*(#[0-9a-fA-F]{3,8})", body):
+                    with self.subTest(prefix=prefix, token=cls, colour=colour):
+                        self.assertIn(
+                            _normalise_hex(colour), expected,
+                            f"colour {colour} is not in the {style_name} palette",
+                        )
+
+    def test_every_token_the_reader_sees_resolves_in_both_themes(self):
+        # A class with no rule is fine only where its palette entry carries no
+        # colour -- punctuation is one, and inheriting body text is correct.
+        # Anything else means the token renders as plain text.
+        unresolvable = []
+        for cls in sorted(self.token_classes(self.lab)):
+            for prefix in (".course-shell", '[data-theme="dark"] .course-shell'):
+                body = self.rules_for(prefix).get(cls)
+                if body is not None and re.search(r"color:\s*#[0-9a-fA-F]{3,8}", body):
+                    continue
+                if _palette_gives_colour(cls, prefix):
+                    continue  # inherits by design
+                unresolvable.append(f"{cls} ({prefix})")
+        self.assertEqual(
+            unresolvable, [],
+            f"tokens that render as plain text in one theme: {unresolvable}",
+        )
+
+    def test_the_light_rules_are_not_gated_on_differing_from_dark(self):
+        # Regression guard on the emission itself. The dark rule is scoped to
+        # `[data-theme="dark"]`, so emitting the light rule only where the two
+        # differ left those tokens with no light-mode colour at all.
+        light = self.rules_for(".course-shell")
+        dark = self.rules_for('[data-theme="dark"] .course-shell')
+        self.assertGreater(
+            len(light), 0, "no light-theme token rules were emitted"
+        )
+        # Punctuation is the one class the light palette leaves uncoloured.
+        self.assertLessEqual(
+            sorted(set(light) - set(dark)),
+            ["p"],
+            "light rules appeared only where they differ from dark",
+        )
+
+    def test_the_stylesheet_has_no_escaped_newline(self):
+        # A '\\n' written into the source instead of a real newline joins the
+        # whole dark palette onto one line, where everything after the first
+        # rule is inside a comment-shaped tail and silently does nothing.
+        self.assertNotIn(
+            "\\n", self.css,
+            "stylesheet contains a literal backslash-n, not a newline",
+        )
+
+    def test_the_build_emits_every_rule_pygments_generates(self):
+        # The coverage check. Whichever way the rules are assembled, nothing
+        # Pygments produces may be quietly dropped on the way into app.css --
+        # that is how tokens end up rendering as body text while the palette
+        # looks complete. `.hll` is excluded because this build never marks a
+        # highlighted line and its `#ffffcc` would be a yellow band in dark mode.
+        for prefix, style_name in (
+            (LIGHT_PREFIX, CODE_LIGHT_THEME),
+            (DARK_PREFIX, CODE_THEME),
+        ):
+            generated = theme._code_theme_rules(style_name)
+            expected = set(re.findall(r"^\.course-shell \.hl \.([a-z]+) \{", generated, re.M))
+            self.assertGreater(len(expected), 50, f"{style_name} produced too few rules")
+            dropped = sorted(expected - set(self.rules_for(prefix)))
+            self.assertEqual(
+                dropped, [],
+                f"{style_name} rules missing from app.css: {dropped}",
+            )
+
+    def test_both_themes_carry_a_substantial_token_palette(self):
+        for prefix in (".course-shell", '[data-theme="dark"] .course-shell'):
+            rules = self.rules_for(prefix)
+            self.assertGreater(
+                len(rules), 50,
+                f"{prefix} emitted only {len(rules)} token rules",
+            )
+            self.assertGreaterEqual(
+                len({body for body in rules.values()}), 10,
+                f"{prefix} rules are near-identical; the palette looks wrong",
+            )
+
+
 class TestCodeStyling(CodeBlockTestCase):
     def test_no_hardcoded_background_from_pygments(self):
         # Pygments' own base rule paints #282C34, its dark palette. On a
@@ -177,9 +371,17 @@ class TestCodeStyling(CodeBlockTestCase):
             self.css, r"\.hl\s*\{[^}]*background:\s*#",
             "app.css must not hardcode a Pygments background",
         )
-        for hexcode in ("#282C34", "#abb2bf"):
-            with self.subTest(colour=hexcode):
-                self.assertNotIn(hexcode.lower(), self.css.lower())
+        # #282C34 only ever came from that base rule, so it must be gone
+        # entirely. #abb2bf is one-dark's base *text* colour, so it legitimately
+        # colours tokens in dark mode -- it is only forbidden as a background,
+        # and in the light palette, which has no such colour.
+        self.assertNotIn("#282c34", self.css.lower())
+        light = "\n".join(
+            body for cls, body in re.findall(
+                r"^\.course-shell \.hl \.([a-z]+) \{([^}]*)\}", self.css, re.M
+            )
+        )
+        self.assertNotIn("#abb2bf", light.lower())
 
     def test_code_background_uses_a_theme_token(self):
         # The block's background has to come from the palette, not from
