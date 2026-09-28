@@ -78,28 +78,33 @@ TOC_MIN_ENTRIES = 3
 # docker/test_codeblocks.py now asserts each language in use resolves.
 LEXER_ALIASES = {
     "": "text",
+    "text": "text",
+    "txt": "text",
+    "plain": "text",
+    "plaintext": "text",
+    "bash": "bash",
     "sh": "bash",
     "shell": "bash",
     "zsh": "bash",
     "console": "bash",
+    "python": "python",
     "py": "python",
+    "javascript": "javascript",
     "js": "javascript",
+    "typescript": "typescript",
     "ts": "typescript",
     "html": "html",
     "htm": "html",
     "xml": "html",
     "css": "css",
     "json": "json",
+    "yaml": "yaml",
     "yml": "yaml",
+    "markdown": "markdown",
     "md": "markdown",
     "sql": "sql",
     "dockerfile": "docker",
     "docker": "docker",
-    "text": "text",
-    "txt": "text",
-    "plain": "text",
-    "plaintext": "text",
-    "": "text",
 }
 
 LABELS = {
@@ -125,7 +130,7 @@ LABELS = {
 # invalid, so browsers collapsed the styling and every block read as one flat
 # slab. `nowrap=True` emits only the token spans, which is what belongs inside
 # `<pre><code>`. See docker/test_codeblocks.py, which asserts the invariant.
-_HIGHLIGHTER = HtmlFormatter(cssclass="hl")
+_HIGHLIGHTER = HtmlFormatter(cssclass="hl", nowrap=True)
 _H1 = re.compile(r"<h1[^>]*>(.*?)</h1>", re.DOTALL)
 _TAG = re.compile(r"<[^>]+>")
 _HEADING = re.compile(r'<h([2-3]) id="([^"]+)"[^>]*>(.*?)</h\1>', re.DOTALL)
