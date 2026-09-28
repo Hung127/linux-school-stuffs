@@ -101,6 +101,10 @@ def _code_vars() -> str:
                 rules.append(
                     f".course-shell .hl .{cls} {{ color: {light_colour}; }}"
                 )
+            # `data-theme` is set on <html> by the bootstrap in app.js, while
+            # `.course-shell` is the <body> -- so the attribute selector has to
+            # come first. Written as `.course-shell[data-theme="dark"]` it never
+            # matched, and dark mode silently kept the light token colours.
             rules.append(
                 f'.course-shell[data-theme="dark"] .hl .{cls}'
                 f" {{ color: #{dark_colour}; }}"
@@ -276,6 +280,17 @@ def stylesheet() -> str:
   font-size: 0.72rem; color: var(--cn-text-faint);
 }}
 
+/* A child entry, e.g. a lab report listed under its assignment sheet.
+   Indented with a rule rather than a colour change alone, so the hierarchy
+   survives greyscale and high-contrast modes. */
+.nav-list .nav-sublist {{
+  margin: 0.1rem 0 0.3rem 0.55rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--cn-border);
+}}
+.nav-list .nav-sublist a {{ padding: 0.18rem 0.55rem; font-size: 0.85em; }}
+.nav-list .nav-sublist .nav-path {{ display: none; }}
+
 .content {{
   min-width: 0;
   max-width: var(--cn-measure);
@@ -407,8 +422,8 @@ def stylesheet() -> str:
 .content pre code {{ background: none; padding: 0; border: 0;
                      font-size: inherit; }}
 
-/* Pygments token colours, remapped onto both themes. */
-{pygments_base}
+/* Pygments token colours, remapped onto both themes. The block element is
+   `code.hl`; there is no wrapper, so these target it directly. */
 .course-shell .hl {{ color: var(--cn-text); }}
 {_code_vars()}
 

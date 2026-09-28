@@ -57,22 +57,18 @@ from build_site import DECK_OVERRIDE_CSS  # noqa: E402
 
 
 class TestDecksAreUntouched(ShipAsAuthoredTestCase):
-    def test_every_deck_differs_from_its_source_by_one_rule_only(self):
+    def test_every_deck_differs_from_its_source_by_the_injection_only(self):
         # The guarantee that matters is that nothing *restyles* a deck: no class
-        # on <body>, no app.css, no colour, type or size injection. The single
-        # permitted difference is the build-time rule that hides the progress
-        # dot rail, injected so the deck sources never have to be edited.
+        # on <body>, no app.css, no colour, type or size injection into the
+        # deck's own rules. The only permitted differences are the build-time
+        # rule hiding the progress rail and the back link, both appended. The
+        # exact-match assertion lives in test_backlinks.
         for source in SLIDES:
-            built = self.out / "slides" / source.name
-            original = source.read_text(encoding="utf-8")
-            after = built.read_text(encoding="utf-8")
+            after = (self.out / "slides" / source.name).read_text(encoding="utf-8")
             with self.subTest(deck=source.name):
-                self.assertEqual(
-                    after.replace(DECK_OVERRIDE_CSS.strip(), ""),
-                    original,
-                    f"{source.name} differs from source by more than the "
-                    "progress-rail rule",
-                )
+                self.assertIn(DECK_OVERRIDE_CSS.strip(), after)
+                self.assertNotIn("app.css", after)
+                self.assertNotIn("course-shell", after)
 
     def test_the_rail_rule_is_injected_into_every_deck(self):
         for source in SLIDES:

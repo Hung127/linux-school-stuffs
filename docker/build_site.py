@@ -67,9 +67,15 @@ SITE_TITLE = "Linux Operating System &amp; Applications"
 # are not cluttered with navigation they do not need.
 TOC_MIN_ENTRIES = 3
 
-# Fence languages that can be mapped to a Pygments lexer. Anything outside
-# this set is rendered as plain text rather than guessed at, because a wrong
-# guess is worse than no colour.
+# Fence languages mapped to a Pygments lexer name. A fence outside this table
+# is rendered as plain text rather than guessed at, because a wrong guess is
+# worse than no colour.
+#
+# Every canonical name must appear as its own key, not only as a target of an
+# alias. `bash` was once missing here while `sh`/`shell`/`zsh` pointed at it, so
+# the 46 bash fences in this repository silently rendered as plain text while
+# a test asserted highlighting was present and passed on a dockerfile block.
+# docker/test_codeblocks.py now asserts each language in use resolves.
 LEXER_ALIASES = {
     "": "text",
     "sh": "bash",
@@ -112,6 +118,13 @@ LABELS = {
     "typescript": "typescript",
 }
 
+# Pygments wraps its output in `<div class="hl"><pre>...</pre></div>` by
+# default. That wrapper was being nested inside the block element the build
+# already had, giving a <pre> inside a <pre> inside a <div> inside a <code>.
+# The tokens were generated correctly, but the structure around them was
+# invalid, so browsers collapsed the styling and every block read as one flat
+# slab. `nowrap=True` emits only the token spans, which is what belongs inside
+# `<pre><code>`. See docker/test_codeblocks.py, which asserts the invariant.
 _HIGHLIGHTER = HtmlFormatter(cssclass="hl")
 _H1 = re.compile(r"<h1[^>]*>(.*?)</h1>", re.DOTALL)
 _TAG = re.compile(r"<[^>]+>")
@@ -130,6 +143,8 @@ class Doc:
     url_label: str     # short path shown under the nav entry
     body: str = ""     # rendered HTML
     headings: list[tuple[int, str, str]] = field(default_factory=list)
+    children: list["Doc"] = field(default_factory=list)
+    parent: str = ""   # url_label of the nav entry this one nests under
 
     @property
     def depth(self) -> int:
@@ -144,10 +159,20 @@ class Site:
     docs: list[Doc]
 
     def by_path(self, path: str) -> Doc:
-        for doc in self.docs:
+        """Find a document by its output path, children included.
+
+        A lab report is a child of its assignment sheet in the sidebar, so the
+        top-level list is not the whole set of pages.
+        """
+        for doc in self.all_docs():
             if doc.path == path:
                 return doc
         raise KeyError(path)
+
+    def all_docs(self) -> list["Doc"]:
+        return [doc for doc in self.docs] + [
+            child for doc in self.docs for child in doc.children
+        ]
 
     def groups(self) -> list[tuple[str, list[Doc]]]:
         """Sidebar groups, in order, each with its documents in order."""
@@ -174,14 +199,42 @@ def build_outline(source: Path) -> Site:
     """Discover the site from what is actually in the repository.
 
     Slides are found by globbing and ordered by their session number, so a new
-    deck appears in the navigation without a code change.
+    deck appears in the navigation without a code change. Lab assignment sheets
+    are discovered the same way, so a sheet is reachable even when the lab it
+    belongs to has no report of its own to render an index from.
     """
     docs: list[Doc] = [
         Doc("index.html", "Overview", "Course", 0, "README.md"),
         Doc("syllabus.html", "Syllabus", "Course", 1, "syllabus.html"),
-        Doc("labs/lab01/index.html", "Lab 01", "Labs", 0, "~/labs/lab01"),
-        Doc("seminar/index.html", "Seminar topics", "Seminar", 0, "~/seminar"),
     ]
+
+    # The assignment sheet is the front door for a lab: it is what a reader
+    # opens first, and it is the only page a lab without a report has. A report
+    # nests under it rather than replacing it, so both are reachable and the
+    # ordering reads the way someone actually works through a lab.
+    for order, lab_dir in enumerate(sorted((source / "labs").glob("lab*"))):
+        if not lab_dir.is_dir():
+            continue
+        label = lab_dir.name.replace("lab", "Lab ")
+        sheets = sorted(lab_dir.glob("*.html"))
+        if not sheets:
+            # No sheet means nothing to link to; a report alone still gets an
+            # entry so the lab is reachable.
+            if (lab_dir / "report.md").is_file():
+                docs.append(Doc(f"labs/{lab_dir.name}/index.html", label, "Labs",
+                                order, f"~/labs/{lab_dir.name}"))
+            continue
+
+        sheet = Doc(f"labs/{lab_dir.name}/{sheets[0].name}", label, "Labs", order,
+                    f"~/labs/{lab_dir.name}")
+        if (lab_dir / "report.md").is_file():
+            sheet.children.append(
+                Doc(f"labs/{lab_dir.name}/index.html", "Report", "Labs", order,
+                    "report.md", parent=sheet.url_label)
+            )
+        docs.append(sheet)
+
+    docs.append(Doc("seminar/index.html", "Seminar topics", "Seminar", 0, "~/seminar"))
 
     slides = sorted(
         (p for p in (source / "slides").glob("*.html")),
@@ -387,6 +440,66 @@ def _retarget_markdown_links(body: str, page_dir: str) -> str:
     return re.sub(r'href="([^"]+\.md(?:#[^"]*)?)"', repl, body)
 
 
+def _link_filenames(body: str, page_dir: str, published: set[str]) -> str:
+    """Turn a backticked filename in a table cell into a real link.
+
+    The notes list their own files by name in backticks rather than linking
+    them -- `` | `linux_lab_1.html` | The assignment sheet | `` -- so a reader
+    has no way to reach the assignment sheet, the report PDF, or any sibling
+    document.
+
+    The name is relative to the *lab*, not to the page doing the listing: the
+    README's inventory names `linux_lab_1.html`, which lives in `labs/lab01/`
+    and is listed on the landing page. Linking the bare name would 404, so each
+    name is resolved against the files actually published -- preferring a
+    sibling of the current page -- and the href is computed relative to that
+    page. An unresolvable name is left as plain text rather than linked, so a
+    typo cannot ship a dead link.
+
+    The Markdown is untouched; the link is generated at build time.
+    """
+
+    def resolve(filename: str) -> str | None:
+        candidates = sorted(
+            path for path in published if path.rsplit("/", 1)[-1] == filename
+        )
+        if not candidates:
+            return None
+        sibling = f"{page_dir}/{filename}" if page_dir else filename
+        target = sibling if sibling in candidates else candidates[0]
+        return os.path.relpath(target, page_dir or ".")
+
+    def repl(match: re.Match) -> str:
+        filename, description = match.group(1), match.group(2)
+        href = resolve(filename)
+        if href is None:
+            return match.group(0)
+        label = "PDF" if filename.endswith(".pdf") else "HTML"
+        meta = (
+            "Open the generated document"
+            if filename.endswith(".pdf")
+            else "Open the document"
+        )
+        title = html.escape(re.sub(r"<[^>]+>", "", description).strip())
+        return (
+            f'<a class="pdf-card" href="{html.escape(href, quote=True)}">'
+            f'<span class="pdf-badge">{label}</span>'
+            f'<span class="pdf-text"><span class="pdf-title">{title}</span>'
+            f'<span class="pdf-meta">{meta}</span></span>'
+            f'<span class="pdf-arrow" aria-hidden="true">&rarr;</span>'
+            "</a>"
+        )
+
+    # A file inventory row: `filename` in one cell, the description in the next.
+    return re.sub(
+        r"<td>\s*<code>([\w.-]+\.(?:html|pdf))</code>\s*</td>\s*"
+        r"<td>(.*?)</td>",
+        repl,
+        body,
+        flags=re.DOTALL,
+    )
+
+
 def _pdf_cards(body: str) -> str:
     """Make links to a PDF look like a document, not a bare filename.
 
@@ -490,24 +603,41 @@ def header(prefix: str = "") -> str:
 
 
 def sidebar(site: Site, current: Doc) -> str:
-    """The course navigation, marked up with filesystem hints."""
+    """The course navigation, marked up with filesystem hints.
+
+    An entry with children nests them one level, so a lab shows its assignment
+    sheet with the report listed under it rather than competing beside it.
+    """
     parts = ['<nav class="sidebar" id="course-nav" aria-label="Course">']
     for name, docs in site.groups():
         parts.append('<div class="nav-group">')
         parts.append(f'<h2 class="nav-group-title">{html.escape(name)}</h2>')
         parts.append('<ul class="nav-list">')
         for doc in docs:
-            is_current = doc.path == current.path
-            classes = ' class="is-current"' if is_current else ""
-            current_attr = ' aria-current="page"' if is_current else ""
-            parts.append(
-                f'<li><a href="{url_for(current, doc)}"{classes}{current_attr}>'
-                f'<span class="nav-label">{html.escape(doc.title)}</span>'
-                f'<span class="nav-path">{html.escape(doc.url_label)}</span></a></li>'
-            )
+            parts.append(_nav_item(current, doc))
         parts.append("</ul></div>")
     parts.append("</nav>")
     return "".join(parts)
+
+
+def _nav_item(current: Doc, doc: Doc, nested: bool = False) -> str:
+    """One sidebar entry, with any children listed beneath it."""
+    is_current = doc.path == current.path
+    classes = ' class="is-current"' if is_current else ' class="nav-child"'
+    if nested and not is_current:
+        classes = ' class="nav-child"'
+    current_attr = ' aria-current="page"' if is_current else ""
+    item = (
+        f'<li><a href="{url_for(current, doc)}"{classes}{current_attr}>'
+        f'<span class="nav-label">{html.escape(doc.title)}</span>'
+        f'<span class="nav-path">{html.escape(doc.url_label)}</span></a>'
+    )
+    if doc.children:
+        item += '<ul class="nav-list nav-sublist">'
+        for child in doc.children:
+            item += _nav_item(current, child, nested=True)
+        item += "</ul>"
+    return item + "</li>"
 
 
 def toc_block(headings: list[tuple[int, str, str]], ident: str, mobile: bool) -> str:
@@ -658,72 +788,143 @@ def build_search_index(docs: list[Doc]) -> str:
     return json.dumps(entries, ensure_ascii=False)
 
 
-# -------------------------------------------------------- slide injection
-
 # ------------------------------------------------- hand-written page edits
 
-# Hides the slide-progress dot rail in the built decks, without editing them.
+# Everything injected into a built deck, and into the standalone documents.
 #
-# Each deck has a bottom-centre pill containing prev/next, a row of 5px dots
-# and an "n / N" counter. The dots are clickable, which makes them easy to hit
-# by accident, and the rail reads as visual noise.
+# Decks are presentations that fill the viewport, so the injected content is
+# deliberately minimal: one CSS block and one link. It is pinned to the
+# top-left because that is the one corner no deck uses -- all four centre their
+# content, and put their own chrome at bottom-centre (.nav) and, in decks 3 and
+# 4, bottom-right (.kbd-hint / .kbhint).
+#
+# Two earlier attempts put navigation on the decks and both were wrong. In
+# normal flow it was unreachable, because the decks clip overflow. Made
+# `position: fixed` it covered the slide, which is the overflow that was
+# reported. A single small link in an empty corner is the narrow version that
+# fits the space these decks actually have.
+#
+# Decks 3 and 4 have an `.idle` hook that hides their chrome after 2.5s; decks
+# 1 and 2 have none. An idle-only link could therefore not be uniform, so the
+# link is always visible and no script is added to any deck.
+DECK_LINK_CLASS = "deck-back-link"
+
+# Hides the slide-progress dot rail. Each deck has a bottom-centre pill holding
+# prev/next, a row of 5px dots and an "n / N" counter. The dots are clickable,
+# which makes them easy to hit by accident, and the rail reads as visual noise.
 #
 # It is a CSS rule rather than a markup edit on purpose: all four decks do
-# `getElementById('dots').appendChild(...)` with no null guard, so removing the
-# element would throw a TypeError on the first line of the deck's script and
-# take its own navigation down with it. `display: none` leaves the node in the
-# DOM, so the script still runs -- the dots are simply never painted, and with
-# them no longer painted there is nothing to click.
+# `getElementById('dots').appendChild(...)` with no null guard, so removing
+# the element would throw a TypeError on the first line of the deck's script
+# and take its own navigation down with it. `display: none` leaves the node in
+# the DOM, so the script still runs -- the dots are simply never painted, and
+# with them not painted there is nothing to click.
 #
 # Scoped to the id rather than a class: deck 1 uses .progress-dots, deck 3 uses
 # .dot-nav, decks 2 and 4 use .dots, but all four carry id="dots".
-DECK_OVERRIDE_CSS = "<style>#dots { display: none; }</style>"
-
-SYLLABUS_BACK_LINK = (
-    '<p class="syllabus-back">'
-    '<a href="index.html">&larr; Back to the course</a>'
-    "</p>"
+DECK_OVERRIDE_CSS = (
+    "<style>"
+    "#dots { display: none; }"
+    f".{DECK_LINK_CLASS} {{"
+    "  position: fixed; top: 0.6rem; left: 0.75rem; z-index: 60;"
+    "  font-family: var(--mono, ui-monospace, monospace);"
+    "  font-size: 12px; line-height: 1.4; opacity: 0.55;"
+    "  transition: opacity 0.15s ease;"
+    "}"
+    f".{DECK_LINK_CLASS}:hover, .{DECK_LINK_CLASS}:focus {{ opacity: 1; }}"
+    f".{DECK_LINK_CLASS} a {{ color: inherit; text-decoration: none; }}"
+    f".{DECK_LINK_CLASS} a:hover {{ text-decoration: underline; }}"
+    "</style>"
 )
 
 
-def hide_deck_progress_rail(path: Path) -> None:
-    """Inject the rule that hides a deck's progress dot rail.
+def deck_link(site_relative: str) -> str:
+    """The back link markup injected into a deck, correct for its depth."""
+    depth = site_relative.count("/")
+    href = "../" * depth + "index.html"
+    return (
+        f'<nav class="{DECK_LINK_CLASS}" aria-label="Course">'
+        f'<a href="{href}">&larr; Back to the course</a>'
+        "</nav>"
+    )
 
-    The only change made to a deck. See DECK_OVERRIDE_CSS for why this is CSS
-    rather than a markup edit, and why it targets `#dots`.
+# Hand-written pages that ship standalone, and the path back to the course.
+#
+# These pages define their own palettes on :root -- the syllabus 25 tokens, the
+# lab sheets 15 each -- and several of those names collide with the shell's.
+# Wrapping them put the shell's dark background behind content asking for its
+# own near-black text, which made them unreadable in dark mode. So they keep
+# their own stylesheet, and the only thing added is a way back.
+#
+# The link is bare markup with no injected CSS, so it inherits each page's own
+# styling and cannot reflow anything above it. It is appended after the page's
+# content in normal flow -- never fixed or absolutely positioned -- so it cannot
+# cover content the way the deck navigation bar did.
+#
+# Depth-aware: a page two directories down needs ../../ to reach the root.
+STANDALONE_PAGES = [
+    "syllabus.html",
+    "labs/lab01/linux_lab_1.html",
+    "labs/lab02/linux_lab_2.html",
+]
+
+BACK_LINK_CLASS = "back-to-course"
+
+
+def back_link_for(path: str) -> str:
+    """A back-to-course link for a standalone page, correct for its depth."""
+    depth = path.count("/")
+    href = "../" * depth + "index.html"
+    return (
+        f'<p class="{BACK_LINK_CLASS}">'
+        f'<a href="{href}">&larr; Back to the course</a>'
+        "</p>"
+    )
+
+
+def inject_deck_chrome(path: Path, site_relative: str) -> None:
+    """Inject the deck's progress-rail rule and its back link.
+
+    The only changes made to a deck, and both are appended rather than woven
+    into the page: one <style> block before </head>, and one <nav> before
+    </body>. Nothing about the deck's own markup, script or styling is altered,
+    so there is no way for the shell to reflow a slide. See DECK_OVERRIDE_CSS
+    for why the rail is hidden with CSS rather than by removing the element.
     """
     original = path.read_text(encoding="utf-8")
-    if DECK_OVERRIDE_CSS in original:
+    if DECK_OVERRIDE_CSS in original and DECK_LINK_CLASS in original:
         return
-    # A deck with no rail at all is left alone rather than given a dead rule.
-    if 'id="dots"' not in original:
-        return
+
     if "</head>" in original:
-        path.write_text(
-            original.replace("</head>", DECK_OVERRIDE_CSS + "</head>", 1),
-            encoding="utf-8",
-        )
+        original = original.replace("</head>", DECK_OVERRIDE_CSS + "</head>", 1)
     else:
-        path.write_text(DECK_OVERRIDE_CSS + original, encoding="utf-8")
+        original = DECK_OVERRIDE_CSS + original
+
+    link = deck_link(site_relative)
+    if "</body>" in original:
+        original = original.replace("</body>", link + "</body>", 1)
+    else:
+        original += link
+
+    path.write_text(original, encoding="utf-8")
 
 
-def add_syllabus_back_link(path: Path) -> None:
-    """Give the standalone syllabus one way back into the shell.
+def add_back_link(path: Path, site_relative: str) -> None:
+    """Give a standalone page one way back into the shell.
 
-    The syllabus is a hand-written, light-only page with no dark variant.
-    Wrapping it in the shell put the shell's dark background behind content
-    that asks for its own near-black `--text` on near-white panels, which made
-    it unreadable in dark mode. So it ships as authored, and this link is the
-    only thing added: enough to keep it from being a dead end, and nothing that
-    would override the page's own styles.
+    Appended as bare markup after the page's own content, in normal flow and
+    with no injected CSS, so it inherits the page's styling and cannot reflow
+    or cover anything. See STANDALONE_PAGES for why these pages are not
+    wrapped in the shell.
     """
     original = path.read_text(encoding="utf-8")
-    if "syllabus-back" in original:
+    if BACK_LINK_CLASS in original:
         return
+    link = back_link_for(site_relative)
     if "</body>" in original:
-        original = original.replace("</body>", SYLLABUS_BACK_LINK + "</body>", 1)
+        original = original.replace("</body>", link + "</body>", 1)
     else:
-        original += SYLLABUS_BACK_LINK
+        original += link
     path.write_text(original, encoding="utf-8")
 
 
@@ -758,7 +959,7 @@ def copy_static(source: Path, out: Path, rendered: set[str]) -> None:
 
 
 def render_page(
-    source: Path, source_name: str, dest_name: str
+    source: Path, source_name: str, dest_name: str, published: set[str]
 ) -> tuple[str, str, list[tuple[int, str, str]]]:
     """Render one Markdown source, returning its body, title and headings."""
     markdown_path = source / source_name
@@ -767,11 +968,13 @@ def render_page(
 
     text = markdown_path.read_text(encoding="utf-8")
     body, headings, fence_langs = render_markdown(text)
+    page_dir = os.path.dirname(dest_name)
     body = _wrap_tables(body)
     body = _style_fences(body, fence_langs)
     body = _figure_figures(body)
+    body = _link_filenames(body, page_dir, published)
     body = _pdf_cards(body)
-    body = _retarget_markdown_links(body, os.path.dirname(dest_name))
+    body = _retarget_markdown_links(body, page_dir)
     body = _heading_anchors(body)
 
     title_match = _H1.search(body)
@@ -823,8 +1026,16 @@ def build(source: Path, out: Path) -> None:
     site = build_outline(source)
     generated: list[Doc] = []
 
+    # Every file actually published, so a filename mentioned in a table can be
+    # resolved to where it really is rather than assumed to be a sibling.
+    published = {
+        path.relative_to(out).as_posix()
+        for path in out.rglob("*")
+        if path.is_file()
+    }
+
     for source_name, dest_name in MARKDOWN_PAGES:
-        body, title, headings = render_page(source, source_name, dest_name)
+        body, title, headings = render_page(source, source_name, dest_name, published)
         doc = site.by_path(dest_name)
         doc.body = body
         doc.headings = headings
@@ -862,9 +1073,12 @@ def build(source: Path, out: Path) -> None:
         if not target.is_file():
             continue
         if doc.group == "Slides":
-            hide_deck_progress_rail(target)
-        elif doc.path == "syllabus.html":
-            add_syllabus_back_link(target)
+            inject_deck_chrome(target, doc.path)
+
+    for site_relative in STANDALONE_PAGES:
+        target = out / site_relative
+        if target.is_file():
+            add_back_link(target, site_relative)
 
 
 def main(argv: list[str] | None = None) -> int:

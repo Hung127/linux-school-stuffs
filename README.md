@@ -357,7 +357,7 @@ and watch where the `CACHED` markers stop.
 python -m unittest discover -s docker -t docker -v
 ```
 
-124 tests, run against both a synthetic fixture and this repository — so a broken link
+145 tests, run against both a synthetic fixture and this repository — so a broken link
 or a leaked file fails the build rather than shipping.
 
 ---
