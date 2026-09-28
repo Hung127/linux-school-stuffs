@@ -22,6 +22,11 @@ but *why* each flag is there.
   - [Shell productivity](#shell-productivity)
 - [Slides](#slides)
 - [Labs](#labs)
+- [The web version](#the-web-version)
+  - [Run the site](#run-the-site)
+  - [What gets published](#what-gets-published)
+  - [Three ignore systems](#three-ignore-systems)
+  - [Layer order](#layer-order)
 - [Seminar topics](#seminar-topics)
 - [Books](#books)
 - [Contributing](#contributing)
@@ -38,6 +43,8 @@ but *why* each flag is there.
   copy-pasteable.
 - **A list of 13 seminar topics** with the infrastructure each one needs, so you can
   pick a topic and know the scope before committing to it.
+- **A browsable web version** of all of it, in one container — see
+  [The web version](#the-web-version).
 
 ---
 
@@ -50,6 +57,9 @@ but *why* each flag is there.
 | `labs/lab01/` | Lab 01 — assignment sheet, dataset, report and screenshots |
 | `seminar/` | Seminar topic list with per-topic infrastructure requirements |
 | `books/` | Reference books — **not in the repo**, see [Books](#books) |
+| `docker/` | Build tooling — the site generator and its tests, see [The web version](#the-web-version) |
+| `Dockerfile` | Builds and serves the site in one container |
+| `.dockerignore` | Keeps `books/` and `.venv/` out of the build context |
 
 ---
 
@@ -227,6 +237,127 @@ Each task in the report follows the same shape:
 `access.log` is committed so that every command in the report runs exactly as written,
 with identical results. Fields are positional — `$1` is the client IP, `$7` the request
 URL, `$9` the status code, `$10` the response size.
+
+---
+
+## The web version
+
+The notes are a static site, so serving them needs no application server — `slides/`,
+`syllabus.html` and the screenshots are already HTML. The only thing that is not
+already a web page is this repository's three Markdown files. `docker/build_site.py`
+renders those to HTML **at the same relative paths**, which is the whole trick: because
+`README.md` becomes `index.html` and `report.md` becomes `labs/lab01/index.html`, every
+relative link in this file keeps working once it is served.
+
+| Source | Becomes | Served at |
+|---|---|---|
+| `README.md` | the landing page | `/` |
+| `labs/lab01/report.md` | the lab report, screenshots intact | `/labs/lab01/` |
+| `seminar/de_tai_seminar.md` | the seminar topic list | `/seminar/` |
+
+### Run the site
+
+**With Docker** — nothing to install but Docker:
+
+```bash
+docker build -t linux-notes .
+docker run --rm -p 8080:8000 linux-notes
+```
+
+**Without Docker** — the same generator, run directly:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install markdown-it-py==4.2.0 mdit-py-plugins==0.6.1
+
+python docker/build_site.py . /tmp/course-site
+cd /tmp/course-site && python -m http.server 8000 --bind 127.0.0.1
+```
+
+Two details in that second version are deliberate. The generator takes **the repository
+first and the output directory second**, and its defaults are `/build/src` and
+`/build/out` — the container paths — so running it with no arguments fails outside
+Docker. And `--bind 127.0.0.1` is not optional advice: `http.server` listens on every
+interface by default, which on shared Wi-Fi hands the whole repository to the network.
+
+### What gets published
+
+| Published | Not published | Why |
+|---|---|---|
+| `index.html`, `syllabus.html`, `slides/` | `books/` | 22 MB of copyrighted textbooks |
+| `labs/lab01/` — report, screenshots, `report.pdf` | `docker/`, `Dockerfile` | build inputs, not course notes |
+| `labs/lab01/access.log` — 18 MB | `.git/`, `.venv`, `.gitignore` | tooling and metadata |
+| `seminar/index.html` | the raw `.md` sources | rendered instead, so a page is one file, not two |
+
+`access.log` is 18 MB and ships on purpose. Every command in the report is written
+against it, so serving it is what lets a classmate reproduce a result without a second
+18 MB download.
+
+### Three ignore systems
+
+This repository has three independent mechanisms for deciding what to leave out, and
+**none of them knows about the other two**:
+
+| System | Controls | Knows about the others? |
+|---|---|---|
+| `.venv/.gitignore` | what git tracks | no |
+| `.dockerignore` | what enters the build context | no |
+| `EXCLUDED_NAMES` in `build_site.py` | what gets published | no |
+
+`python -m venv` writes a `.gitignore` containing `*` into every virtualenv it creates,
+so `git status` stays clean and the venv looks handled. But Docker never reads that
+file, and neither does the generator — a 13 MB virtualenv reached the published site
+this way. **`.dockerignore` and `.gitignore` are different tools protecting different
+things**, and a path can be gitignored and still end up baked into an image layer.
+
+The fix is a **rule, not a list**: anything whose name starts with `.` is excluded, at
+any depth. `.vscode`, `.idea`, `.DS_Store` and a stray `.env` full of secrets are
+covered without anyone remembering to add them. A denylist only ever contains what
+someone thought of in advance — the whole point is to stop needing to.
+
+`.dockerignore` is still needed, and is not a substitute. The generator's rules keep
+junk out of the site; only `.dockerignore` keeps 14 MB of virtualenv out of the build
+context in the first place.
+
+### Layer order
+
+```dockerfile
+FROM python:3-alpine
+
+EXPOSE 8000
+
+RUN pip install --no-cache-dir \
+    markdown-it-py==4.2.0 \
+    mdit-py-plugins==0.6.1
+WORKDIR /app
+COPY . build/
+RUN python build/docker/build_site.py ./build ./build-out
+WORKDIR /app/build-out
+
+CMD [ "python", "-m", "http.server", "8000" ]
+```
+
+Docker caches **each instruction as a layer**, and one invalidated layer invalidates
+everything after it. That is why `pip install` sits *above* `COPY`: editing a note
+reuses the cached package layer. Move it below and every keystroke in this file
+re-runs pip.
+
+The experiment that proves it: build once, add a space to `README.md`, build again,
+and watch where the `CACHED` markers stop.
+
+> **Note:** `CMD` in the exec form is an argument array, not a command line, so
+> nothing is split for you. `["python", "-m", "http.server 8000"]` reads sensibly and
+> fails with `No module named http.server 8000` — the module and its port have to be
+> separate elements.
+
+### Tests
+
+```bash
+python -m unittest discover -s docker -t docker -v
+```
+
+28 tests, run against both a synthetic fixture and this repository — so a broken link
+or a leaked file fails the build rather than shipping.
 
 ---
 

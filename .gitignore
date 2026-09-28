@@ -7,3 +7,6 @@ books/
 Thumbs.db
 *~
 *.swp
+
+# Python bytecode from running the build-site tests
+__pycache__/

@@ -1,0 +1,19 @@
+# Build-context exclusions. This is NOT the same file as .gitignore: that one
+# protects the repository, this one protects the image. A path can be gitignored
+# and still end up baked into a layer, which is why `books/` appears in both.
+
+# 22 MB of copyrighted textbooks. The README tells readers to find their own
+# copies, so these must never be published or shipped.
+books/
+
+# Repository history -- never belongs in an image layer.
+.git/
+.venv
+
+# Byte-compiled test artifacts, regenerated on every test run.
+__pycache__/
+
+# NOTE: `docker/` is deliberately NOT excluded. The build step lives at
+# docker/build_site.py and the builder stage has to COPY it in. The script drops
+# the whole docker/ directory from the *finished site*, so the Dockerfile and
+# this file never reach the published output.
