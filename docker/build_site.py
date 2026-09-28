@@ -576,8 +576,13 @@ def document(
     doc: Doc,
     body: str,
     search_index: str,
+    extra_head: str = "",
 ) -> str:
-    """Assemble one complete HTML page."""
+    """Assemble one complete HTML page.
+
+    `extra_head` carries a hand-written page's own <head> contents through, so
+    wrapping it in the shell does not discard its stylesheet or fonts.
+    """
     prefix = rel_prefix(doc)
     title = html.escape(doc.title)
     return (
@@ -588,12 +593,13 @@ def document(
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f'<meta name="description" content="Course notes for {title}.">\n'
         f"<title>{title} — {SITE_TITLE}</title>\n"
+        + extra_head
         + theme_bootstrap()
         + f'<link rel="stylesheet" href="{prefix}assets/app.css">\n'
         + f'<script type="application/json" id="search-index">{search_index}</script>\n'
         f'<script src="{prefix}assets/app.js" defer></script>\n'
         "</head>\n"
-        f'<body data-depth="{doc.depth}">\n'
+        f'<body class="course-shell" data-depth="{doc.depth}">\n'
         '<a class="skip-link" href="#main">Skip to content</a>\n'
         + header(prefix)
         + '<div class="nav-scrim"></div>\n'
@@ -654,54 +660,71 @@ def build_search_index(docs: list[Doc]) -> str:
 
 # -------------------------------------------------------- slide injection
 
-def inject_shell_into_slide(path: Path, doc: Doc, site: Site) -> None:
-    """Give a standalone deck a header and pager without touching its CSS.
+# ------------------------------------------------- hand-written page edits
 
-    The decks are already self-contained and work offline, so their own styling
-    is left entirely alone. The header sits in normal flow rather than fixed,
-    because each deck centres its own content in the viewport and a fixed bar
-    would overlap the first slide. The pager goes just before `</body>` so it
-    appears below the deck, not above it.
+# Hides the slide-progress dot rail in the built decks, without editing them.
+#
+# Each deck has a bottom-centre pill containing prev/next, a row of 5px dots
+# and an "n / N" counter. The dots are clickable, which makes them easy to hit
+# by accident, and the rail reads as visual noise.
+#
+# It is a CSS rule rather than a markup edit on purpose: all four decks do
+# `getElementById('dots').appendChild(...)` with no null guard, so removing the
+# element would throw a TypeError on the first line of the deck's script and
+# take its own navigation down with it. `display: none` leaves the node in the
+# DOM, so the script still runs -- the dots are simply never painted, and with
+# them no longer painted there is nothing to click.
+#
+# Scoped to the id rather than a class: deck 1 uses .progress-dots, deck 3 uses
+# .dot-nav, decks 2 and 4 use .dots, but all four carry id="dots".
+DECK_OVERRIDE_CSS = "<style>#dots { display: none; }</style>"
 
-    Every link is written from the *output root* and then prefixed with
-    `rel_prefix`, because a deck lives in `slides/` and a bare `index.html`
-    there would resolve to `slides/index.html`, which does not exist.
+SYLLABUS_BACK_LINK = (
+    '<p class="syllabus-back">'
+    '<a href="index.html">&larr; Back to the course</a>'
+    "</p>"
+)
+
+
+def hide_deck_progress_rail(path: Path) -> None:
+    """Inject the rule that hides a deck's progress dot rail.
+
+    The only change made to a deck. See DECK_OVERRIDE_CSS for why this is CSS
+    rather than a markup edit, and why it targets `#dots`.
     """
     original = path.read_text(encoding="utf-8")
-    if "site-header" in original:
+    if DECK_OVERRIDE_CSS in original:
         return
-
-    prefix = rel_prefix(doc)
-    top = (
-        '<div class="slide-shell-top">'
-        + header(prefix=prefix)
-        + '<div class="nav-scrim"></div>'
-        + f'<p class="breadcrumb"><a href="{prefix}index.html">{BRAND}</a> / '
-        f'<a href="{prefix}index.html#slides">Slides</a> / '
-        f"<span>{html.escape(doc.title)}</span></p>"
-        + "</div>"
-    )
-    bottom = f'<div class="slide-shell-bottom">{pager(site, doc)}</div>'
-
-    result = original
-    if "<body>" in result:
-        result = result.replace("<body>", "<body>" + top, 1)
+    # A deck with no rail at all is left alone rather than given a dead rule.
+    if 'id="dots"' not in original:
+        return
+    if "</head>" in original:
+        path.write_text(
+            original.replace("</head>", DECK_OVERRIDE_CSS + "</head>", 1),
+            encoding="utf-8",
+        )
     else:
-        result = top + result
+        path.write_text(DECK_OVERRIDE_CSS + original, encoding="utf-8")
 
-    if "</body>" in result:
-        result = result.replace("</body>", bottom + "</body>", 1)
+
+def add_syllabus_back_link(path: Path) -> None:
+    """Give the standalone syllabus one way back into the shell.
+
+    The syllabus is a hand-written, light-only page with no dark variant.
+    Wrapping it in the shell put the shell's dark background behind content
+    that asks for its own near-black `--text` on near-white panels, which made
+    it unreadable in dark mode. So it ships as authored, and this link is the
+    only thing added: enough to keep it from being a dead end, and nothing that
+    would override the page's own styles.
+    """
+    original = path.read_text(encoding="utf-8")
+    if "syllabus-back" in original:
+        return
+    if "</body>" in original:
+        original = original.replace("</body>", SYLLABUS_BACK_LINK + "</body>", 1)
     else:
-        result += bottom
-
-    head_extra = (
-        f'<link rel="stylesheet" href="{prefix}assets/app.css">\n'
-        f'<script src="{prefix}assets/app.js" defer></script>\n'
-    )
-    if "</head>" in result:
-        result = result.replace("</head>", head_extra + "</head>", 1)
-
-    path.write_text(result, encoding="utf-8")
+        original += SYLLABUS_BACK_LINK
+    path.write_text(original, encoding="utf-8")
 
 
 # ----------------------------------------------------------------- build
@@ -819,12 +842,29 @@ def build(source: Path, out: Path) -> None:
             document(site, doc, doc.body, index), encoding="utf-8"
         )
 
-    # The standalone decks get the shell around them, not a restyle.
+    # Hand-written pages ship as authored, with one exception: the syllabus
+    # gets a link back to the shell so it is not a dead end.
+    #
+    # The decks are presentations that fill the viewport -- a 100vh body, or a
+    # fixed 1600x900 box scaled by `fit()` against innerWidth/innerHeight -- so
+    # there is nowhere to put navigation without covering content. Injected in
+    # flow it was unreachable below a clipped viewport; made `position: fixed`
+    # it overlaid the slide. They stay reachable from the sidebar, the landing
+    # page and the README, and keep their own prev/next buttons and counter.
+    # The single rule injected here hides the clickable progress dot rail --
+    # see DECK_OVERRIDE_CSS for why that is CSS rather than a markup edit.
+    #
+    # The syllabus is light-only by design and has no dark variant, so wrapping
+    # it in a two-theme shell rendered it unreadable in dark mode. It keeps its
+    # own stylesheet and gets a single back-link instead.
     for doc in site.docs:
+        target = out / doc.path
+        if not target.is_file():
+            continue
         if doc.group == "Slides":
-            slide_path = out / doc.path
-            if slide_path.is_file():
-                inject_shell_into_slide(slide_path, doc, site)
+            hide_deck_progress_rail(target)
+        elif doc.path == "syllabus.html":
+            add_syllabus_back_link(target)
 
 
 def main(argv: list[str] | None = None) -> int:

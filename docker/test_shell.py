@@ -131,19 +131,22 @@ class TestNavigation(ShellTestCase):
         # two never drift apart and the accent bar is not colour-only.
         self.assertRegex(self.lab, r'class="is-current"[^>]*aria-current="page"')
 
-    def test_previous_and_next_navigation_exists_on_slides(self):
+    def test_slides_carry_no_injected_navigation(self):
+        # The decks fill the viewport, so there is nowhere to put course
+        # navigation without covering content. They are presentations with their
+        # own controls; they ship as authored and stay reachable from the
+        # sidebar and the landing page. Coverage lives in test_handwritten_pages.
         deck = (self.out / "slides" / "2_cli-text-processing.html").read_text(encoding="utf-8")
-        self.assertIn("1_linux_architecture.html", deck)
-        self.assertIn("3_users-permissions.html", deck)
+        for marker in ("deck-bar", "pager-prev", "pager-next", "app.css", "course-shell"):
+            with self.subTest(marker=marker):
+                self.assertNotIn(marker, deck)
 
-    def test_slide_shell_does_not_obscure_the_deck(self):
-        # Each deck centres its own content in the viewport, so the shell stays
-        # in normal flow and the pager sits below the deck, not above it.
-        deck = (self.out / "slides" / "1_linux_architecture.html").read_text(encoding="utf-8")
-        self.assertLess(deck.index("slide-shell-top"), deck.index("pager"))
-        self.assertLess(deck.index("pager"), deck.rindex("</body>"))
-        self.assertIn("slide-shell-top", deck)
-        self.assertIn("slide-shell-bottom", deck)
+    def test_slide_decks_are_reachable_from_the_shell(self):
+        # Losing the in-deck navigation only works because these stay linked.
+        for name in ("1_linux_architecture.html", "2_cli-text-processing.html",
+                     "3_users-permissions.html", "4-software-storage-tasks.html"):
+            with self.subTest(deck=name):
+                self.assertIn(name, self.index)
 
     def test_slide_links_resolve_from_inside_the_slides_directory(self):
         # A deck sits in slides/, so a bare `index.html` there would resolve to
@@ -160,22 +163,18 @@ class TestNavigation(ShellTestCase):
                         f"{deck.name}: {href!r} resolves to a missing file",
                     )
 
-    def test_slide_keeps_its_own_stylesheet_and_content(self):
-        original = (REPO_ROOT / "slides" / "1_linux_architecture.html").read_text(encoding="utf-8")
-        built = (self.out / "slides" / "1_linux_architecture.html").read_text(encoding="utf-8")
-        self.assertIn("<style", built, "the deck's own stylesheet must survive")
-        # Only the shell is added; the deck's own body markup is untouched.
-        for probe in ("<body>", "</body>", "session", "Linux"):
-            with self.subTest(probe=probe):
-                self.assertIn(probe, built)
-        self.assertGreater(len(built), len(original))
-
-    def test_slide_sequence_follows_filename_order(self):
-        first = (self.out / "slides" / "1_linux_architecture.html").read_text(encoding="utf-8")
-        last = (self.out / "slides" / "4-software-storage-tasks.html").read_text(encoding="utf-8")
-        # The first deck has no previous, the last has no next.
-        self.assertNotIn("pager-prev", first)
-        self.assertNotIn("pager-next", last)
+    def test_slide_decks_differ_from_source_by_one_rule_only(self):
+        # The guarantee that matters is that nothing restyles a deck: no class
+        # on <body>, no app.css, no colour, type or size injection. The single
+        # permitted difference is the rule hiding the progress dot rail, which
+        # the build injects so the deck sources are never edited. The exact
+        # guarantee is asserted in test_handwritten_pages.
+        for source in sorted((REPO_ROOT / "slides").glob("*.html")):
+            built = self.out / "slides" / source.name
+            after = built.read_text(encoding="utf-8")
+            with self.subTest(deck=source.name):
+                self.assertNotIn("course-shell", after)
+                self.assertNotIn("app.css", after)
 
     def test_no_previous_next_invented_where_no_order_exists(self):
         # One lab and one seminar topic list: claiming a sequence is fiction.
@@ -282,8 +281,8 @@ class TestSearch(ShellTestCase):
         # with the including page's depth, read from <body data-depth>.
         for entry in self.index_data(self.lab):
             self.assertFalse(entry["url"].startswith(("../", "/")), entry["url"])
-        self.assertRegex(self.lab, r'<body data-depth="2">')
-        self.assertRegex(self.index, r'<body data-depth="0">')
+        self.assertRegex(self.lab, r'<body class="course-shell" data-depth="2">')
+        self.assertRegex(self.index, r'<body class="course-shell" data-depth="0">')
 
     def test_search_navigation_uses_the_recorded_depth(self):
         js = (self.out / "assets" / "app.js").read_text(encoding="utf-8")
@@ -370,9 +369,17 @@ class TestPaletteContrast(ShellTestCase):
         return (hi + 0.05) / (lo + 0.05)
 
     def tokens(self, css: str, theme: str) -> dict[str, str]:
+        """The palette for a theme, keyed without the private --cn- prefix.
+
+        Stripping the prefix keeps these contrast assertions about the palette
+        values themselves; test_tokens.py separately guarantees the prefix is
+        applied, so a rename cannot silently weaken the check.
+        """
         block = re.search(rf'\[data-theme="{theme}"\]\s*\{{(.*?)\n\}}', css, re.DOTALL)
         self.assertIsNotNone(block, f"no {theme} token block in the stylesheet")
-        return dict(re.findall(r"--([\w-]+):\s*(#[0-9a-fA-F]{6})", block.group(1)))
+        return dict(
+            re.findall(r"--cn-([\w-]+):\s*(#[0-9a-fA-F]{6})", block.group(1))
+        )
 
     def test_text_contrast_meets_wcag_aa(self):
         css = (self.out / "assets" / "app.css").read_text(encoding="utf-8")
@@ -401,7 +408,7 @@ class TestPaletteContrast(ShellTestCase):
 
     def test_focus_ring_uses_a_token_that_passes(self):
         css = (self.out / "assets" / "app.css").read_text(encoding="utf-8")
-        self.assertIn("outline: 2px solid var(--accent)", css)
+        self.assertIn("outline: 2px solid var(--cn-accent)", css)
 
 
 class TestAccessibility(ShellTestCase):

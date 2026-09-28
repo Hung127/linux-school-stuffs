@@ -322,7 +322,7 @@ context in the first place.
 ### Layer order
 
 ```dockerfile
-FROM python:3-alpine
+FROM python:3.14.7-alpine3.24
 
 EXPOSE 8000
 
@@ -357,7 +357,7 @@ and watch where the `CACHED` markers stop.
 python -m unittest discover -s docker -t docker -v
 ```
 
-92 tests, run against both a synthetic fixture and this repository — so a broken link
+124 tests, run against both a synthetic fixture and this repository — so a broken link
 or a leaked file fails the build rather than shipping.
 
 ---
