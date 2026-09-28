@@ -286,6 +286,25 @@ class TestRealRepo(unittest.TestCase):
     def test_books_are_not_published(self):
         self.assertFalse((self.out / "books").exists())
 
+    def test_readme_test_count_is_accurate(self):
+        # The README quotes a test count; it must not drift from reality.
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        match = re.search(r"(\d+) tests, run against", readme)
+        self.assertIsNotNone(match, "README should state a test count")
+
+        # Counting by walking the loaded suite rather than by grepping for
+        # `def test_`, so subTest variants and inherited cases are counted too.
+        suite = unittest.TestLoader().discover(
+            str(REPO_ROOT / "docker"),
+            pattern="test_*.py",
+            top_level_dir=str(REPO_ROOT / "docker"),
+        )
+        self.assertEqual(
+            int(match.group(1)),
+            suite.countTestCases(),
+            "the README's test count is out of date",
+        )
+
     def test_readme_documents_the_real_dockerfile(self):
         # The web-version section quotes the Dockerfile to explain layer order.
         # A paraphrased copy drifts from the real file and quietly documents a

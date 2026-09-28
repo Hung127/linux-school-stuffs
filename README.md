@@ -328,7 +328,8 @@ EXPOSE 8000
 
 RUN pip install --no-cache-dir \
     markdown-it-py==4.2.0 \
-    mdit-py-plugins==0.6.1
+    mdit-py-plugins==0.6.1 \
+    pygments==2.21.0
 WORKDIR /app
 COPY . build/
 RUN python build/docker/build_site.py ./build ./build-out
@@ -356,7 +357,7 @@ and watch where the `CACHED` markers stop.
 python -m unittest discover -s docker -t docker -v
 ```
 
-28 tests, run against both a synthetic fixture and this repository — so a broken link
+92 tests, run against both a synthetic fixture and this repository — so a broken link
 or a leaked file fails the build rather than shipping.
 
 ---
