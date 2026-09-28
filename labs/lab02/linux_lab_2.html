@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Homework 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d12;
+    --surface:#111620;
+    --surface2:#161c28;
+    --border:#1e2840;
+    --text:#cbd5e1;
+    --white:#f0f4f8;
+    --muted:#64748b;
+    --teal:#00c9a7;
+    --teal-dim:#007d68;
+    --green:#22c55e;
+    --blue:#3b82f6;
+    --red:#ef4444;
+    --purple:#a78bfa;
+    --amber:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  body{padding:3rem 2rem 6rem}
+  .wrap{max-width:1180px;margin:0 auto}
+  .mono{font-family:'IBM Plex Mono',monospace}
+
+  /* ─── Header ─────────────────────────────── */
+  .hdr{
+    display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:end;
+    padding:2.5rem 0 2rem;border-bottom:1px solid var(--border);margin-bottom:2.5rem;
+    position:relative;
+  }
+  .hdr::before{content:'';position:absolute;top:0;left:-2rem;width:48px;height:2px;background:var(--teal)}
+  .crumb{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--teal);text-transform:uppercase;margin-bottom:.75rem}
+  h1{font-size:42px;font-weight:600;color:var(--white);letter-spacing:-.015em;line-height:1.1}
+  h1 .accent{color:var(--teal)}
+  .sub{font-size:14px;color:var(--muted);margin-top:.85rem;max-width:620px}
+  .meta{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);line-height:1.9}
+  .meta b{color:var(--text);font-weight:500}
+
+  /* ─── Submission box ─────────────────────────────── */
+  .submit-box{
+    background:linear-gradient(180deg,rgba(0,201,167,.06) 0%,rgba(0,201,167,.02) 100%);
+    border:1px solid rgba(0,201,167,.25);border-radius:14px;
+    padding:1.75rem 2rem;margin-bottom:2rem;position:relative;overflow:hidden;
+  }
+  .submit-box::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--teal)}
+  .sb-tag{
+    display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--teal);background:rgba(0,201,167,.1);
+    padding:4px 10px;border-radius:4px;margin-bottom:.85rem;font-weight:600;
+  }
+  .sb-title{font-size:22px;font-weight:600;color:var(--white);margin-bottom:1rem;letter-spacing:-.01em}
+  .sb-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.25rem}
+  .sb-col h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase;margin-bottom:.65rem;font-weight:500}
+  .sb-col ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .sb-col li{display:flex;gap:9px;font-size:13.5px;color:var(--text);line-height:1.55}
+  .sb-col li::before{content:'▸';color:var(--teal);flex-shrink:0;font-size:11px;margin-top:3px}
+  .sb-col code{background:var(--bg);color:var(--teal);padding:1px 6px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid var(--border)}
+
+  /* ─── Legend ─────────────────────────────── */
+  .legend{
+    display:flex;gap:1.25rem;flex-wrap:wrap;margin-bottom:2.5rem;
+    padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  }
+  .lg{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .pip{width:8px;height:8px;border-radius:50%}
+  .pip.warm{background:var(--green)}
+  .pip.med{background:var(--teal)}
+  .pip.hot{background:var(--red)}
+
+  /* ─── Lab cards ─────────────────────────────── */
+  .labs{display:flex;flex-direction:column;gap:1.5rem}
+  .lab{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .25s}
+  .lab:hover{border-color:var(--teal-dim)}
+
+  .lab-hdr{
+    display:grid;grid-template-columns:auto 1fr auto;gap:1.25rem;align-items:center;
+    padding:1.25rem 1.75rem;background:var(--surface2);border-bottom:1px solid var(--border);
+  }
+  .lab-num{
+    width:42px;height:42px;border-radius:10px;
+    background:rgba(0,201,167,.1);border:1px solid var(--teal-dim);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--teal);
+  }
+  .lab-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+  .lab-title{font-size:18px;font-weight:600;color:var(--white)}
+  .lab-pill{
+    display:flex;align-items:center;gap:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    padding:6px 12px;border-radius:20px;background:var(--bg);border:1px solid var(--border);
+  }
+  .lab-pill.warm{color:var(--green);border-color:rgba(34,197,94,.3)}
+  .lab-pill.med{color:var(--teal);border-color:rgba(0,201,167,.3)}
+  .lab-pill.hot{color:var(--red);border-color:rgba(239,68,68,.3)}
+
+  .lab-body{padding:1.5rem 1.75rem 1.75rem;display:grid;grid-template-columns:1.15fr 1fr;gap:1.75rem}
+
+  .panel-label{
+    font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:.85rem;display:flex;align-items:center;gap:8px;
+  }
+  .panel-label::before{content:'';width:14px;height:1px;background:var(--teal-dim)}
+
+  .scenario{font-size:13px;color:var(--muted);margin-bottom:.9rem;line-height:1.65}
+
+  .tasks{display:flex;flex-direction:column;gap:9px}
+  .task{display:flex;gap:10px;font-size:13.5px;line-height:1.55;color:var(--text)}
+  .task .arrow{color:var(--teal);flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;margin-top:2px}
+  .task code{background:var(--bg);color:var(--teal);padding:1px 6px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid var(--border)}
+
+  /* ─── Deliverables panel ─── */
+  .deliv{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:.6rem}
+  .deliv-item{display:flex;gap:10px;font-size:13px;line-height:1.55;color:var(--text);padding-bottom:.55rem;border-bottom:1px dashed var(--border)}
+  .deliv-item:last-child{border-bottom:none;padding-bottom:0}
+  .deliv-icon{
+    flex-shrink:0;width:22px;height:22px;border-radius:5px;
+    background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+  }
+  .deliv-icon.cam{background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.25);color:var(--teal)}
+  .deliv-icon.txt{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.25);color:var(--blue)}
+  .deliv-text b{color:var(--white);font-weight:500;display:block;margin-bottom:1px;font-size:13px}
+  .deliv-text span{color:var(--muted);font-size:12.5px}
+  .deliv-text code{background:var(--surface2);color:var(--teal);padding:0 5px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:11.5px}
+
+  .hint{margin-top:1rem;padding:.85rem 1rem;background:rgba(0,201,167,.04);border-left:2px solid var(--teal);border-radius:0 6px 6px 0;font-size:12.5px;color:var(--text)}
+  .hint b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase;display:block;margin-bottom:3px;font-weight:500}
+
+  .warn{margin-top:1rem;padding:.85rem 1rem;background:rgba(239,68,68,.04);border-left:2px solid var(--red);border-radius:0 6px 6px 0;font-size:12.5px;color:var(--text)}
+  .warn b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--red);text-transform:uppercase;display:block;margin-bottom:3px;font-weight:500}
+
+  /* ─── Footer ─────────────────────────────── */
+  .foot{
+    margin-top:4rem;padding:2rem 0 0;border-top:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+  }
+  .foot .acc{color:var(--teal)}
+
+  @media (max-width:880px){
+    .lab-body,.sb-grid{grid-template-columns:1fr}
+    .hdr{grid-template-columns:1fr;gap:1rem}
+    .meta{text-align:left}
+    h1{font-size:32px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ═══ HEADER ═══════════════════════════════ -->
+  <header class="hdr">
+    <div>
+      <div class="crumb">› Homework 2 / Lab Pack</div>
+      <h1>Ten labs in <span class="accent">users, permissions &amp; processes</span>.</h1>
+      <p class="sub">Practical exercises in <span class="mono">useradd · usermod · chmod · chown · setfacl · visudo · tmux · ps · kill · nice</span>. Work in order — each lab builds the mental model you need for the next.</p>
+    </div>
+    <div class="meta">
+      <div><b>Total</b> 10 labs</div>
+      <div><b>Time</b> ~3–4 hours</div>
+      <div><b>Platform</b> Ubuntu / Debian VM (root or sudo)</div>
+    </div>
+  </header>
+
+  <!-- ═══ SUBMISSION REQUIREMENTS ═══════════════════════════════ -->
+  <div class="submit-box">
+    <span class="sb-tag">★ Required — read before you start</span>
+    <div class="sb-title">You must complete all 10 labs and write a report.</div>
+    <p style="font-size:14px;color:var(--text);line-height:1.65;max-width:780px;">
+      Run every task on your own VM. Most tasks require root — use <span class="mono" style="color:var(--teal)">sudo -i</span> or log in as root. Screenshot your terminal for every major step. Write a single <span class="mono" style="color:var(--teal)">report.md</span> that explains what you did and what you observed.
+    </p>
+    <div class="sb-grid">
+      <div class="sb-col">
+        <h4>What to submit</h4>
+        <ul>
+          <li>One file <code>report.md</code> — Markdown format, in your own words</li>
+          <li>A folder <code>screenshots/</code> with PNG/JPG for every lab</li>
+          <li>Any scripts or sudoers snippets you created</li>
+          <li>Everything zipped as <code>lab2_&lt;studentID&gt;.zip</code></li>
+        </ul>
+      </div>
+      <div class="sb-col">
+        <h4>Report structure (per lab)</h4>
+        <ul>
+          <li><code>## Lab N — Title</code> heading for each lab</li>
+          <li>Exact commands you ran (in fenced code blocks)</li>
+          <li>At least <strong>one screenshot</strong> per lab showing the result</li>
+          <li>2–4 sentences explaining what happened and why</li>
+          <li>Answers to any questions asked in the lab</li>
+        </ul>
+      </div>
+    </div>
+    <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px dashed var(--border);font-size:12.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace">
+      <span style="color:var(--red)">⚠</span> Labs that skip the <strong style="color:var(--text)">Experiment</strong> steps will not receive full marks. The experiments — where you intentionally break things — are where the real learning happens.
+    </div>
+  </div>
+
+  <!-- ═══ LEGEND ═══════════════════════════════ -->
+  <div class="legend">
+    <div class="lg"><span class="pip warm"></span>Warm-up · single concept</div>
+    <div class="lg"><span class="pip med"></span>Medium · multi-step scenario</div>
+    <div class="lg"><span class="pip hot"></span>Spicy · real-world incident</div>
+  </div>
+
+  <!-- ═══ LABS ═══════════════════════════════ -->
+  <div class="labs">
+
+    <!-- ── LAB 01 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">01</div>
+        <div>
+          <div class="lab-tag">useradd · groupadd · /etc/passwd · /etc/group</div>
+          <div class="lab-title">Populate a fresh server with users and groups</div>
+        </div>
+        <div class="lab-pill warm"><span class="pip warm"></span>Warm-up</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">You are a sysadmin onboarding a new project team. The team has two roles: <strong style="color:var(--white)">developers</strong> (alice, bob) and <strong style="color:var(--white)">ops</strong> (carol, dave). Set them all up from scratch on a fresh Ubuntu VM.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create groups <code>dev</code> and <code>ops</code> with <code>groupadd</code>. Verify both appear in <code>/etc/group</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Create users <strong>alice</strong> and <strong>bob</strong> with home directories (<code>-m</code>), bash shell (<code>-s /bin/bash</code>), a GECOS comment (<code>-c "Dev User"</code>), and add them to the <code>dev</code> group (<code>-G dev</code>).</span></div>
+            <div class="task"><span class="arrow">→</span><span>Create users <strong>carol</strong> and <strong>dave</strong> the same way, added to the <code>ops</code> group. Set a password for each user with <code>passwd</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Run <code>id alice</code> and <code>id carol</code>. Identify the UID, primary GID, and supplementary groups in the output.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Run <code>grep alice /etc/passwd</code>. Identify all 7 colon-separated fields and state what each one means.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Create a system user <code>svcapp</code> with no home dir and <code>nologin</code> shell: <code>useradd -r -s /usr/sbin/nologin svcapp</code>. What UID range does it receive? Why is this different?</span></div>
+          </div>
+          <div class="hint"><b>Hint</b>Use <code>useradd -m -s /bin/bash -c "Dev User" -G dev alice</code> then <code>passwd alice</code>. The <code>-G</code> flag at creation time sets supplementary groups directly — no extra <code>usermod</code> needed for new users.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Output of <code>id alice</code> and <code>id carol</code> — both users' group memberships visible.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>grep -E "alice|bob|carol|dave|svcapp" /etc/passwd</code> — all 5 rows visible.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>List all 7 fields of alice's <code>/etc/passwd</code> entry and explain each. Why does <code>svcapp</code> get a UID below 1000 while alice gets one above?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 02 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">02</div>
+        <div>
+          <div class="lab-tag">usermod · -aG vs -G · lock/unlock · /etc/shadow</div>
+          <div class="lab-title">The silent group-wipe trap</div>
+        </div>
+        <div class="lab-pill warm"><span class="pip warm"></span>Warm-up</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">A junior admin tries to add alice to a new group but accidentally runs <code>usermod -G</code> without <code>-a</code>. She loses all her existing groups with no error message. This lab demonstrates the bug and how to fix it.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Add alice to groups <code>dev</code>, <code>docker</code>, and <code>sudo</code> using <code>usermod -aG dev,docker,sudo alice</code>. Confirm all three appear in <code>id alice</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>The trap:</strong> run <code>usermod -G qa alice</code> (without <code>-a</code>). Run <code>id alice</code> again. What happened to dev, docker, and sudo?</span></div>
+            <div class="task"><span class="arrow">→</span><span>Fix it: restore alice to all four groups (<code>dev</code>, <code>docker</code>, <code>sudo</code>, <code>qa</code>) in one command. Verify.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Run <code>su - alice</code> and then <code>groups</code> inside her shell. Do her active groups reflect the change yet? Run <code>newgrp dev</code> to activate without logging out.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Lock alice's account with <code>usermod -L alice</code>. Inspect <code>grep alice /etc/shadow</code> — what character appears before her password hash? Unlock with <code>usermod -U alice</code>.</span></div>
+          </div>
+          <div class="hint"><b>Why it matters</b>If alice had sudo access, silently losing the sudo group means she can no longer escalate privileges. <code>usermod -G</code> produces no warning — it is a known footgun.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>id alice</code> showing 4 groups, then <code>id alice</code> after the -G trap (1 group left).</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The <code>/etc/shadow</code> entry for alice showing the <code>!</code> lock prefix, then after unlocking.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Explain the difference between <code>-g</code> (lowercase), <code>-G</code>, and <code>-aG</code>. In what real-world scenario would silently losing sudo access cause a serious production outage?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 03 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">03</div>
+        <div>
+          <div class="lab-tag">chmod · chown · umask · permission evaluation</div>
+          <div class="lab-title">Read, write, execute — controlling file access</div>
+        </div>
+        <div class="lab-pill warm"><span class="pip warm"></span>Warm-up</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create <code>secret.txt</code> and directory <code>reports/</code>. Check their default permissions with <code>ls -la</code>. Note the permission string and the current umask.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Use <strong>octal</strong> chmod: set <code>secret.txt</code> → <code>600</code>, <code>reports/</code> → <code>750</code>. For each, write out what the three octal digits mean in rwx terms.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Use <strong>symbolic</strong> chmod on <code>reports/</code>: add execute for the owner, remove all permissions for others, set group to exactly <code>r-x</code>. Use a single command with a comma-separated list.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Change the owner of <code>reports/</code> to <code>alice:dev</code> recursively with <code>chown -R</code>. Verify with <code>ls -la reports/</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Change the umask to <code>027</code> and create a new file and directory. What permissions did they receive? Explain using the formula <em>base − umask</em>.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Experiment:</strong> create a file owned by alice with permissions <code>640</code>, group <code>dev</code>. Log in as bob (also in dev) and try to read it. Then log in as dave (in ops) and try to read it. Explain why each succeeded or failed.</span></div>
+          </div>
+          <div class="hint"><b>Permission evaluation order</b>Linux checks in this exact order — first match wins: (1) root → always granted. (2) UID matches owner → apply owner bits. (3) GID matches group → apply group bits. (4) Otherwise → apply other bits.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>ls -la</code> showing <code>secret.txt</code> at 600 and <code>reports/</code> at 750 with <code>alice:dev</code> ownership.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Umask set to 027 and the resulting permissions on a newly created file and directory.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Walk through the permission evaluation for: (a) bob reading the 640 file, (b) dave reading it. Use the 4-step order from the slide to show your reasoning.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 04 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">04</div>
+        <div>
+          <div class="lab-tag">SUID · SGID · sticky bit · find -perm</div>
+          <div class="lab-title">Special permission bits: shared directories and elevated execution</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">The dev team needs a shared folder where all new files automatically belong to the <code>dev</code> group and no one can delete another person's files — even if the directory is group-writable.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create <code>/opt/teamshared</code>. Set owner to <code>root:dev</code>. Apply mode <code>3775</code> (SGID + sticky + rwxrwxr-x). Run <code>ls -ld /opt/teamshared</code> — identify the <code>s</code> and <code>t</code> characters in the output.</span></div>
+            <div class="task"><span class="arrow">→</span><span>As alice (<code>su - alice</code>), create a file inside <code>/opt/teamshared</code>. Log back out as root and check <code>ls -l /opt/teamshared</code>. What group owns alice's file and why?</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Test the sticky bit:</strong> as bob, try to delete alice's file. Confirm it fails. Now remove the sticky bit from the directory (<code>chmod -t</code>) and try again. What changes?</span></div>
+            <div class="task"><span class="arrow">→</span><span>Restore the sticky bit. Create a small script <code>/tmp/whotest.sh</code> containing <code>echo "Running as: $(whoami)"</code>. Set SUID on it (<code>chmod u+s</code>) and make it owned by root. Run it as alice. What identity does it report?</span></div>
+            <div class="task"><span class="arrow">→</span><span>Find all SUID binaries on the system: <code>find / -perm -4000 2>/dev/null</code>. Identify at least 3 you recognize and explain in your report why each one needs SUID.</span></div>
+          </div>
+          <div class="hint"><b>Octal for special bits</b>The leading digit: 4=SUID, 2=SGID, 1=sticky. Mode <code>3775</code> = SGID(2) + sticky(1) = 3, then rwxrwxr-x = 775.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>ls -ld /opt/teamshared</code> showing the <code>s</code> (SGID) and <code>t</code> (sticky) characters in the permission string.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Bob's failed <code>rm</code> attempt on alice's file (<code>Operation not permitted</code>).</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Output of the SUID binary search — at least 3 results visible.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Why is SUID on <code>/bin/bash</code> a critical security vulnerability? What exact steps could an attacker take to exploit it and get a root shell?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 05 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">05</div>
+        <div>
+          <div class="lab-tag">setfacl · getfacl · default ACL · mask</div>
+          <div class="lab-title">Fine-grained access control with ACLs</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">A project directory needs three distinct access levels: the <code>dev</code> group gets full read/write/execute, the <code>ops</code> group gets read and execute only, and contractor <code>charlie</code> gets read and execute but belongs to neither group. Standard chmod cannot express this — ACLs are the solution.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create user <code>charlie</code> (no special group). Create <code>/opt/project</code> owned by <code>root:dev</code>, mode <code>770</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Apply ACLs: <code>g:dev:rwx</code>, <code>g:ops:r-x</code>, <code>u:charlie:r-x</code>. Run <code>getfacl /opt/project</code>. Also run <code>ls -la</code> and notice the trailing <code>+</code> character.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Set a <strong>default ACL</strong> so any new files or subdirectories created inside <code>/opt/project</code> inherit the same permissions: <code>setfacl -d -m g:dev:rwx,g:ops:r-x,u:charlie:r-x /opt/project</code>. As alice, create a file inside and run <code>getfacl</code> on it.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>The mask trap:</strong> run <code>chmod g-x /opt/project</code>. Run <code>getfacl /opt/project</code> again. What happened to the <em>effective</em> permissions for <code>dev</code> and <code>charlie</code>? Why?</span></div>
+            <div class="task"><span class="arrow">→</span><span>Restore the mask by running <code>chmod g+x /opt/project</code>. Then revoke charlie's ACL entirely with <code>setfacl -x u:charlie /opt/project</code>. Confirm with <code>getfacl</code>.</span></div>
+          </div>
+          <div class="hint"><b>Install ACL tools if needed</b><code>apt install acl</code>. Modern ext4 filesystems have ACL support enabled by default. Look for the <code>+</code> after the permission string in <code>ls -la</code> to confirm an ACL is set.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Full <code>getfacl /opt/project</code> output showing user, group, mask, and default ACL entries.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>getfacl</code> before and after <code>chmod g-x</code> — show the <code>#effective</code> comment change in the mask trap.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Explain what the ACL <em>mask</em> is and why running <code>chmod</code> on a file with ACLs can silently cut effective permissions. When should you use ACLs instead of standard chmod?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 06 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">06</div>
+        <div>
+          <div class="lab-tag">visudo · sudoers.d · NOPASSWD · least privilege</div>
+          <div class="lab-title">Grant surgical sudo access to a CI deploy user</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">An automated CI/CD pipeline runs as user <code>deploy</code>. It needs to execute a deploy script and restart the cron service — nothing else. Granting it full sudo would be a serious security risk.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create user <code>deploy</code> as a system user with no home and <code>nologin</code> shell: <code>useradd -r -s /usr/sbin/nologin deploy</code>. Confirm you cannot get an interactive shell via <code>su - deploy</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Create the deploy script: <code>mkdir -p /opt/scripts</code>, then write <code>/opt/scripts/deploy.sh</code> with content <code>echo "Deploying application..."</code>. Set permissions <code>750</code> and owner <code>root:dev</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Open <code>visudo -f /etc/sudoers.d/deploy</code> and add a rule allowing the <code>deploy</code> user — without a password — to run only <code>/opt/scripts/deploy.sh</code> and <code>/bin/systemctl restart cron</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Test (allowed):</strong> run <code>sudo -u deploy sudo /opt/scripts/deploy.sh</code> and <code>sudo -u deploy sudo /bin/systemctl restart cron</code> from your admin account. Both should succeed silently.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Test (denied):</strong> run <code>sudo -u deploy sudo /bin/bash</code> and <code>sudo -u deploy sudo rm /etc/passwd</code>. Both should be rejected with a "not allowed" message.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Check the audit trail: <code>grep "deploy" /var/log/auth.log | tail -20</code>. Find the COMMAND entries for both an allowed run and a denied attempt.</span></div>
+          </div>
+          <div class="warn"><b>Never edit sudoers directly</b>Always use <code>visudo</code> — it validates syntax before saving. A single typo that breaks sudoers requires booting into single-user mode to repair. There is no undo.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>Attach</b><span>Contents of <code>/etc/sudoers.d/deploy</code> pasted into your report as a code block.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The allowed command succeeding and the denied command being rejected — both in the same terminal session.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The <code>auth.log</code> entries showing an allowed COMMAND and a DENIED attempt with timestamps.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Why use separate files in <code>/etc/sudoers.d/</code> instead of editing the main sudoers file? What is the risk of granting <code>NOPASSWD: ALL</code> to a service account?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 07 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">07</div>
+        <div>
+          <div class="lab-tag">usermod -L · pkill -u · gpasswd · last · auth.log</div>
+          <div class="lab-title">Incident response — compromised account containment</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">Security alerts you: user <code>bob</code>'s password was found in a data breach. He is in the <code>sudo</code> and <code>docker</code> groups. You must contain the damage immediately without destroying evidence, then restore his account after the investigation.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span><strong>Immediate containment — lock the account:</strong> run <code>usermod -L bob</code>. Verify the lock by inspecting <code>grep bob /etc/shadow</code> and finding the <code>!</code> prefix on the password hash.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Kill active sessions:</strong> run <code>pkill -u bob</code> to terminate all of bob's running processes. Confirm with <code>who</code> and <code>ps aux | grep "^bob"</code> that no bob processes remain.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Revoke elevated access:</strong> remove bob from the <code>sudo</code> and <code>docker</code> groups using <code>gpasswd -d bob sudo</code> and <code>gpasswd -d bob docker</code>. Confirm with <code>id bob</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Audit what bob did:</strong> run <code>last bob</code> to see login history. Search <code>grep "bob" /var/log/auth.log</code> for sudo usage. Find files bob owns that were modified recently: <code>find /home/bob -newer /tmp/marker 2>/dev/null</code> (create <code>/tmp/marker</code> with <code>touch -d "1 hour ago" /tmp/marker</code>).</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Recovery:</strong> unlock the account (<code>usermod -U bob</code>), expire his password so he must reset it on next login (<code>passwd -e bob</code>), and restore only the <code>docker</code> group (not sudo — per the principle of least privilege).</span></div>
+          </div>
+          <div class="hint"><b>Lock, don't delete</b>Deleting the account immediately destroys the UID mapping in file ownership records and log files. Lock first, investigate with evidence intact, delete only after forensics are complete.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>/etc/shadow</code> entry for bob showing the <code>!</code> lock prefix.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>id bob</code> before containment (sudo + docker) and after (only docker).</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Output of <code>last bob</code> showing login history.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Write a short incident timeline (5–8 sentences): what you did, in what order, and why. What would the worst-case impact have been if bob had <code>NOPASSWD: ALL</code> in sudoers?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 08 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">08</div>
+        <div>
+          <div class="lab-tag">tmux · sessions · windows · panes · detach/attach</div>
+          <div class="lab-title">Survive SSH disconnections with tmux</div>
+        </div>
+        <div class="lab-pill warm"><span class="pip warm"></span>Warm-up</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">You need to run a long data-processing job on a remote server over an unstable SSH connection. If the connection drops mid-run, the job dies. tmux keeps the session alive on the server regardless of what happens to your local terminal.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Create a named session: <code>tmux new -s dataproc</code>. Inside it, start a long job: <code>for i in $(seq 1 300); do echo "Step $i of 300"; sleep 1; done</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Detach from the session (<code>Ctrl+B</code> then <code>D</code>) while the loop is running. Verify the session is still alive with <code>tmux ls</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Close your terminal window completely. Reopen a terminal and reattach: <code>tmux attach -t dataproc</code>. Confirm the counter is still incrementing where you left off.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Split the pane vertically (<code>Ctrl+B %</code>). In the right pane run <code>top</code>. Navigate between panes using <code>Ctrl+B ←→</code> arrows. Zoom into one pane with <code>Ctrl+B Z</code> and back.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Create a second window in the same session (<code>Ctrl+B C</code>). Rename it to <code>monitor</code> (<code>Ctrl+B ,</code>). Switch between windows with <code>Ctrl+B 0</code> / <code>Ctrl+B 1</code>. List all with <code>Ctrl+B W</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Rename the entire session to <code>lab08</code> using <code>tmux rename-session lab08</code>. Verify with <code>tmux ls</code>.</span></div>
+          </div>
+          <div class="hint"><b>tmux vs nohup</b><code>nohup ./job &amp;</code> keeps one command alive after logout but you lose the interactive shell. tmux gives you a full multi-window, multi-pane workspace you can return to at any time from any terminal.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>tmux ls</code> showing the session alive after detaching, with the step counter number visible.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The 2-pane view: the counter loop running in one pane and <code>top</code> in the other.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The window list (<code>Ctrl+B W</code>) showing both windows, with the renamed <code>monitor</code> window visible.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Describe one real scenario from your own work or studies where tmux would have prevented losing work. Explain in your own words what "detach" means at the OS level — why does the session survive?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 09 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">09</div>
+        <div>
+          <div class="lab-tag">ps · top · kill · nice · renice · signals · jobs</div>
+          <div class="lab-title">Diagnose and tame a runaway process</div>
+        </div>
+        <div class="lab-pill med"><span class="pip med"></span>Medium</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">A shared lab server is sluggish. CPU is at 99%. Someone left a computation running without any priority setting. Walk through identification, deprioritization, and controlled termination.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span>Start a CPU hog in the background: <code>python3 -c "while True: pass" &</code>. Note the PID printed by the shell. Confirm it is consuming CPU via <code>top</code> (press <code>P</code> to sort by CPU usage).</span></div>
+            <div class="task"><span class="arrow">→</span><span>Inspect the process: <code>ps -p &lt;PID&gt; -o pid,comm,user,pcpu,pmem,nice,etime</code>. Record the NI (nice) value and how long it has been running.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Deprioritize (keep it running):</strong> lower its priority with <code>renice -n 19 -p &lt;PID&gt;</code>. Watch the <code>NI</code> column in <code>top</code> change. Does other terminal activity feel more responsive now?</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Signal escalation:</strong> send SIGTERM (<code>kill &lt;PID&gt;</code>). Wait 3 seconds and check <code>ps -p &lt;PID&gt;</code>. Since a tight Python loop cannot catch SIGTERM, escalate to SIGKILL (<code>kill -9 &lt;PID&gt;</code>). Confirm it is gone.</span></div>
+            <div class="task"><span class="arrow">→</span><span>Start a new background job: <code>sleep 999 &</code>. Practice the full job-control cycle: check with <code>jobs</code>, bring to foreground (<code>fg %1</code>), suspend with <code>Ctrl+Z</code>, send to background (<code>bg %1</code>), then kill by job number (<code>kill %1</code>).</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Stretch:</strong> launch a new hog with <code>nice -n 10 python3 -c "while True: pass" &amp;</code>. Compare its NI column in <code>top</code> to a default process. Confirm only root can set a negative nice value by trying <code>renice -n -5 -p &lt;PID&gt;</code> as a regular user.</span></div>
+          </div>
+          <div class="hint"><b>Signal order matters</b>SIGTERM (15) politely asks the process to clean up and exit. SIGKILL (9) forces instant death with no cleanup. Databases and file-sync services can corrupt data if killed with -9 mid-write — always try SIGTERM first.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>top</code> showing the python3 process near 100% CPU <em>before</em> renicing (NI = 0).</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>top</code> after <code>renice -n 19</code> showing the NI column changed to 19.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>The <code>jobs</code> listing and the bg/fg/kill cycle for the <code>sleep 999</code> job.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Explain SIGTERM, SIGKILL, SIGSTOP, SIGHUP, and SIGCONT — what each does and when you would use it. Why is <code>kill -9</code> always the last resort?</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ── LAB 10 ───────────────────────── -->
+    <article class="lab">
+      <div class="lab-hdr">
+        <div class="lab-num">10</div>
+        <div>
+          <div class="lab-tag">Capstone · all concepts</div>
+          <div class="lab-title">Harden a multi-role development server from scratch</div>
+        </div>
+        <div class="lab-pill hot"><span class="pip hot"></span>Spicy</div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="panel-label">Scenario</div>
+          <p class="scenario">You are building a shared Linux server for a software team with four roles: <strong style="color:var(--white)">developers</strong> (write code, deploy), <strong style="color:var(--white)">ops</strong> (monitor and read logs, no modification), <strong style="color:var(--white)">CI runner</strong> (automated job account, no login), and <strong style="color:var(--white)">auditors</strong> (read-only access everywhere, zero write capability). Implement the full security model from user creation to process policy.</p>
+          <div class="panel-label">Tasks</div>
+          <div class="tasks">
+            <div class="task"><span class="arrow">→</span><span><strong>Users &amp; Groups:</strong> Create groups <code>devs</code>, <code>ops</code>, <code>auditors</code>. Create: <code>alice</code> (devs), <code>carol</code> (ops), <code>eve</code> (auditors), and <code>cirunner</code> as a system user with <code>nologin</code> shell added to <code>devs</code>.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Project directory:</strong> Create <code>/opt/appdata</code> owned by <code>root:devs</code>, mode <code>2770</code> (SGID + full group access, no world access). Apply ACL: ops → r-x, auditors → r--. Set default ACL so all new files inherit.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Log directory:</strong> Create <code>/var/log/applog/</code> owned by <code>root:ops</code>, mode <code>750</code>. Grant <code>devs</code> write access and <code>auditors</code> read-only via ACL. Set default ACL. Confirm that cirunner (in devs) can write a log entry.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Sudo policy:</strong> Create <code>/opt/scripts/deploy.sh</code> (content: <code>echo "Deploy complete"</code>). In separate <code>sudoers.d</code> files: allow <code>devs</code> group to run <code>/opt/scripts/deploy.sh</code>, allow <code>ops</code> to run <code>/bin/systemctl status cron</code> (read-only check), allow <code>cirunner</code> NOPASSWD for <code>/opt/scripts/deploy.sh</code>. Auditors get no sudo at all.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Verify access:</strong> as alice — write a file to <code>/opt/appdata</code> (should succeed). As carol — try to write to <code>/opt/appdata</code> (should fail). As eve — try to write anywhere (should fail everywhere). Confirm carol can read. Confirm eve can read.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Security audit:</strong> run the three checks from the slide: (a) find any UID=0 accounts besides root with <code>awk -F: '$3==0' /etc/passwd</code>, (b) find world-writable files in <code>/opt</code>, (c) find all SUID binaries you created. Confirm none are unexpected.</span></div>
+            <div class="task"><span class="arrow">→</span><span><strong>Write-up:</strong> document your design in 8–12 sentences. Include a summary table with columns: User | Groups | /opt/appdata | /var/log/applog | sudo rights.</span></div>
+          </div>
+          <div class="hint"><b>This is the whole module</b>You are applying every concept in sequence: useradd, SGID, sticky, ACL default, setfacl, visudo, sudoers.d, and permission evaluation — all wired into one coherent security model.</div>
+        </div>
+        <div>
+          <div class="panel-label">Deliverables</div>
+          <div class="deliv">
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span><code>getfacl /opt/appdata</code> and <code>getfacl /var/log/applog/</code> showing complete ACL setup.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Access verification: alice writing successfully, carol denied, eve denied — all in one terminal session.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Sudo tests — each role's allowed command succeeding and a disallowed command being rejected.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon cam">📷</div>
+              <div class="deliv-text"><b>Screenshot</b><span>Security audit results: UID=0 check, world-writable check, SUID check — all clean.</span></div>
+            </div>
+            <div class="deliv-item">
+              <div class="deliv-icon txt">✍</div>
+              <div class="deliv-text"><b>In report</b><span>Your 8–12 sentence design write-up, including the permission summary table. Justify why cirunner must be a system user with <code>nologin</code> and not a regular user account.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <!-- ═══ FOOTER ═══════════════════════════════ -->
+  <footer class="foot">
+    <div>Module 2 · Users, Permissions &amp; Processes · Lab Pack <span class="acc">v1</span></div>
+    <div>Submit <span class="acc">report.md + screenshots/ + scripts</span> as one zip · deadline end of week</div>
+  </footer>
+
+</div>
+</body>
+</html>
