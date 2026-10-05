@@ -9,7 +9,7 @@ in this report can be reproduced exactly.
 |---|---|
 | Platform | Debian GNU/Linux 13 (trixie), amd64, KVM guest |
 | Shell | `bash` - SSH in as `lab`, then `sudo -i` for root |
-| Working directory | `/root` (after `sudo -i`) |
+| Working directory | `/root` (after `sudo -i`) — except Lab 3, which ran as `lab` in `/home/lab` |
 | Report file | `labs/lab02/report.md` |
 | Screenshots | `labs/lab02/screenshots/` - the folder sitting next to this file |
 
@@ -27,12 +27,16 @@ groupadd ops
 cat /etc/group | tail -2
 
 # output
-dev:x:1003:
-ops:x:1004:
+dev:x:1001:
+ops:x:1002:
 ```
 
 Explain: I use `groupadd` to create 2 groups, then `cat /etc/group | tail -2` to show the group 
 in `/etc/group`
+
+`groupadd` took the two lowest free GIDs, so `dev=1001` and `ops=1002`. That is why the four
+per-user groups created afterwards (`alice`, `bob`, `carol`, `dave`) start at `1003` — visible in
+Task 2 and Task 3.
 
 ### Task 2 - Create users **alice** and **bob** with home directories (`-m`), bash shell (`-s /bin/bash`), a GECOS comment (`-c "Dev User"`), and add them to the `dev` group (`-G dev`).
 
@@ -196,8 +200,11 @@ id alice
 uid=1001(alice) gid=1003(alice) groups=1003(alice),27(sudo),1001(dev),986(docker)
 ```
 
-Explain The user alice has been added to the supplementary groups dev, docker, and sudo. 
+Explain: The user alice has been added to the supplementary groups dev, docker, and sudo. 
 The user remains a member of the original primary group alice, which has not been changed.
+
+Note: the screenshot for this step also shows `1007(qa)`, left over from an earlier run of this lab
+before I reset the state. The three groups this task adds are `sudo`, `dev` and `docker`.
 
 ### Task 2 - **The trap:** run `usermod -G qa alice` (without `-a`). Run `id alice` again. What happened to dev, docker, and sudo?
 
@@ -246,8 +253,13 @@ id
 uid=1001(alice) gid=1001(dev) groups=1001(dev),27(sudo),986(docker),1003(alice),1007(qa)
 ```
 
-Explain: `newgrp dev` starts a new shell where `dev` becomes Alice's effective primary group (GID 1001).
-Her other group memberships remain active. Newly created files will generally use `dev` as their group ownership.
+Explain: Yes — her active groups already reflect the change, because `su - alice` starts a brand new
+login session that re-reads the group list from `/etc/group`. A session that was already open *before*
+the `usermod` would keep the stale list, and that is exactly the situation `newgrp` exists to fix.
+
+`newgrp dev` starts yet another new shell, this time with `dev` as Alice's effective primary group
+(GID 1001). Her other group memberships remain active. Newly created files will generally use `dev` as
+their group ownership.
 
 ### Task 5 - Lock alice's account with `usermod -L alice`. Inspect `grep alice /etc/shadow` — what character appears before her password hash? Unlock with `usermod -U alice`.
 
@@ -270,7 +282,7 @@ account has been locked.
 
 Answer: In the `usermod` command:
 - `-g` sets the user's primary group.
-- `G` sets the user's supplementary groups, replacing the existing supplementary group list.
+- `-G` sets the user's supplementary groups, replacing the existing supplementary group list.
 - `-aG` adds the specified groups to the user's existing supplementary groups without removing the groups they already belong to.
 One real world scenario is that when an administrator access to server with his account `a` which has sudo privilege 
 by adding group `sudo` to `a`'s supplementary group. One day, the administator wants to test something with docker. 
@@ -286,6 +298,7 @@ But instead of using `aG` to add `docker` group, he used `G` to override groups 
 
 ```bash
 # input
+umask
 touch secret.txt
 mkdir reports
 ls -al | grep -e "secret" -e "reports"
@@ -298,7 +311,7 @@ drwxrwxr-x 2 lab  lab  4096 Oct  3 17:06 reports
 Explain: `reports/` permission string: `drwxrwxr-x` → directory permissions `775`
 `secret.txt` permission string: `-rw-rw-r--` → file permissions `664`
 
-The default umask is `002`, because:
+The default umask is `002` (as printed by `umask`), because:
     - Directory: 777 & ~002 = 775
     - File: 666 & ~002 = 664
 
@@ -348,6 +361,7 @@ Explain: Change the owner of `reports/` to `alice:dev` recursively with `chown -
 
 ```bash
 # input
+umask 027
 touch newfile.txt
 mkdir newdirectory
 ls -al | grep -e "newfile" -e "newdirectory"
@@ -472,8 +486,19 @@ Running as: alice
 
 ```
 
-Explain: Even without the permission to run the file `/tmp/whotest.sh`, `alice` can still run the file because 
-of the SUID (`s`) bit. This bit allows other user to run a file under the privilege of file's owner.
+Explain: It reports `alice`, and the important part is *why* the SUID bit did not change that.
+
+Two things are going on:
+
+1. `alice` was never blocked from running the script. The file started at `644`, and
+   `chmod +x,u+s` turned that into `4755` — so the "other" bits already gave her `r-x`.
+   The SUID bit added nothing to her ability to execute it.
+2. Even so, the script still ran as `alice`, because **Linux does not honour the setuid bit on
+   scripts**. The setuid bit only takes effect when the kernel itself loads a binary image. A
+   script is not a binary — the kernel has to hand the file to an interpreter (`/bin/sh` here,
+   since the file has no `#!` line at all), and it is the interpreter that ends up executing,
+   with the caller's privileges. Had this been a compiled binary, for example a root-owned copy
+   of `/usr/bin/passwd`, `whoami` inside it would have printed `root`.
 
 ### Task 5 - Find all SUID binaries on the system: `find / -perm -4000 2>/dev/null`. Identify at least 3 you recognize and explain in your report why each one needs SUID.
 
@@ -504,7 +529,32 @@ SUID root:
 alice → bash → runs with root privileges
 ```
 
-Because Bash is a **general-purpose shell**, a root SUID Bash could allow an unprivileged user to execute arbitrary commands with root privileges.
+Because Bash is a **general-purpose shell**, a root SUID Bash lets an unprivileged user run *any*
+command as root. The exact steps an attacker would take:
+
+```bash
+# 1. copy the SUID-root shell somewhere they can write
+cp /bin/bash /tmp/mybash
+
+# 2. keep the root ownership and add/confirm the setuid bit
+chown root:root /tmp/mybash
+chmod u+s /tmp/mybash
+ls -l /tmp/mybash          # -rwsr-xr-x 1 root root ...
+
+# 3. run it with -p so bash does not drop privileges, and confirm euid is 0
+/tmp/mybash -p
+id -u                     # 0  <- effective UID is root
+
+# 4. do anything, as root
+/tmp/mybash -c 'id'
+cat /etc/shadow            # readable now
+```
+
+Step 3 is the crucial one: bash normally discards elevated privileges when it is not the
+*real* login shell, which is why a naive `mybash` attempt drops back to `alice`. `-p`
+(`--privileged`) stops that reset, and the process keeps `euid=0`. From there every
+subcommand in that shell is root — there is no allow-list to work around, because the program
+being exploited *is* a full shell.
 
 Therefore:
 
@@ -572,7 +622,24 @@ touch /opt/project/alice.txt
 getfacl /opt/project/alice.txt
 ```
 
-Explain: The `alice.txt` has the same ACL as default which is set via `setfacl -d -m`.
+Explain: `alice.txt` inherits the default ACL set with `setfacl -d -m`, but **not** a verbatim copy
+of it. When a file is created inside a directory that has a default ACL, every inherited entry is
+intersected with the mode the kernel was actually asked for. `touch` requests `0666`, and a regular
+file's mode never carries the execute bit, so every `x` in the inherited entries is dropped and the
+mask shrinks to `rw-`:
+
+```text
+user::rw-
+user:charlie:r--      # was r-x in the default ACL
+group::rw-
+group:dev:rw-         # was rwx
+group:ops:r--         # was r-x
+mask::rw-
+other::---
+```
+
+That is why the `x` on a *directory* default ACL is meaningful but the same `x` on a file
+default ACL is dropped. (Screenshot of this output: `screenshots/lab5_3.png` — to be captured.)
 
 ![Lab 5 - getfacl /opt/project showing user, group, mask and default ACL](screenshots/lab5_1.png)
 
@@ -657,7 +724,14 @@ Explain:
 
 - Explain what the ACL *mask* is and why running `chmod` on a file with ACLs can silently cut effective permissions. When should you use ACLs instead of standard chmod?
 
-Answer: 
+Answer: The **mask** is the ceiling on the whole "group class" of an ACL — that is, on
+`group::`, every named `group:<name>:`, and every named `user:<name>:` entry. Each of those
+entries still stores the permission it *asks* for, but the kernel grants only
+`entry AND mask`, and `getfacl` prints the difference as `#effective:`. Because `chmod` on a
+file with an ACL writes to the mask rather than to the individual entries (see the mask trap in
+Task 4), a plain `chmod g-x` silently strips execute from every named user and group in one
+move while leaving the ACL text looking untouched — nothing is deleted, only capped.
+
     - **`chmod`** → use for simple permissions: `owner / group / others`.
     - **ACL** → use when you need permissions for **specific users or groups**.
 
@@ -720,18 +794,36 @@ deploy ALL=(root) NOPASSWD: /opt/scripts/deploy.sh,/bin/systemctl restart cron
 ```bash
 sudo -u deploy sudo /opt/scripts/deploy.sh
 sudo -u deploy sudo /bin/systemctl restart cron
+
+# output
+Deploying application...
 ```
 
-Explain: It works
+Explain: Both ran without asking for a password, which is what `NOPASSWD` buys — sudo did not
+prompt for `deploy`'s password because the command is on the allow-list. The deploy script
+printed its own `Deploying application...` line, so it was not literally silent; the
+`systemctl restart cron` call produced no output at all, which is the normal result for a
+successful restart.
 
 ### Task 5 - **Test (denied):** run `sudo -u deploy sudo /bin/bash` and `sudo -u deploy sudo rm /etc/passwd`. Both should be rejected with a "not allowed" message.
 
 ```bash
 sudo -u deploy sudo /bin/bash
 sudo -u deploy sudo rm /etc/passwd
+
+# output
+[sudo] password for deploy:
+Sorry, user deploy is not allowed to execute '/bin/bash' as root on lab02.
+[sudo] password for deploy:
+Sorry, user deploy is not allowed to execute '/usr/bin/rm /etc/passwd' as root on lab02.
 ```
 
-Explain: I have not set the privilege for `/bin/bash` and `etc/passwd` for `deploy`, so it did not work.
+Explain: Neither command is in the sudoers rule, so both were rejected. Note the
+`[sudo] password for deploy:` prompt first — `NOPASSWD` only covers the two commands named in
+the rule, so for anything else sudo falls back to normal password authentication. `deploy` was
+created with `-r` and never had a password set, so there was nothing to type and the attempt
+died at the authorisation check. The second message also shows sudo resolved `rm` to its
+absolute path `/usr/bin/rm`, which is why the rule has to name full paths.
 
 ![Lab 6 - the allowed command succeeding and the denied command being rejected](screenshots/lab6_1.png)
 
@@ -798,12 +890,17 @@ Explain: No more bob
 ### Task 3 - **Revoke elevated access:** remove bob from the `sudo` and `docker` groups using `gpasswd -d bob sudo` and `gpasswd -d bob docker`. Confirm with `id bob`.
 
 ```bash
+id bob                    # before containment
 gpasswd -d bob sudo
 gpasswd -d bob docker
-id bob
+id bob                    # after
 ```
 
-Explain: Removed bob from sudo and docker.
+Explain: `id bob` before the change showed `groups=1004(bob),27(sudo),1001(dev),986(docker)`,
+which is the state the scenario describes — bob held `sudo` and `docker`. After the two
+`gpasswd -d` commands only `1004(bob),1001(dev)` remain. `gpasswd -d` is the right tool here
+because it edits one membership in `/etc/group`; `usermod -G` would have replaced the whole
+supplementary list, which is the Lab 2 trap all over again.
 
 ![Lab 7 - id bob before containment (sudo + docker) and after](screenshots/lab7_2.png)
 
@@ -875,7 +972,10 @@ exit
 tmux attach -t dataproc
 ```
 
-Explain: After closing, reopen the terminal and attach to tmux session again, the session is still active.
+Explain: After closing, reopen the terminal and attach to tmux session again, the session is
+still active — the counter was still incrementing from where it had stopped, and the shell
+history was intact. Nothing was lost because the loop was never a child of the terminal I
+closed; it was a child of the tmux server.
 
 ### Task 4 - Split the pane vertically (`Ctrl+B %`). In the right pane run `top`. Navigate between panes using `Ctrl+B ←→` arrows. Zoom into one pane with `Ctrl+B Z` and back.
 
@@ -951,9 +1051,16 @@ Explain: Nice value is 0.
 
 ```bash
 renice -n 19 -p 3336
+
+# output
+3336: old priority 0, new priority 19
 ```
 
-Explain: The NI changed to 19.
+Explain: The NI changed to 19, the lowest possible priority, so the scheduler now gives the
+hog CPU only when nothing else wants it. It was not actually necessary for responsiveness on
+an idle box — with only one busy process the CPU is 100% busy either way, and the difference
+only shows once there is a second process competing for the same core. What renice really
+guarantees is that if the lab server is shared, my shell stops queueing behind the hog.
 
 ![Lab 9 - top after renice -n 19, NI column changed to 19](screenshots/lab9_2.png)
 
@@ -963,12 +1070,14 @@ Explain: The NI changed to 19.
 
 ```bash
 kill 3336
-#  ps -p 3336
+sleep 3
+ps -p 3336
 # PID TTY          TIME CMD
 # [1]+  Terminated              python3 -c "while True: pass"
-
-kill -9 3336
 ```
+
+The `ps` header with no row underneath means the process is gone, so the `kill -9` escalation
+was not needed here and I did not run it.
 
 Explain: `kill 3336` sends SIGTERM (15), requesting the process to terminate gracefully. The Python process terminated immediately, so SIGKILL (`kill -9`) was not necessary in this case. SIGKILL should only be used as a last resort when a process does not respond to SIGTERM.
 
@@ -995,6 +1104,8 @@ Explain: just do the requirement.
 nice -n 10 python3 -c "while True: pass" & # 1409
 # now in top it has NI = 10
 
+# drop root first, otherwise the negative nice would simply succeed
+su - alice
 renice -n -5 -p 1409
 # renice: failed to set priority for 1409 (process ID): Permission denied
 ```
@@ -1029,8 +1140,15 @@ groupadd auditors
 useradd -m -s /bin/bash -c "Dev user" -G devs alice
 useradd -m -s /bin/bash -c "Ops User" -G ops carol
 useradd -m -s /bin/bash -c "Auditor user" -G auditors eve
-useradd -s /usr/sbin/nologin -c "System user" -G devs cirunner
+useradd -r -s /usr/sbin/nologin -c "System user" -G devs cirunner
 ```
+
+Explain: Created users and groups according to requirements. The `-r` on `cirunner` is the
+important flag: it makes it a *system* account, so it draws a UID from the reserved sub-1000
+range instead of the regular user range, exactly like `svcapp` in Lab 1. `-G devs` still adds it
+as a supplementary member of `devs`; the system-user flag does not change group membership.
+Without `-r` the account would have been a normal login-capable user holding a UID above 1000,
+which is the opposite of what a CI job account should be.
 
 Explain: Created users and groups according to requirements.
 
@@ -1047,9 +1165,16 @@ sudo setfacl -m g:ops:r-x,g:auditors:r-- /opt/appdata
 # Default ACL for newly created objects
 sudo setfacl -d -m g:ops:r-x,g:auditors:r-- /opt/appdata
 
+getfacl /opt/appdata
 ```
 
-Explain: Created directory and set ownership, permissions... following the requirement.
+Explain: The `2` in `2770` is the SGID bit, so every new file lands in group `devs` no matter
+which member of `devs` created it, and the trailing `0` keeps `others` at no permissions at all.
+`getfacl` then shows `group:ops:r-x` and `group:auditors:r--` layered on top. Note what
+`r--` on a directory actually buys an auditor: they can `ls` the directory and read the names
+inside it, but without the `x` bit they cannot descend into it or open a file by name. For a
+genuinely read-only auditor role `r-x` is the correct grant; the slide specifies `r--`, so that
+is what I applied, and the summary table in Task 7 records the distinction.
 
 ### Task 3 - **Log directory:** Create `/var/log/applog/` owned by `root:ops`, mode `750`. Grant `devs` write access and `auditors` read-only via ACL. Set default ACL. Confirm that cirunner (in devs) can write a log entry.
 
@@ -1067,12 +1192,21 @@ sudo setfacl -m g:auditors:r-x /var/log/applog
 # Default ACL for new files/directories
 sudo setfacl -d -m g:devs:rwx,g:auditors:r-x /var/log/applog
 
-# confirm cirunner can write log
-sudo -u cirunner echo "This is from cirunner" > /var/log/applog/cirunner.txt
-cat /opt/appdata/cirunner.txt # this is from ci runner
+# confirm cirunner can write a log entry
+# the redirect has to happen *inside* cirunner's own shell, otherwise root's
+# shell would create the file and prove nothing about cirunner's access
+sudo -u cirunner bash -c 'echo "This is from cirunner" > /var/log/applog/cirunner.txt'
+ls -l /var/log/applog/cirunner.txt
+cat /var/log/applog/cirunner.txt   # this is from ci runner
 ```
 
-Explain: do what requirements says.
+Explain: `sudo -u cirunner echo "…" > file` looks like it tests cirunner, but the `>` is
+performed by the *invoking* shell, which is root — so the file would be created by root and
+the test would pass no matter what cirunner's permissions were. Wrapping the redirect in
+`bash -c` makes cirunner the process that actually calls `open(2)`, and then it only succeeds
+because `group:devs:rwx` is in the ACL. Also worth noting: `/var/log/applog` has **no** SGID
+bit, so a log file created here inherits the creator's own primary group, not `ops` — only
+`/opt/appdata` guarantees the shared group.
 
 ![Lab 10 - getfacl /opt/appdata and /var/log/applog/ showing the full ACL setup](screenshots/lab10_1.png)
 
@@ -1083,15 +1217,33 @@ Explain: do what requirements says.
 ```bash
 mkdir -p /opt/scripts/
 echo 'echo "Deploy complete"' > /opt/scripts/deploy.sh
-chmod 744 /opt/scripts/deploy.sh
+chown root:dev /opt/scripts/deploy.sh
+chmod 750 /opt/scripts/deploy.sh
+ls -l /etc/sudoers.d/          # sudoers.d files must not be group/other writable
 
-visudo -f /etc/sudoers.d/devs # %devs ALL=(root) /opt/scripts/deploy.sh
-visudo -f /etc/sudoers.d/ops # %ops ALL=(root) /bin/systemctl status cron
-visudo -f /etc/sudoers.d/cirunner # cirunner ALL=(root) NOPASSWD: /opt/scripts/deploy.sh
-
+visudo -f /etc/sudoers.d/devs
+visudo -f /etc/sudoers.d/ops
+visudo -f /etc/sudoers.d/cirunner
 ```
 
-Explain: Just do what requirement asks
+```bash
+# /etc/sudoers.d/devs
+%devs ALL=(root) /opt/scripts/deploy.sh
+
+# /etc/sudoers.d/ops
+%ops ALL=(root) /bin/systemctl status cron
+
+# /etc/sudoers.d/cirunner
+cirunner ALL=(root) NOPASSWD: /opt/scripts/deploy.sh
+```
+
+Explain: Each role gets its own file so a later change to one rule cannot disturb the others,
+and sudo only reads `/etc/sudoers.d/*` when those files are not group- or world-writable —
+`visudo` creates them with mode `0440`, which is why the rule is never edited by hand.
+`chmod 750 root:dev` on the script is deliberate: sudo checks execute permission against the
+*invoking* user, so `%devs` members need the `x` bit, and `750` gives it to them via the group
+without handing the deploy script to every other account on the box. No `sudoers.d` file is
+created for `auditors`, so that role has no sudo entry at all.
 
 ### Task 5 - **Verify access:** as alice — write a file to `/opt/appdata` (should succeed). As carol — try to write to `/opt/appdata` (should fail). As eve — try to write anywhere (should fail everywhere). Confirm carol can read. Confirm eve can read.
 
@@ -1130,26 +1282,37 @@ awk '{
 }'
 ```
 
-Explain: The security audit checks confirmed that the system is configured as expected. The /etc/passwd check showed only root with UID 0, so there are no unexpected root-level accounts. The /opt check found no world-writable files. The SUID check listed standard system SUID binaries, and none were unexpected or created by this lab.
+Explain: The security audit checks confirmed that the system is configured as expected.
+
+- `awk -F: '$3==0' /etc/passwd` returned only `root:x:0:0:root:/root:/bin/bash`, so there is
+  no second UID 0 account — the classic backdoor check.
+- `find /opt -type f -perm -o+w` returned nothing, so nothing under `/opt` is world-writable.
+  Note this is `-type f`, so it deliberately skips directories; a world-writable directory
+  would be the more dangerous finding and `find /opt -perm -o+w -type d` would surface it.
+- The SUID scan listed only stock distribution binaries (`sudo`, `su`, `passwd`, `mount`,
+  `umount`, `gpasswd`, `chsh`, `chfn`, `newgrp`, `dbus-daemon-launch-helper`, …).
+
+Importantly, `/tmp/whotest.sh` from Lab 4 — the root-owned `4755` script I created — does **not**
+appear in that list, because I deleted it after the SUID test. That is the right outcome: a
+setuid file sitting in `/tmp` is writable-adjacent world-readable and is exactly the kind of
+thing this audit is meant to catch, and it should not survive the lab that created it.
 
 ![Lab 10 - security audit results, UID=0, world-writable and SUID checks](screenshots/lab10_4.png)
 
 *security audit results, UID=0, world-writable and SUID checks*
 
-Sure — here it is in the **same format** with the TODOs filled in.
-
 ### Task 7 - **Write-up:** document your design in 8–12 sentences. Include a summary table with columns: User | Groups | /opt/appdata | /var/log/applog | sudo rights.
 
-**Write-up:** The server uses the `devs`, `ops`, and `auditors` groups to separate users based on their roles. Alice is a developer and belongs to the `devs` group, while Carol belongs to `ops` and Eve belongs to `auditors`. The `/opt/appdata` directory is owned by `root:devs` with mode `2770`, providing full access to developers while preventing world access. ACLs allow the `ops` group to read and access `/opt/appdata`, while auditors have read-only access. The `/var/log/applog` directory is owned by `root:ops` with mode `750`, and ACLs allow `devs` to write logs and `auditors` to read them. The SGID and default ACL settings ensure that files created in the shared directories inherit the appropriate group permissions. Sudo access is restricted so that `devs` can run the deployment script, `ops` can check the status of the cron service, and `cirunner` can run the deployment script without a password. Auditors are not given any sudo privileges because their role only requires read-only access. The `cirunner` account is a system user with a `nologin` shell because it is intended for automated tasks rather than interactive human login. Using `nologin` reduces the risk of the service account being used for interactive access while still allowing it to perform its required tasks.
+**Write-up:** The server uses the `devs`, `ops`, and `auditors` groups to separate users based on their roles. Alice is a developer and belongs to the `devs` group, while Carol belongs to `ops` and Eve belongs to `auditors`. The `/opt/appdata` directory is owned by `root:devs` with mode `2770`, providing full access to developers while preventing world access, and its SGID bit means new files always land in group `devs` regardless of which developer created them. ACLs allow the `ops` group `r-x` on `/opt/appdata` and `auditors` only `r--`, which grants listing but not traversal. The `/var/log/applog` directory is owned by `root:ops` with mode `750`, and ACLs allow `devs` to write logs and `auditors` to read them; unlike `/opt/appdata` this directory has no SGID bit, so a log file inherits its creator's primary group rather than `ops`. Sudo access is restricted so that `devs` can run the deployment script, `ops` can check the status of the cron service, and `cirunner` can run the deployment script without a password. Auditors are not given any sudo privileges because their role only requires read-only access. The `cirunner` account is a system user with a `nologin` shell because it is intended for automated tasks rather than interactive human login. Using `nologin` reduces the risk of the service account being used for interactive access while still allowing it to perform its required tasks.
 
 **Summary table:**
 
 | User | Groups | /opt/appdata | /var/log/applog | sudo rights |
 |---|---|---|---|---|
-| **alice** | `devs` | Read/write/create | Read/write/create | Run `/opt/scripts/deploy.sh` |
+| **alice** | `devs` (plus `dev`, `docker`, `qa`, `sudo` from Lab 2) | Read/write/create | Read/write/create | Run `/opt/scripts/deploy.sh` |
 | **carol** | `ops` | Read/traverse | Read/write/create | Run `/bin/systemctl status cron` |
-| **eve** | `auditors` | Read-only | Read-only | None |
-| **cirunner** | `devs` | Read/write/create | Read/write/create | `NOPASSWD` for `/opt/scripts/deploy.sh` |
+| **eve** | `auditors` | List only (`r--`, cannot traverse) | Read + traverse (`r-x`) | None |
+| **cirunner** | `devs` (system user, `nologin`) | Read/write/create | Read/write/create | `NOPASSWD` for `/opt/scripts/deploy.sh` |
 
 ### Questions (in report)
 
