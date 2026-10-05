@@ -10,3 +10,6 @@ Thumbs.db
 
 # Python bytecode from running the build-site tests
 __pycache__/
+
+docker-swarm-lab/
+temp/
