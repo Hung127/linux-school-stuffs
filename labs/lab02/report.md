@@ -639,11 +639,6 @@ other::---
 ```
 
 That is why the `x` on a *directory* default ACL is meaningful but the same `x` on a file
-default ACL is dropped. (Screenshot of this output: `screenshots/lab5_3.png` — to be captured.)
-
-![Lab 5 - getfacl /opt/project showing user, group, mask and default ACL](screenshots/lab5_1.png)
-
-*getfacl /opt/project showing user, group, mask and default ACL*
 
 ### Task 4 - **The mask trap:** run `chmod g-x /opt/project`. Run `getfacl /opt/project` again. What happened to the *effective* permissions for `dev` and `charlie`? Why?
 
