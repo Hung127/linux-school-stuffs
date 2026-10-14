@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Servers on Linux — CentOS + Apache httpd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#0d1620;
+    --muted:#3f4b57;
+    --faint:#6b7684;
+    --line:#dde3ea;
+    --accent:#143a6e;
+    --accent-2:#2f74c0;
+    --accent-soft:#eaf1f9;
+    --danger:#b23a3a;
+    --danger-soft:#fbecec;
+    --ok:#1f7a4d;
+    --term-bg:#0f1b2d;
+    --term-bar:#1c2c44;
+    --term-ink:#e6edf3;
+    --term-green:#57d18c;
+    --term-cyan:#79c0e6;
+    --term-amber:#e8b765;
+    --term-comment:#7a8aa0;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#c9d2dc;
+    font-family:var(--sans);
+    color:var(--ink);
+    overflow:hidden;
+  }
+
+  /* ---------- deck chrome ---------- */
+  .deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;
+    background:var(--bg);
+    display:none;
+    padding:5.2vh 7vw 8vh;
+    flex-direction:column;
+    animation:fade .35s ease;
+  }
+  .slide.active{display:flex}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide{animation:none}
+  }
+
+  /* kicker row */
+  .kicker{
+    display:flex;align-items:center;gap:.9rem;
+    font-family:var(--mono);
+    font-size:clamp(.7rem,1.15vw,.95rem);
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:2.6vh;
+  }
+  .kicker .num{
+    color:var(--bg);background:var(--accent);
+    padding:.2em .55em;border-radius:3px;font-weight:600;letter-spacing:.05em;
+  }
+  .kicker .dot{width:6px;height:6px;border-radius:50%;background:var(--line)}
+  .kicker .mod{color:var(--faint)}
+
+  h1{font-size:clamp(1.7rem,4.4vw,3.4rem);font-weight:700;line-height:1.05;letter-spacing:-.02em}
+  h2{font-size:clamp(1.6rem,3.4vw,2.8rem);font-weight:700;line-height:1.1;letter-spacing:-.015em;margin-bottom:.4em}
+  .lead{font-size:clamp(1.12rem,1.9vw,1.48rem);color:var(--muted);line-height:1.5;max-width:46ch}
+  p{font-size:clamp(1.05rem,1.6vw,1.32rem);line-height:1.58}
+
+  .body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.4rem,3vw,3rem);align-items:start}
+  .cols.wide-left{grid-template-columns:1.15fr .85fr}
+  .cols.wide-right{grid-template-columns:.85fr 1.15fr}
+
+  ul.pts{list-style:none;display:flex;flex-direction:column;gap:1.05vh}
+  ul.pts li{
+    position:relative;padding-left:1.6em;
+    font-size:clamp(1.05rem,1.65vw,1.36rem);line-height:1.5;color:var(--ink);
+  }
+  ul.pts li::before{
+    content:"";position:absolute;left:0;top:.55em;
+    width:.62em;height:.62em;border:2px solid var(--accent);border-radius:2px;
+  }
+  ul.pts li b{color:var(--accent)}
+  ul.pts li .sub{display:block;font-size:.82em;color:var(--muted);margin-top:.15em}
+  ul.pts.tight li{font-size:clamp(1rem,1.5vw,1.22rem)}
+
+  .note{font-family:var(--mono);font-size:clamp(.82rem,1.2vw,1.02rem);color:var(--muted);margin-top:1.6vh;line-height:1.55}
+  .note b{color:var(--danger)}
+  .demo{margin-top:1.5vh;display:flex;align-items:baseline;gap:.65em;
+    background:#e7f4ec;border-left:4px solid var(--ok);border-radius:0 6px 6px 0;
+    padding:.7em .9em;font-family:var(--mono);
+    font-size:clamp(.8rem,1.15vw,1rem);line-height:1.6;color:#123524}
+  .demo .lbl{flex:none;background:var(--ok);color:#fff;font-weight:600;
+    padding:.14em .5em;border-radius:3px;letter-spacing:.06em;font-size:.82em;white-space:nowrap}
+  .demo code{background:rgba(31,122,77,.13);color:#12492f;padding:.04em .34em;border-radius:3px}
+
+  /* terminal block */
+  .term{
+    background:var(--term-bg);border-radius:8px;overflow:hidden;
+    box-shadow:0 12px 30px -12px rgba(15,27,45,.5);
+    font-family:var(--mono);
+  }
+  .term .bar{
+    background:var(--term-bar);height:2.1em;display:flex;align-items:center;gap:.5em;padding:0 .9em;
+  }
+  .term .bar i{width:.72em;height:.72em;border-radius:50%;display:block}
+  .term .bar i.r{background:#e05c5c}.term .bar i.y{background:#e8b765}.term .bar i.g{background:#57d18c}
+  .term .bar span{margin-left:.6em;color:var(--term-comment);font-size:.8em;letter-spacing:.03em}
+  .term pre{
+    padding:1.1em 1.3em;color:var(--term-ink);
+    font-size:clamp(.82rem,1.22vw,1.12rem);line-height:1.7;
+    white-space:pre;overflow-x:auto;
+  }
+  .term .p{color:var(--term-green)}      /* prompt */
+  .term .c{color:var(--term-comment)}    /* comment */
+  .term .k{color:var(--term-cyan)}       /* keyword/path */
+  .term .a{color:var(--term-amber)}      /* arg/emphasis */
+  .term .o{color:var(--term-ink);opacity:.85} /* output */
+
+  .card{border:1px solid var(--line);border-radius:8px;padding:1.1em 1.2em;background:#fbfcfe}
+  .card h3{font-size:clamp(1.08rem,1.65vw,1.34rem);color:var(--accent);margin-bottom:.4em;font-weight:700}
+  .card p{font-size:clamp(.96rem,1.4vw,1.16rem);color:var(--muted);line-height:1.5}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
+
+  .tag{display:inline-block;font-family:var(--mono);font-size:.78em;padding:.15em .5em;border-radius:3px;
+    background:var(--accent-soft);color:var(--accent);margin-right:.3em}
+  .tag.danger{background:var(--danger-soft);color:var(--danger)}
+  .tag.ok{background:#e7f4ec;color:var(--ok)}
+
+  .layer{display:flex;flex-direction:column;gap:.5em}
+  .layer .row{display:flex;align-items:center;gap:.8em;border:1px solid var(--line);border-radius:6px;padding:.65em .95em;font-size:clamp(.95rem,1.4vw,1.2rem)}
+  .layer .row b{font-family:var(--mono);color:var(--accent);min-width:8.5em}
+  .layer .row.hl{border-color:var(--accent);background:var(--accent-soft)}
+
+  .flow{display:flex;align-items:center;gap:.4em;flex-wrap:wrap;font-family:var(--mono);font-size:clamp(.78rem,1.2vw,1.02rem)}
+  .flow .box{border:1.5px solid var(--accent);color:var(--accent);border-radius:5px;padding:.4em .7em;background:var(--bg)}
+  .flow .arr{color:var(--faint);font-size:1.2em}
+
+  /* title slide */
+  .title-slide{justify-content:center;padding-left:8vw}
+  .title-slide .eyebrow{font-family:var(--mono);color:var(--accent);letter-spacing:.18em;text-transform:uppercase;font-size:clamp(.75rem,1.3vw,1rem);margin-bottom:1.4vh}
+  .title-slide h1{max-width:20ch;margin-bottom:2.4vh}
+  .title-slide .sub{font-size:clamp(1rem,1.9vw,1.45rem);color:var(--muted);max-width:40ch;line-height:1.5}
+  .title-slide .meta{margin-top:5vh;font-family:var(--mono);font-size:clamp(.75rem,1.15vw,.95rem);color:var(--faint);display:flex;gap:1.4em;flex-wrap:wrap}
+  .title-slide .meta span b{color:var(--ink)}
+  .brandbar{position:absolute;left:0;top:0;bottom:0;width:10px;background:linear-gradient(var(--accent),var(--accent-2))}
+
+  /* section divider */
+  .divider{justify-content:center}
+  .divider .big{font-size:clamp(2rem,7vw,5.5rem);font-weight:700;letter-spacing:-.03em;line-height:1}
+  .divider .idx{font-family:var(--mono);color:var(--accent);font-size:clamp(1rem,2.4vw,1.8rem);margin-bottom:1vh}
+
+  /* footer / progress */
+  .footer{position:fixed;left:0;right:0;bottom:0;height:5.6vh;min-height:34px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 7vw;font-family:var(--mono);font-size:clamp(.62rem,1vw,.8rem);
+    color:var(--faint);pointer-events:none;z-index:5}
+  .footer .l{color:var(--muted)}
+  .progress{position:fixed;left:0;top:0;height:4px;background:var(--accent);z-index:6;transition:width .3s ease}
+  .counter{color:var(--accent);font-weight:600}
+
+  .nav{position:fixed;right:2vw;bottom:6.5vh;display:flex;gap:.5rem;z-index:7}
+  .nav button{
+    width:2.4rem;height:2.4rem;border-radius:50%;border:1px solid var(--line);
+    background:var(--bg);color:var(--accent);font-size:1.1rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:.15s;
+    box-shadow:0 4px 12px -6px rgba(0,0,0,.25)
+  }
+  .nav button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .nav button:focus-visible{outline:3px solid var(--accent-2);outline-offset:2px}
+
+  .hint{position:fixed;left:7vw;bottom:6.5vh;font-family:var(--mono);font-size:.72rem;color:var(--faint);z-index:7;opacity:.8}
+
+  table.meaning{width:100%;border-collapse:collapse;font-size:clamp(.82rem,1.18vw,1.02rem)}
+  table.meaning th{text-align:left;font-family:var(--mono);font-size:.8em;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--faint);padding:.35em .6em;border-bottom:2px solid var(--line)}
+  table.meaning td{padding:.5em .6em;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink);line-height:1.45}
+  table.meaning td:first-child{white-space:nowrap;color:var(--accent);font-family:var(--mono);font-size:.9em}
+  table.meaning td code{background:var(--accent-soft);color:var(--accent);padding:.03em .3em;border-radius:3px;font-size:.92em}
+
+  @media (max-width:820px){
+    .cols,.cols.wide-left,.cols.wide-right,.grid3,.grid2{grid-template-columns:1fr}
+    .slide{padding:4vh 6vw 9vh}
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- 1 TITLE -->
+  <section class="slide title-slide active">
+    <div class="brandbar"></div>
+    <div class="eyebrow">Faculty of Information Technology · HCMUS</div>
+    <h1>Web Servers on Linux</h1>
+    <p class="sub">Installing, configuring, serving, and hardening a production web server — with CentOS and the Apache HTTP Server (<span style="font-family:var(--mono);color:var(--accent)">httpd</span>) as the running example.</p>
+    <div class="meta">
+      <span>Server · <b>Apache httpd</b></span>
+      <span>Example OS · <b>CentOS Stream</b></span>
+    </div>
+  </section>
+
+  <!-- 2 AGENDA -->
+  <section class="slide">
+    <div class="kicker"><span class="num">00</span><span class="dot"></span><span class="mod">Roadmap</span></div>
+    <div class="body">
+      <h2>What we'll cover</h2>
+      <div class="cols" style="margin-top:1.5vh">
+        <ul class="pts tight">
+          <li><b>1 ·</b> What a web server is — and isn't</li>
+          <li><b>2 ·</b> The Linux environment: daemons, users, layout</li>
+          <li><b>3 ·</b> Apache architecture &amp; installation</li>
+          <li><b>4 ·</b> Service management &amp; verification</li>
+          <li><b>5 ·</b> Configuration: vhosts, directories, MIME</li>
+          <li><b>6 ·</b> Dynamic content, reverse proxy &amp; load balancing</li>
+        </ul>
+        <ul class="pts tight">
+          <li><b>7 ·</b> Performance, load &amp; scale</li>
+          <li><b>8 ·</b> TLS / HTTPS</li>
+          <li><b>9 ·</b> Logging &amp; troubleshooting</li>
+          <li><b>10 ·</b> Security hardening + SELinux</li>
+          <li><b>11 ·</b> Live demos + take-home lab</li>
+        </ul>
+      </div>
+      <p class="note">Every command in this deck is written for CentOS with <span class="tag">dnf</span> and <span class="tag">systemctl</span>. Substitute <span class="tag">yum</span> on CentOS 7.</p>
+    </div>
+  </section>
+
+  <!-- 3 DIVIDER: FOUNDATIONS -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 1</div>
+    <div class="big">Foundations</div>
+    <p class="lead" style="margin-top:2vh">What a web server actually does before we touch a config file.</p>
+  </section>
+
+  <!-- 4 WHAT IS A WEB SERVER -->
+  <section class="slide">
+    <div class="kicker"><span class="num">01</span><span class="dot"></span><span class="mod">Foundations</span></div>
+    <div class="body">
+      <h2>Web server vs. app server vs. reverse proxy</h2>
+      <div class="grid3" style="margin-top:1.5vh">
+        <div class="card">
+          <h3>Web server</h3>
+          <p>Speaks HTTP. Accepts requests, returns static files, or forwards to a backend. <b style="color:var(--accent)">Apache, Nginx.</b></p>
+        </div>
+        <div class="card">
+          <h3>Application server</h3>
+          <p>Runs your program that generates responses. <b style="color:var(--accent)">PHP-FPM, Gunicorn, Node, Tomcat.</b></p>
+        </div>
+        <div class="card">
+          <h3>Reverse proxy</h3>
+          <p>Sits in front, terminates TLS, load-balances, caches, routes to backends. Often the <i>same</i> Apache/Nginx process.</p>
+        </div>
+      </div>
+      <p class="note">One box can be all three at once. Apache serves static assets, terminates TLS, and proxies <span class="tag">/api</span> to PHP-FPM — simultaneously.</p>
+        <svg viewBox="0 0 1180 196" style="width:100%;max-width:1180px;margin:2vh auto 0;display:block" font-family="var(--mono)">
+          <defs>
+            <marker id="ah4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <rect x="10" y="66" width="150" height="58" rx="8" fill="#eef2f7" stroke="#6b7684" stroke-width="1.5"/>
+          <text x="85" y="91" text-anchor="middle" font-size="19" font-weight="700" fill="#0d1620">Client</text>
+          <text x="85" y="111" text-anchor="middle" font-size="14" fill="#3f4b57">browser</text>
+          <line x1="160" y1="95" x2="236" y2="95" stroke="#6b7684" stroke-width="1.6" marker-end="url(#ah4)"/>
+          <text x="198" y="84" text-anchor="middle" font-size="13" fill="#143a6e">HTTPS</text>
+          <rect x="244" y="26" width="300" height="138" rx="12" fill="#eaf1f9" stroke="#143a6e" stroke-width="1.5"/>
+          <text x="394" y="51" text-anchor="middle" font-size="19" font-weight="700" fill="#143a6e">Reverse proxy</text>
+          <text x="394" y="71" text-anchor="middle" font-size="13.5" fill="#3f4b57">terminate TLS · cache · route</text>
+          <rect x="266" y="86" width="256" height="30" rx="6" fill="#ffffff" stroke="#2f74c0" stroke-width="1.2"/>
+          <text x="394" y="106" text-anchor="middle" font-size="14" fill="#143a6e">static → serve here</text>
+          <rect x="266" y="122" width="256" height="30" rx="6" fill="#ffffff" stroke="#2f74c0" stroke-width="1.2"/>
+          <text x="394" y="142" text-anchor="middle" font-size="14" fill="#143a6e">/api (dynamic) → forward</text>
+          <line x1="544" y1="70" x2="636" y2="70" stroke="#1f7a4d" stroke-width="1.6" marker-end="url(#ah4)"/>
+          <text x="590" y="58" text-anchor="middle" font-size="13" fill="#1f7a4d">static</text>
+          <rect x="644" y="40" width="258" height="58" rx="8" fill="#e7f4ec" stroke="#1f7a4d" stroke-width="1.5"/>
+          <text x="773" y="64" text-anchor="middle" font-size="18" font-weight="700" fill="#123524">Web server</text>
+          <text x="773" y="84" text-anchor="middle" font-size="13.5" fill="#1c3d2b">HTTP · static files · Apache</text>
+          <line x1="544" y1="137" x2="636" y2="137" stroke="#b23a3a" stroke-width="1.6" marker-end="url(#ah4)"/>
+          <text x="590" y="126" text-anchor="middle" font-size="13" fill="#b23a3a">dynamic</text>
+          <rect x="644" y="108" width="258" height="58" rx="8" fill="#fbecec" stroke="#b23a3a" stroke-width="1.5"/>
+          <text x="773" y="132" text-anchor="middle" font-size="18" font-weight="700" fill="#7a2020">App server</text>
+          <text x="773" y="152" text-anchor="middle" font-size="13.5" fill="#7a2020">runs code · PHP-FPM · Node</text>
+          <line x1="394" y1="164" x2="394" y2="182" stroke="#143a6e" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="773" y1="98" x2="773" y2="182" stroke="#143a6e" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="394" y1="182" x2="773" y2="182" stroke="#143a6e" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="938" y="104" font-size="13.5" fill="#3f4b57">proxy + web server are</text>
+          <text x="938" y="124" font-size="13.5" fill="#3f4b57">often the SAME Apache</text>
+          <text x="938" y="144" font-size="13.5" fill="#3f4b57">process (dashed span)</text>
+        </svg>
+    </div>
+  </section>
+
+  <!-- 5 HTTP CYCLE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">02</span><span class="dot"></span><span class="mod">Foundations</span></div>
+    <div class="body">
+      <h2>The HTTP request/response cycle</h2>
+      <div class="flow" style="margin:2vh 0">
+        <span class="box">Client</span><span class="arr">→</span>
+        <span class="box">TCP connect :443</span><span class="arr">→</span>
+        <span class="box">Request line + headers</span><span class="arr">→</span>
+        <span class="box">Server routes</span><span class="arr">→</span>
+        <span class="box">Response + body</span>
+      </div>
+      <div class="cols">
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>request</span></div>
+<pre><span class="a">GET</span> /index.html <span class="k">HTTP/1.1</span>
+<span class="k">Host:</span> demo.hcmus.edu.vn
+<span class="k">User-Agent:</span> curl/8.6
+<span class="k">Accept:</span> text/html</pre>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>response</span></div>
+<pre><span class="k">HTTP/1.1</span> <span class="a">200 OK</span>
+<span class="k">Server:</span> Apache
+<span class="k">Content-Type:</span> text/html
+<span class="k">Content-Length:</span> 348
+<span class="c">&lt;!-- body follows --&gt;</span></pre>
+        </div>
+      </div>
+      <p class="note">Recap targets: methods (GET/POST/PUT/DELETE), status classes (2xx/3xx/4xx/5xx), key headers (Host, Content-Type, Cache-Control).</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Show a real exchange live — <code>curl -v https://example.com</code> — watch the request headers go out and the response headers come back.</span></div>
+    </div>
+  </section>
+
+  <!-- 6 SOCKET LIFECYCLE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">03</span><span class="dot"></span><span class="mod">Foundations</span></div>
+    <div class="body">
+      <h2>How a server "listens": the socket lifecycle</h2>
+      <div class="cols wide-right">
+        <div class="layer">
+          <div class="row"><b>socket()</b> create endpoint</div>
+          <div class="row"><b>bind()</b> claim :80 / :443</div>
+          <div class="row"><b>listen()</b> queue connections</div>
+          <div class="row hl"><b>accept()</b> one per client</div>
+          <div class="row"><b>read/write</b> the HTTP exchange</div>
+          <div class="row"><b>close()</b> or keep-alive</div>
+        </div>
+        <div>
+          <p>Ports below <b>1024</b> are privileged — that's why <span class="tag">httpd</span> starts as root, binds :80/:443, then drops privileges to the <span class="tag">apache</span> user.</p>
+          <div class="term" style="margin-top:1.5vh">
+            <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>who is listening?</span></div>
+<pre><span class="p">[root@centos ~]#</span> ss <span class="a">-tlnp</span> | grep httpd
+<span class="o">LISTEN 0 511 *:80    users:(("httpd"...))</span>
+<span class="o">LISTEN 0 511 *:443   users:(("httpd"...))</span></pre>
+          </div>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>List every listening socket on this machine — <code>ss -tln</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- 7 STATIC VS DYNAMIC -->
+  <section class="slide">
+    <div class="kicker"><span class="num">04</span><span class="dot"></span><span class="mod">Foundations</span></div>
+    <div class="body">
+      <h2>Static vs. dynamic content</h2>
+      <div class="cols">
+        <div class="card">
+          <h3>Static</h3>
+          <p>File read straight from disk: HTML, CSS, JS, images. Fast, cacheable, no code runs. Apache handles this natively and extremely well.</p>
+          <p style="margin-top:.6em"><span class="tag ok">DocumentRoot → file</span></p>
+        </div>
+        <div class="card">
+          <h3>Dynamic</h3>
+          <p>Response is generated per request by a program. Apache hands the request off to a backend (PHP-FPM, WSGI, Node) and relays the result.</p>
+          <p style="margin-top:.6em"><span class="tag">DocumentRoot → app → response</span></p>
+        </div>
+      </div>
+      <p class="note">Rule of thumb: serve static from the web server, generate dynamic in an app server. Mixing them is where most misconfigurations (and vulnerabilities) live.</p>
+    </div>
+  </section>
+
+  <!-- 8 DIVIDER: LINUX ENV -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 2</div>
+    <div class="big">The Linux environment</div>
+    <p class="lead" style="margin-top:2vh">Where httpd lives on a CentOS box, and who it runs as.</p>
+  </section>
+
+  <!-- 9 PROCESS MODEL -->
+  <section class="slide">
+    <div class="kicker"><span class="num">05</span><span class="dot"></span><span class="mod">Linux env</span></div>
+    <div class="body">
+      <h2>httpd in the process model</h2>
+      <div class="cols wide-left">
+        <ul class="pts">
+          <li>A web server is a <b>daemon</b> — a long-running background process.</li>
+          <li>On CentOS it is managed by <b>systemd</b> as the <span class="tag">httpd.service</span> unit.</li>
+          <li>A parent process runs as <b>root</b> to bind privileged ports, then spawns worker children as the <b>apache</b> user.</li>
+          <li>systemd handles start on boot, restart on crash, and log capture via <span class="tag">journald</span>.</li>
+        </ul>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>process tree</span></div>
+<pre><span class="p">[root@centos ~]#</span> ps -ef | grep httpd
+<span class="o">root   1201  ... httpd -DFOREGROUND</span>
+<span class="o">apache 1203  1201 httpd -DFOREGROUND</span>
+<span class="o">apache 1204  1201 httpd -DFOREGROUND</span>
+<span class="o">apache 1205  1201 httpd -DFOREGROUND</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 USER / PERMISSION MODEL -->
+  <section class="slide">
+    <div class="kicker"><span class="num">06</span><span class="dot"></span><span class="mod">Linux env</span></div>
+    <div class="body">
+      <h2>Run as <span style="font-family:var(--mono);color:var(--accent)">apache</span>, never as root</h2>
+      <div class="cols">
+        <div>
+          <ul class="pts">
+            <li>Workers run as the unprivileged <b>apache</b> user &amp; group.</li>
+            <li>If a worker is compromised, the blast radius is limited to what <span class="tag">apache</span> can touch.</li>
+            <li>Content files should be <b>owned by a deploy user</b>, only <b>readable</b> by apache — not writable.</li>
+          </ul>
+          <p class="note"><b>Anti-pattern:</b> <span class="tag danger">chmod 777</span> on the document root. Never do this to "make it work."</p>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>who am I</span></div>
+<pre><span class="p">[root@centos ~]#</span> grep -E <span class="a">'^User|^Group'</span> \
+   /etc/httpd/conf/httpd.conf
+<span class="o">User apache</span>
+<span class="o">Group apache</span>
+
+<span class="p">[root@centos ~]#</span> chown -R deploy:apache /var/www/site
+<span class="p">[root@centos ~]#</span> chmod -R <span class="a">750</span> /var/www/site</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 FILESYSTEM LAYOUT -->
+  <section class="slide">
+    <div class="kicker"><span class="num">07</span><span class="dot"></span><span class="mod">Linux env</span></div>
+    <div class="body">
+      <h2>Where everything lives on CentOS</h2>
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>httpd filesystem map</span></div>
+<pre><span class="k">/etc/httpd/conf/httpd.conf</span>          <span class="c"># main configuration</span>
+<span class="k">/etc/httpd/conf.d/*.conf</span>            <span class="c"># drop-in configs (vhosts, ssl)</span>
+<span class="k">/etc/httpd/conf.modules.d/*.conf</span>    <span class="c"># which modules load (incl. MPM)</span>
+<span class="k">/var/www/html/</span>                     <span class="c"># default DocumentRoot</span>
+<span class="k">/var/log/httpd/access_log</span>           <span class="c"># every request</span>
+<span class="k">/var/log/httpd/error_log</span>            <span class="c"># diagnostics + startup errors</span>
+<span class="k">/usr/sbin/httpd</span>                     <span class="c"># the binary (a.k.a. apachectl)</span></pre>
+      </div>
+      <p class="note">Debian/Ubuntu differ: there it's <span class="tag">/etc/apache2</span>, <span class="tag">apache2</span> service, <span class="tag">www-data</span> user, and <span class="tag">a2ensite</span>. Know the difference when you switch distros.</p>
+    </div>
+  </section>
+
+  <!-- 12 DIVIDER: APACHE -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 3</div>
+    <div class="big">Apache httpd</div>
+    <p class="lead" style="margin-top:2vh">Architecture, the module system, and getting it installed.</p>
+  </section>
+
+  <!-- 13 SERVER LANDSCAPE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">08</span><span class="dot"></span><span class="mod">Apache</span></div>
+    <div class="body">
+      <h2>The server landscape — and why Apache</h2>
+      <div class="grid2" style="margin-top:1vh">
+        <div class="card"><h3>Apache httpd</h3><p>Process/thread model, huge module ecosystem, per-directory <span class="tag">.htaccess</span> overrides. Our example.</p></div>
+        <div class="card"><h3>Nginx</h3><p>Event-driven, excels as a reverse proxy and at high concurrency with low memory.</p></div>
+        <div class="card"><h3>Caddy</h3><p>Automatic HTTPS out of the box, simple config — great for quick deploys.</p></div>
+        <div class="card"><h3>Embedded</h3><p>Node, Gunicorn, Tomcat — app servers that also speak HTTP directly.</p></div>
+      </div>
+      <p class="note">Pick Apache for its mature module system, <span class="tag">.htaccess</span> flexibility, and ubiquity on RHEL/CentOS. Pick Nginx when raw proxy throughput dominates.</p>
+    </div>
+  </section>
+
+  <!-- 14 APACHE ARCHITECTURE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">09</span><span class="dot"></span><span class="mod">Apache</span></div>
+    <div class="body">
+      <h2>Apache architecture: MPMs &amp; modules</h2>
+      <div class="cols">
+        <div>
+          <p style="margin-bottom:1vh"><b style="color:var(--accent)">Multi-Processing Modules</b> decide how connections are handled:</p>
+          <ul class="pts tight">
+            <li><b>prefork</b> — one process per connection<span class="sub">safe for non-thread-safe code (old mod_php), heavy on RAM</span></li>
+            <li><b>worker</b> — threads inside processes<span class="sub">lighter, needs thread-safe modules</span></li>
+            <li><b>event</b> — worker + smart keep-alive handling<span class="sub">CentOS default; best for many idle connections</span></li>
+          </ul>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>modules & MPM</span></div>
+<pre><span class="p">[root@centos ~]#</span> httpd <span class="a">-M</span> | head
+<span class="o">core_module (static)</span>
+<span class="o">mpm_event_module (shared)</span>
+<span class="o">ssl_module (shared)</span>
+<span class="o">proxy_module (shared)</span>
+
+<span class="c"># MPM is chosen here:</span>
+<span class="k">/etc/httpd/conf.modules.d/00-mpm.conf</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 INSTALLATION -->
+  <section class="slide">
+    <div class="kicker"><span class="num">10</span><span class="dot"></span><span class="mod">Apache</span></div>
+    <div class="body">
+      <h2>Installing httpd on CentOS</h2>
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>install</span></div>
+<pre><span class="p">[root@centos ~]#</span> dnf install <span class="a">httpd</span> -y          <span class="c"># yum on CentOS 7</span>
+<span class="p">[root@centos ~]#</span> httpd -v
+<span class="o">Server version: Apache/2.4.x (centos)</span>
+
+<span class="p">[root@centos ~]#</span> systemctl enable <span class="a">--now</span> httpd    <span class="c"># start + start-on-boot</span>
+
+<span class="p">[root@centos ~]#</span> firewall-cmd --permanent \
+   --add-service=http --add-service=https
+<span class="p">[root@centos ~]#</span> firewall-cmd --reload         <span class="c"># open :80 and :443</span></pre>
+      </div>
+      <p class="note">On a fresh CentOS box the firewall blocks inbound HTTP by default — installing httpd is not enough, you must open the ports.</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Run these live, then <code>curl -I http://localhost/</code> → the default CentOS test page appears.</span></div>
+    </div>
+  </section>
+
+  <!-- 16 DIVIDER: OPERATE -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 4</div>
+    <div class="big">Run &amp; verify</div>
+    <p class="lead" style="margin-top:2vh">Managing the service and proving it actually works.</p>
+  </section>
+
+  <!-- 17 SERVICE MGMT -->
+  <section class="slide">
+    <div class="kicker"><span class="num">11</span><span class="dot"></span><span class="mod">Operate</span></div>
+    <div class="body">
+      <h2>Service management with systemd</h2>
+      <div class="cols">
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>systemctl</span></div>
+<pre><span class="p">#</span> systemctl <span class="a">status</span>  httpd
+<span class="p">#</span> systemctl <span class="a">start</span>   httpd
+<span class="p">#</span> systemctl <span class="a">stop</span>    httpd
+<span class="p">#</span> systemctl <span class="a">enable</span>  httpd  <span class="c"># on boot</span>
+<span class="p">#</span> systemctl <span class="a">reload</span>  httpd  <span class="c"># reread config, no drop</span>
+<span class="p">#</span> systemctl <span class="a">restart</span> httpd  <span class="c"># full stop→start</span></pre>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <h3>reload vs. restart</h3>
+            <p><b>reload</b> re-reads config gracefully — existing connections survive. Prefer it in production.</p>
+          </div>
+          <div class="card">
+            <h3>Always test first</h3>
+            <p>Run <span class="tag">apachectl configtest</span> before reloading. A syntax error on restart takes the site down.</p>
+          </div>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span><code>systemctl status httpd</code>, tweak a config, then <code>systemctl reload httpd</code> — connections survive.</span></div>
+    </div>
+  </section>
+
+  <!-- 18 VERIFY -->
+  <section class="slide">
+    <div class="kicker"><span class="num">12</span><span class="dot"></span><span class="mod">Operate</span></div>
+    <div class="body">
+      <h2>Verify the listener</h2>
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>is it really up?</span></div>
+<pre><span class="p">[root@centos ~]#</span> systemctl is-active httpd
+<span class="o">active</span>
+
+<span class="p">[root@centos ~]#</span> ss -tlnp | grep <span class="a">':80\|:443'</span>
+<span class="o">LISTEN 0 511 *:80  ...  users:(("httpd",pid=1201))</span>
+
+<span class="p">[root@centos ~]#</span> curl -I http://localhost/
+<span class="o">HTTP/1.1 200 OK</span>
+<span class="o">Server: Apache</span></pre>
+      </div>
+      <p class="note">Three questions, three tools: <span class="tag">systemctl</span> (is the service running?) · <span class="tag">ss</span> (is it bound to the port?) · <span class="tag">curl</span> (does it answer HTTP?).</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Three checks in ten seconds: <code>systemctl is-active httpd</code> · <code>ss -tlnp | grep httpd</code> · <code>curl -I localhost</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- 19 DIVIDER: CONFIG -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 5</div>
+    <div class="big">Configuration</div>
+    <p class="lead" style="margin-top:2vh">Virtual hosts, directories, MIME types, and directives that matter.</p>
+  </section>
+
+  <!-- 20 CONFIG STRUCTURE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">13</span><span class="dot"></span><span class="mod">Config</span></div>
+    <div class="body">
+      <h2>How the config is organized</h2>
+      <ul class="pts">
+        <li><b>httpd.conf</b> — global defaults: User, Listen, DocumentRoot, log formats.</li>
+        <li><b>conf.d/*.conf</b> — drop-in files; one per site or feature (auto-included).</li>
+        <li>Directives are <b>containers</b> and <b>key-value</b> lines. Containers scope settings.</li>
+      </ul>
+      <div class="term" style="margin-top:2vh">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf/httpd.conf</span></div>
+<pre><span class="k">Listen</span> 80                          <span class="c"># global directive</span>
+
+<span class="a">&lt;Directory "/var/www/html"&gt;</span>          <span class="c"># container: scopes what's inside</span>
+    <span class="k">Options</span> -Indexes +FollowSymLinks
+    <span class="k">AllowOverride</span> None
+    <span class="k">Require</span> all granted
+<span class="a">&lt;/Directory&gt;</span></pre>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Open <code>/etc/httpd/conf/httpd.conf</code>, find a &lt;Directory&gt; block, then <code>apachectl configtest</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- 21 VIRTUAL HOSTS -->
+  <section class="slide">
+    <div class="kicker"><span class="num">14</span><span class="dot"></span><span class="mod">Config</span></div>
+    <div class="body">
+      <h2>Virtual hosts: many sites, one server</h2>
+      <div class="cols">
+        <div>
+          <p>Apache picks the vhost by matching the <b>Host:</b> header (name-based). One IP can serve dozens of domains.</p>
+          <ul class="pts tight" style="margin-top:1.5vh">
+            <li><b>ServerName</b> — the domain to match</li>
+            <li><b>DocumentRoot</b> — files for this site</li>
+            <li>Separate <b>log files</b> per site</li>
+          </ul>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.d/demo.conf</span></div>
+<pre><span class="a">&lt;VirtualHost *:80&gt;</span>
+  <span class="k">ServerName</span>  demo.hcmus.edu.vn
+  <span class="k">DocumentRoot</span> /var/www/demo
+  <span class="k">ErrorLog</span>  /var/log/httpd/demo_error.log
+  <span class="k">CustomLog</span> /var/log/httpd/demo_access.log combined
+<span class="a">&lt;/VirtualHost&gt;</span></pre>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Create <code>/var/www/demo/index.html</code>, write this vhost, <code>reload</code>, then <code>curl -H "Host: demo.hcmus.edu.vn" localhost</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- 22 DIRECTORY + MIME -->
+  <section class="slide">
+    <div class="kicker"><span class="num">15</span><span class="dot"></span><span class="mod">Config</span></div>
+    <div class="body">
+      <h2>Directories, indexes &amp; MIME types</h2>
+      <div class="cols">
+        <ul class="pts tight">
+          <li><b>DirectoryIndex</b> — file served for <span class="tag">/</span> (index.html)</li>
+          <li><b>Options -Indexes</b> — turn <b>off</b> auto directory listing</li>
+          <li><b>AllowOverride</b> — whether <span class="tag">.htaccess</span> may override here</li>
+          <li><b>MIME types</b> — map extensions to <span class="tag">Content-Type</span> via mod_mime</li>
+        </ul>
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <h3>.htaccess</h3>
+            <p>Per-directory overrides read on <i>every</i> request. Flexible for shared hosting, slower and riskier — disable with <span class="tag">AllowOverride None</span> when you control the main config.</p>
+          </div>
+          <p class="note"><b>Security:</b> directory listing exposes files you never meant to publish. Keep <span class="tag">-Indexes</span> on.</p>
+        </div>
+      </div>
+      <div class="term" style="margin-top:1.2vh">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.d/example.conf — a concrete block</span></div>
+<pre><span class="a">&lt;Directory "/var/www/demo"&gt;</span>
+  <span class="k">DirectoryIndex</span> index.html index.php  <span class="c"># try these in order for /</span>
+  <span class="k">Options</span> -Indexes              <span class="c"># no auto file listing</span>
+  <span class="k">AllowOverride</span> None            <span class="c"># ignore .htaccess (faster, safer)</span>
+  <span class="k">Require</span> all granted           <span class="c"># allow public access</span>
+<span class="a">&lt;/Directory&gt;</span>
+<span class="k">AddType</span> application/wasm .wasm   <span class="c"># MIME: map .wasm → correct Content-Type</span></pre>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span><b>1.</b> <code>echo "&lt;h1&gt;hi&lt;/h1&gt;" | sudo tee /var/www/demo/index.html</code> → visit <code>/</code>, you get it (DirectoryIndex). &nbsp;<b>2.</b> delete it, set <code>Options +Indexes</code>, reload → <code>/</code> shows a raw <b>file listing</b>. &nbsp;<b>3.</b> back to <code>-Indexes</code> → <code>403 Forbidden</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- 23 DIVIDER: DYNAMIC/PROXY -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 6</div>
+    <div class="big">Dynamic &amp; proxy</div>
+    <p class="lead" style="margin-top:2vh">Handing requests to an application, and standing in front of it.</p>
+  </section>
+
+  <!-- 24 DYNAMIC CONTENT -->
+  <section class="slide">
+    <div class="kicker"><span class="num">16</span><span class="dot"></span><span class="mod">Dynamic</span></div>
+    <div class="body">
+      <h2>Serving dynamic content</h2>
+      <div class="flow" style="margin:1.5vh 0 2.5vh">
+        <span class="box">CGI</span><span class="arr">→</span>
+        <span class="box">FastCGI</span><span class="arr">→</span>
+        <span class="box">PHP-FPM / app server</span>
+      </div>
+      <div class="cols">
+        <div>
+          <ul class="pts tight">
+            <li><b>CGI</b> — spawn a process per request. Simple, slow.</li>
+            <li><b>FastCGI</b> — persistent worker pool. The modern way.</li>
+            <li>Apache reaches the backend over a <b>unix socket</b> or <b>TCP</b>.</li>
+          </ul>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>inside the vhost · /etc/httpd/conf.d/demo.conf</span></div>
+<pre><span class="a">&lt;FilesMatch \.php$&gt;</span>
+  <span class="k">SetHandler</span> <span class="a">"proxy:unix:/run/php-fpm/www.sock|fcgi://localhost"</span>
+<span class="a">&lt;/FilesMatch&gt;</span></pre>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Start a backend to proxy to next — <code>python3 -m http.server 3000</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- 25 REVERSE PROXY -->
+  <section class="slide">
+    <div class="kicker"><span class="num">17</span><span class="dot"></span><span class="mod">Dynamic</span></div>
+    <div class="body">
+      <h2>Reverse proxy: the components</h2>
+      <div class="cols">
+        <div>
+          <p style="margin-bottom:1.4vh">Apache fronts any HTTP backend via <span class="tag">mod_proxy</span> — one public door, the backend hidden on localhost:</p>
+          <svg viewBox="0 0 420 250" style="width:100%;height:auto;font-family:'IBM Plex Sans',system-ui,sans-serif">
+            <defs><marker id="rpArw" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1e4d8c"/></marker></defs>
+            <rect x="4" y="100" width="80" height="52" rx="8" fill="#fff" stroke="#5a6672" stroke-width="1.5"/>
+            <text x="44" y="124" text-anchor="middle" font-size="13" font-weight="600" fill="#16202c">Client</text>
+            <text x="44" y="140" text-anchor="middle" font-size="9" fill="#5a6672">browser</text>
+            <rect x="140" y="26" width="150" height="200" rx="10" fill="#eaf1f9" stroke="#1e4d8c" stroke-width="2"/>
+            <text x="215" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1e4d8c">Apache httpd</text>
+            <text x="215" y="62" text-anchor="middle" font-size="9" fill="#5a6672">reverse proxy · :443</text>
+            <rect x="154" y="76" width="122" height="30" rx="5" fill="#fff" stroke="#c7d6e8"/>
+            <text x="215" y="95" text-anchor="middle" font-size="10.5" fill="#16202c">1 · terminate TLS</text>
+            <rect x="154" y="113" width="122" height="30" rx="5" fill="#fff" stroke="#c7d6e8"/>
+            <text x="215" y="132" text-anchor="middle" font-size="10.5" fill="#16202c">2 · serve static  /</text>
+            <rect x="154" y="150" width="122" height="30" rx="5" fill="#fff" stroke="#1e4d8c"/>
+            <text x="215" y="169" text-anchor="middle" font-size="10.5" fill="#1e4d8c" font-weight="600">3 · route  /api</text>
+            <rect x="336" y="139" width="80" height="52" rx="8" fill="#fff" stroke="#1f7a4d" stroke-width="1.5"/>
+            <text x="376" y="161" text-anchor="middle" font-size="12" font-weight="600" fill="#1f7a4d">Node</text>
+            <text x="376" y="177" text-anchor="middle" font-size="8.5" fill="#5a6672">127.0.0.1:3000</text>
+            <line x1="86" y1="126" x2="136" y2="126" stroke="#1e4d8c" stroke-width="2" marker-end="url(#rpArw)"/>
+            <text x="110" y="118" text-anchor="middle" font-size="9.5" fill="#1e4d8c" font-weight="600">HTTPS</text>
+            <line x1="278" y1="165" x2="332" y2="165" stroke="#1e4d8c" stroke-width="2" marker-end="url(#rpArw)"/>
+            <text x="305" y="157" text-anchor="middle" font-size="8.5" fill="#5a6672">HTTP</text>
+          </svg>
+          <p class="note" style="margin-top:1.2vh"><b>ProxyPass</b> routes matching URLs &middot; <b>ProxyPassReverse</b> rewrites the backend's redirects.</p>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.d/demo.conf</span></div>
+<pre><span class="a">&lt;VirtualHost *:80&gt;</span>
+  <span class="k">ServerName</span> demo.hcmus.edu.vn
+  <span class="c"># add these 3 lines inside the vhost:</span>
+  <span class="k">ProxyPreserveHost</span> On
+  <span class="k">ProxyPass</span>        /api  <span class="a">http://127.0.0.1:3000/</span>
+  <span class="k">ProxyPassReverse</span> /api  <span class="a">http://127.0.0.1:3000/</span>
+<span class="a">&lt;/VirtualHost&gt;</span></pre>
+        </div>
+      </div>
+      <p class="note">Edit the vhost file, not <span class="tag">httpd.conf</span>. Enable modules first (usually already on): proxy, proxy_http; for balancing add proxy_balancer + a method module. Then <span class="tag">apachectl configtest</span> &amp; reload.</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Add the ProxyPass lines, reload, then <code>curl localhost/api/</code> — answered by the backend on :3000.</span></div>
+    </div>
+  </section>
+
+  <!-- LOAD BALANCING -->
+  <section class="slide">
+    <div class="kicker"><span class="num">18</span><span class="dot"></span><span class="mod">Dynamic</span></div>
+    <div class="body">
+      <h2>Load balancing a backend pool</h2>
+      <div class="cols">
+        <div>
+          <svg viewBox="0 0 420 280" style="width:100%;height:auto;font-family:'IBM Plex Sans',system-ui,sans-serif">
+            <defs><marker id="lbArw" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1e4d8c"/></marker>
+            <marker id="lbArwG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1f7a4d"/></marker></defs>
+            <rect x="4" y="116" width="76" height="50" rx="8" fill="#fff" stroke="#5a6672" stroke-width="1.5"/>
+            <text x="42" y="138" text-anchor="middle" font-size="12" font-weight="600" fill="#16202c">Client</text>
+            <text x="42" y="153" text-anchor="middle" font-size="8.5" fill="#5a6672">browser</text>
+            <rect x="118" y="90" width="152" height="100" rx="10" fill="#eaf1f9" stroke="#1e4d8c" stroke-width="2"/>
+            <text x="194" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#1e4d8c">Apache</text>
+            <text x="194" y="130" text-anchor="middle" font-size="8.5" fill="#5a6672">balancer://appcluster</text>
+            <text x="194" y="157" text-anchor="middle" font-size="9.5" fill="#16202c">lbmethod =</text>
+            <text x="194" y="172" text-anchor="middle" font-size="9.5" font-weight="600" fill="#1e4d8c">byrequests</text>
+            <rect x="332" y="16" width="84" height="46" rx="8" fill="#fff" stroke="#1f7a4d" stroke-width="1.5"/>
+            <text x="374" y="36" text-anchor="middle" font-size="11" font-weight="600" fill="#1f7a4d">app :3001</text>
+            <text x="374" y="51" text-anchor="middle" font-size="8" fill="#5a6672">healthy</text>
+            <rect x="332" y="117" width="84" height="46" rx="8" fill="#fbecec" stroke="#b23a3a" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <text x="374" y="137" text-anchor="middle" font-size="11" font-weight="600" fill="#b23a3a">app :3002</text>
+            <text x="374" y="152" text-anchor="middle" font-size="8" fill="#b23a3a">✗ down</text>
+            <rect x="332" y="218" width="84" height="46" rx="8" fill="#fff" stroke="#1f7a4d" stroke-width="1.5"/>
+            <text x="374" y="238" text-anchor="middle" font-size="11" font-weight="600" fill="#1f7a4d">app :3003</text>
+            <text x="374" y="253" text-anchor="middle" font-size="8" fill="#5a6672">healthy</text>
+            <line x1="80" y1="141" x2="114" y2="141" stroke="#1e4d8c" stroke-width="2" marker-end="url(#lbArw)"/>
+            <path d="M270,118 C300,86 302,50 330,40" fill="none" stroke="#1f7a4d" stroke-width="2" marker-end="url(#lbArwG)"/>
+            <path d="M270,140 L330,140" fill="none" stroke="#b23a3a" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.45"/>
+            <path d="M270,162 C300,194 302,230 330,240" fill="none" stroke="#1f7a4d" stroke-width="2" marker-end="url(#lbArwG)"/>
+            <circle cx="300" cy="66" r="10" fill="#1e4d8c"/><text x="300" y="70" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">1</text>
+            <circle cx="300" cy="214" r="10" fill="#1e4d8c"/><text x="300" y="218" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">2</text>
+          </svg>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.d/demo.conf (inside vhost)</span></div>
+<pre><span class="a">&lt;Proxy balancer://appcluster&gt;</span>
+  <span class="k">BalancerMember</span> http://127.0.0.1:<span class="a">3001</span>
+  <span class="k">BalancerMember</span> http://127.0.0.1:<span class="a">3002</span>
+  <span class="k">BalancerMember</span> http://127.0.0.1:<span class="a">3003</span>
+  <span class="k">ProxySet</span> lbmethod=<span class="a">byrequests</span>
+<span class="a">&lt;/Proxy&gt;</span>
+
+<span class="k">ProxyPass</span>        /app  <span class="a">balancer://appcluster/</span>
+<span class="k">ProxyPassReverse</span> /app  <span class="a">balancer://appcluster/</span></pre>
+        </div>
+      </div>
+      <p class="note"><b>Scenario:</b> requests to <span class="tag">/app</span> rotate across the healthy pool (:3001 &#8594; :3003). When :3002 fails its health check the balancer drops it automatically &#8212; no error reaches the user. Needs modules: proxy, proxy_http, <b>proxy_balancer</b> + a <span class="tag">lbmethod_*</span> module.</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Run three Node instances on :3001&#8211;:3003, hit <code>curl localhost/app/</code> repeatedly &#8212; responses rotate; kill one and watch traffic route around it.</span></div>
+    </div>
+  </section>
+
+  <!-- DIVIDER: PERFORMANCE -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 7</div>
+    <div class="big">Performance, load &amp; scale</div>
+    <p class="lead" style="margin-top:2vh">One box is finite. Tune it, measure it, then scale it.</p>
+  </section>
+
+  <!-- PERF: MPM TUNING -->
+  <section class="slide">
+    <div class="kicker"><span class="num">19</span><span class="dot"></span><span class="mod">Performance</span></div>
+    <div class="body">
+      <h2>Tuning workers, memory &amp; KeepAlive</h2>
+      <div class="cols">
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.modules.d/00-mpm.conf</span></div>
+<pre><span class="a">&lt;IfModule mpm_event_module&gt;</span>
+  <span class="k">StartServers</span>            2
+  <span class="k">ServerLimit</span>             16
+  <span class="k">ThreadsPerChild</span>         25
+  <span class="k">MaxRequestWorkers</span>      <span class="a">400</span>   <span class="c"># concurrency ceiling</span>
+  <span class="k">MaxConnectionsPerChild</span> 1000
+<span class="a">&lt;/IfModule&gt;</span>
+
+<span class="c"># httpd.conf</span>
+<span class="k">KeepAlive</span> On
+<span class="k">KeepAliveTimeout</span> 5          <span class="c"># free idle workers fast</span></pre>
+        </div>
+        <div>
+          <ul class="pts tight">
+            <li><b>MaxRequestWorkers</b> = concurrency ceiling; beyond it, requests queue.</li>
+            <li><b>RAM budget</b> = workers &#215; per-process RAM. Set the ceiling so the box never swaps.</li>
+            <li><b>prefork</b> is RAM-hungry (1 process/conn); <b>event</b> is far lighter.</li>
+            <li><b>KeepAlive</b> speeds repeat requests but ties up a worker &#8212; short timeout.</li>
+          </ul>
+          <p class="note"><b>Where's the bottleneck?</b> CPU (dynamic code / TLS) &#183; RAM (too many processes) &#183; I/O (logs, DB).</p>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Change <code>MaxRequestWorkers</code>, reload, fire load, and watch RAM/CPU move in <code>htop</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- PERF: LOAD TEST -->
+  <section class="slide">
+    <div class="kicker"><span class="num">20</span><span class="dot"></span><span class="mod">Performance</span></div>
+    <div class="body">
+      <h2>Load testing with ApacheBench</h2>
+      <div class="cols">
+        <div>
+          <svg viewBox="0 0 420 180" style="width:100%;height:auto;font-family:'IBM Plex Sans',system-ui,sans-serif">
+            <defs><marker id="ltArw" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1e4d8c"/></marker></defs>
+            <rect x="8" y="58" width="120" height="62" rx="8" fill="#fff" stroke="#5a6672" stroke-width="1.5"/>
+            <text x="68" y="84" text-anchor="middle" font-size="12" font-weight="600" fill="#16202c">Mac / client</text>
+            <text x="68" y="102" text-anchor="middle" font-size="9" fill="#5a6672">ab -n2000 -c200</text>
+            <text x="208" y="52" text-anchor="middle" font-size="9.5" fill="#1e4d8c" font-weight="600">200 concurrent</text>
+            <line x1="130" y1="72"  x2="286" y2="72"  stroke="#1e4d8c" stroke-width="1.6" marker-end="url(#ltArw)"/>
+            <line x1="130" y1="89"  x2="286" y2="89"  stroke="#1e4d8c" stroke-width="1.6" marker-end="url(#ltArw)"/>
+            <line x1="130" y1="106" x2="286" y2="106" stroke="#1e4d8c" stroke-width="1.6" marker-end="url(#ltArw)"/>
+            <rect x="290" y="50" width="122" height="80" rx="8" fill="#eaf1f9" stroke="#1e4d8c" stroke-width="2"/>
+            <text x="351" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#1e4d8c">CentOS</text>
+            <text x="351" y="100" text-anchor="middle" font-size="9" fill="#5a6672">Apache :80</text>
+            <text x="210" y="152" text-anchor="middle" font-size="9" fill="#5a6672">measure RPS / latency / failed &#8212; on the server</text>
+          </svg>
+          <p class="note" style="margin-top:1vh">macOS: <span class="tag">brew install httpd</span>, then <span class="tag">ulimit -n 4096</span> before heavy runs. URL <b>needs a trailing</b> <span class="tag">/</span>.</p>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>from a separate client machine</span></div>
+<pre><span class="p">$</span> ulimit -n 4096
+<span class="p">$</span> ab <span class="a">-n</span> 2000 <span class="a">-c</span> 200 <span class="a">-k</span> http://demo.hcmus.edu.vn/
+<span class="c">#      total   concurrency  keep-alive</span>
+
+<span class="o">Requests per second: 842.5 [#/sec]</span>   <span class="c"># throughput</span>
+<span class="o">Time per request:    237 ms</span>         <span class="c"># latency</span>
+<span class="o">Failed requests:     0</span>              <span class="c"># &gt;0 = breaking point</span></pre>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Ramp <code>-c</code> (50 &#8594; 200 &#8594; 500) until <code>Failed requests</code> &gt; 0 &#8212; that is the server's breaking point.</span></div>
+    </div>
+  </section>
+
+  <!-- PERF: WATCH UNDER LOAD -->
+  <section class="slide">
+    <div class="kicker"><span class="num">21</span><span class="dot"></span><span class="mod">Performance</span></div>
+    <div class="body">
+      <h2>Watching the server under load</h2>
+      <div class="cols">
+        <div>
+          <svg viewBox="0 0 320 150" style="width:100%;height:auto;font-family:'IBM Plex Mono',monospace">
+            <text x="10" y="30" font-size="10" font-weight="600" fill="#5a6672">mod_status scoreboard</text>
+            <text x="10" y="53" font-size="10" fill="#1f7a4d">idle</text>
+            <text x="10" y="105" font-size="10" fill="#b23a3a">load</text>
+            <rect x="96" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="108" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="120" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="132" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="144" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="156" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="168" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="180" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="192" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="204" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="216" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="228" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="240" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="252" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="264" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="276" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="288" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="300" y="44" width="9" height="9" rx="1.5" fill="#eef2f6" stroke="#cdd6e0"/>
+            <rect x="96" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="108" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="120" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="132" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="144" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="156" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="168" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="180" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="192" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="204" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="216" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="228" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="240" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="252" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="264" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="276" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="288" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <rect x="300" y="96" width="9" height="9" rx="1.5" fill="#1e4d8c"/>
+            <text x="96" y="132" font-size="9" fill="#5a6672">all W · no free slot &#8594; MaxRequestWorkers hit</text>
+          </svg>
+          <ul class="pts tight" style="margin-top:1vh">
+            <li><b>htop</b> &#8212; CPU cores, RAM, load average (&gt; #cores = overloaded)</li>
+            <li><b>ss -s</b> &#8212; established conns &#8776; ab's <span class="tag">-c</span>; watch TIME_WAIT pile up</li>
+            <li><b>mod_status</b> &#8212; <span class="tag">_</span> idle &#183; <span class="tag">K</span> keepalive &#183; <span class="tag">W</span> busy &#183; <span class="tag">.</span> free</li>
+            <li><b>tail access_log</b> &#8212; status codes; 500/503 = it broke</li>
+          </ul>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.d/status.conf</span></div>
+<pre><span class="a">&lt;Location "/server-status"&gt;</span>
+  <span class="k">SetHandler</span> server-status
+  <span class="k">Require</span> local
+<span class="a">&lt;/Location&gt;</span>
+
+<span class="c"># then, in three panes while ab runs:</span>
+<span class="p">#</span> htop
+<span class="p">#</span> watch -n1 "ss -s"
+<span class="p">#</span> watch -n1 "curl -s localhost/server-status?auto"</pre>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Open htop + <code>ss -s</code> + server-status side by side, fire <code>ab</code>, and watch <code>_</code> turn into <code>W</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- PERF: SCALING + SESSION -->
+  <section class="slide">
+    <div class="kicker"><span class="num">22</span><span class="dot"></span><span class="mod">Performance</span></div>
+    <div class="body">
+      <h2>Scaling: vertical, horizontal &amp; the session trap</h2>
+      <div class="cols">
+        <div>
+          <svg viewBox="0 0 420 250" style="width:100%;height:auto;font-family:'IBM Plex Sans',system-ui,sans-serif">
+            <defs>
+              <marker id="sArw" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1e4d8c"/></marker>
+              <marker id="sGrn" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1f7a4d"/></marker>
+            </defs>
+            <rect x="6" y="66" width="66" height="44" rx="8" fill="#fff" stroke="#5a6672" stroke-width="1.5"/>
+            <text x="39" y="92" text-anchor="middle" font-size="11" font-weight="600" fill="#16202c">User</text>
+            <rect x="104" y="58" width="80" height="60" rx="8" fill="#eaf1f9" stroke="#1e4d8c" stroke-width="2"/>
+            <text x="144" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="#1e4d8c">Load</text>
+            <text x="144" y="100" text-anchor="middle" font-size="11" font-weight="700" fill="#1e4d8c">Balancer</text>
+            <rect x="250" y="20" width="120" height="50" rx="8" fill="#e7f4ec" stroke="#1f7a4d" stroke-width="1.5"/>
+            <text x="310" y="40" text-anchor="middle" font-size="11" font-weight="600" fill="#1f7a4d">App A</text>
+            <text x="310" y="56" text-anchor="middle" font-size="9" fill="#1f7a4d">has session S1</text>
+            <rect x="250" y="104" width="120" height="50" rx="8" fill="#fbecec" stroke="#b23a3a" stroke-width="1.5"/>
+            <text x="310" y="124" text-anchor="middle" font-size="11" font-weight="600" fill="#b23a3a">App B</text>
+            <text x="310" y="140" text-anchor="middle" font-size="9" fill="#b23a3a">no session &#8594; logged out</text>
+            <line x1="72" y1="88" x2="102" y2="88" stroke="#1e4d8c" stroke-width="1.8" marker-end="url(#sArw)"/>
+            <path d="M184,78 C215,60 220,48 248,46" fill="none" stroke="#1e4d8c" stroke-width="1.8" marker-end="url(#sArw)"/>
+            <path d="M184,100 C215,116 220,126 248,128" fill="none" stroke="#b23a3a" stroke-width="1.8" marker-end="url(#sArw)"/>
+            <circle cx="214" cy="58" r="9" fill="#1e4d8c"/><text x="214" y="62" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">1</text>
+            <circle cx="214" cy="120" r="9" fill="#b23a3a"/><text x="214" y="124" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">2</text>
+            <line x1="20" y1="176" x2="400" y2="176" stroke="#dde3ea" stroke-width="1"/>
+            <text x="210" y="172" text-anchor="middle" font-size="9" fill="#8b96a3" font-style="italic">FIX — shared session store</text>
+            <rect x="150" y="196" width="120" height="42" rx="8" fill="#fff" stroke="#1f7a4d" stroke-width="1.5"/>
+            <text x="210" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1f7a4d">Redis / Memcached</text>
+            <text x="210" y="230" text-anchor="middle" font-size="8.5" fill="#5a6672">session survives any node</text>
+            <path d="M300,72 C290,150 250,180 262,194" fill="none" stroke="#1f7a4d" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#sGrn)"/>
+            <path d="M300,156 C300,172 240,182 230,194" fill="none" stroke="#1f7a4d" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#sGrn)"/>
+          </svg>
+        </div>
+        <div>
+          <ul class="pts tight">
+            <li><b>Vertical</b> &#8212; a bigger box (more CPU/RAM). Simple, but a hard ceiling and costly.</li>
+            <li><b>Horizontal</b> &#8212; more boxes behind a load balancer (Nginx / HAProxy / Apache). Scales out.</li>
+            <li><b>The trap</b> &#8212; user logs in on App A; the next request lands on App B &#8594; logged out.</li>
+            <li><b>Fixes</b> &#8212; sticky sessions (pin user to one node) <b>or</b> a shared store (Redis / Memcached).</li>
+          </ul>
+          <p class="note">Prefer a <b>shared store</b>: sticky sessions unbalance the load and lose the session if that node dies.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 26 DIVIDER: TLS -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 8</div>
+    <div class="big">TLS / HTTPS</div>
+    <p class="lead" style="margin-top:2vh">Certificates, redirects, and getting an A on the SSL test.</p>
+  </section>
+
+  <!-- TLS: THE FLOW -->
+  <section class="slide">
+    <div class="kicker"><span class="num">23</span><span class="dot"></span><span class="mod">TLS</span></div>
+    <div class="body">
+      <h2>What happens on <span style="font-family:var(--mono);color:var(--accent)">https://</span> &#8212; port 80 vs 443</h2>
+      <div class="cols">
+        <div>
+          <svg viewBox="0 0 440 300" style="width:100%;height:auto;font-family:'IBM Plex Sans',system-ui,sans-serif">
+            <defs>
+              <marker id="fRed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#b23a3a"/></marker>
+              <marker id="fGrn" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1f7a4d"/></marker>
+            </defs>
+            <rect x="40" y="6" width="110" height="30" rx="6" fill="#fff" stroke="#5a6672" stroke-width="1.5"/>
+            <text x="95" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="#16202c">Browser</text>
+            <rect x="300" y="6" width="120" height="30" rx="6" fill="#eaf1f9" stroke="#1e4d8c" stroke-width="1.5"/>
+            <text x="360" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="#1e4d8c">Apache</text>
+            <line x1="95" y1="36" x2="95" y2="294" stroke="#dde3ea" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <line x1="360" y1="36" x2="360" y2="294" stroke="#dde3ea" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <text x="227" y="60" text-anchor="middle" font-size="9.5" fill="#b23a3a">GET http://demo &#8594; :80</text>
+            <line x1="97" y1="66" x2="356" y2="66" stroke="#b23a3a" stroke-width="1.8" marker-end="url(#fRed)"/>
+            <text x="227" y="88" text-anchor="middle" font-size="9.5" fill="#b23a3a">301 redirect &#8594; https://</text>
+            <line x1="358" y1="94" x2="99" y2="94" stroke="#b23a3a" stroke-width="1.8" marker-end="url(#fRed)"/>
+            <text x="227" y="122" text-anchor="middle" font-size="8.5" fill="#8b96a3" font-style="italic">browser retries on 443</text>
+            <text x="227" y="148" text-anchor="middle" font-size="9.5" fill="#1f7a4d">TLS ClientHello &#8594; :443</text>
+            <line x1="97" y1="154" x2="356" y2="154" stroke="#1f7a4d" stroke-width="1.8" marker-end="url(#fGrn)"/>
+            <text x="227" y="176" text-anchor="middle" font-size="9.5" fill="#1f7a4d">ServerHello + Certificate</text>
+            <line x1="358" y1="182" x2="99" y2="182" stroke="#1f7a4d" stroke-width="1.8" marker-end="url(#fGrn)"/>
+            <text x="227" y="204" text-anchor="middle" font-size="9.5" fill="#1f7a4d">verify + build session key</text>
+            <line x1="97" y1="210" x2="356" y2="210" stroke="#1f7a4d" stroke-width="1.8" marker-end="url(#fGrn)"/>
+            <rect x="110" y="230" width="235" height="30" rx="6" fill="#e7f4ec" stroke="#1f7a4d" stroke-width="1.5"/>
+            <text x="227" y="249" text-anchor="middle" font-size="10" font-weight="600" fill="#1f7a4d">encrypted HTTP (all data)</text>
+            <text x="227" y="284" text-anchor="middle" font-size="8.5" fill="#5a6672">HSTS: next visit &#8594; browser jumps straight to :443</text>
+          </svg>
+        </div>
+        <div>
+          <ul class="pts tight">
+            <li>Type the bare domain &#8594; browser first hits <b>:80</b> (HTTP).</li>
+            <li>Apache on :80 answers <b>301 &#8594; https://</b> &#8212; so :80 must stay open.</li>
+            <li>Browser retries on <b>:443</b> &#8594; <b>TLS handshake</b>: ClientHello &#8594; ServerHello + Certificate &#8594; verify &#8594; session key.</li>
+            <li>From then on every byte is <b>encrypted</b> with that key.</li>
+            <li><b>HSTS</b> &#8212; after the first visit the browser jumps straight to :443, skipping the risky :80 hop (stops SSL-stripping).</li>
+          </ul>
+          <p class="note">An HTTPS server listens on <b>both</b> 80 and 443. Kill :80 and users typing the bare domain get "can't connect".</p>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span><code>curl -I http://demo...</code> shows the 301; <code>curl -Iv https://demo...</code> shows the handshake + certificate.</span></div>
+    </div>
+  </section>
+
+  <!-- 27 TLS SETUP -->
+  <section class="slide">
+    <div class="kicker"><span class="num">24</span><span class="dot"></span><span class="mod">TLS</span></div>
+    <div class="body">
+      <h2>Enabling HTTPS with Let's Encrypt</h2>
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>certbot on CentOS</span></div>
+<pre><span class="p">[root@centos ~]#</span> dnf install <span class="a">mod_ssl</span> -y            <span class="c"># TLS engine for httpd</span>
+<span class="p">[root@centos ~]#</span> dnf install certbot python3-certbot-apache -y
+
+<span class="p">[root@centos ~]#</span> certbot <span class="a">--apache</span> -d demo.hcmus.edu.vn
+<span class="o">Congratulations! Certificate deployed.</span>
+<span class="o">Auto-renew scheduled via systemd timer.</span></pre>
+      </div>
+      <p class="note">certbot edits your vhost, installs the cert, and sets up automatic renewal. Certificates from Let's Encrypt last 90 days — automation is not optional.</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>On the lab VM (with a resolvable test domain): <code>certbot --apache -d demo.hcmus.edu.vn</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- 28 REDIRECT + HSTS -->
+  <section class="slide">
+    <div class="kicker"><span class="num">25</span><span class="dot"></span><span class="mod">TLS</span></div>
+    <div class="body">
+      <h2>Force HTTPS &amp; set HSTS</h2>
+      <div class="cols">
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.d/demo.conf (+ *-ssl.conf)</span></div>
+<pre><span class="a">&lt;VirtualHost *:80&gt;</span>
+  <span class="k">ServerName</span> demo.hcmus.edu.vn
+  <span class="k">Redirect</span> permanent / <span class="a">https://demo.hcmus.edu.vn/</span>
+<span class="a">&lt;/VirtualHost&gt;</span>
+
+<span class="c"># inside the :443 vhost — tell browsers "HTTPS only"</span>
+<span class="k">Header</span> always set Strict-Transport-Security \
+  <span class="a">"max-age=31536000; includeSubDomains"</span></pre>
+        </div>
+        <div>
+          <ul class="pts tight">
+            <li>Redirect all plain HTTP to HTTPS with a <b>301</b>.</li>
+            <li><b>HSTS</b> tells the browser to never try HTTP again.</li>
+            <li>Disable old protocols: <b>TLS 1.2+</b> only, no SSLv3.</li>
+            <li>Test with SSL Labs / <span class="tag">testssl.sh</span>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 29 DIVIDER: LOGS -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 9</div>
+    <div class="big">Logs &amp; troubleshooting</div>
+    <p class="lead" style="margin-top:2vh">When it breaks — and it will — the logs already told you why.</p>
+  </section>
+
+  <!-- 30 LOGGING -->
+  <section class="slide">
+    <div class="kicker"><span class="num">26</span><span class="dot"></span><span class="mod">Logs</span></div>
+    <div class="body">
+      <h2>Reading the logs</h2>
+      <div class="cols">
+        <div>
+          <ul class="pts tight">
+            <li><b>access_log</b> — one line per request (who, what, status, size)</li>
+            <li><b>error_log</b> — startup errors, permission denials, backend failures</li>
+            <li><b>LogFormat</b> — the <span class="tag">combined</span> format is the common default</li>
+          </ul>
+          <p class="note">Start every debugging session with:<br><span class="tag">tail -f /var/log/httpd/error_log</span></p>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>access_log · combined</span></div>
+<pre><span class="o">10.0.0.5 - - [10/Jul/2026:09:14:22 +0700]</span>
+<span class="o">"GET /index.html HTTP/1.1" </span><span class="a">200</span><span class="o"> 348</span>
+<span class="o">"-" "curl/8.6.0"</span>
+
+<span class="c"># status tells the story:</span>
+<span class="a">200</span> ok · <span class="a">301</span> redirect · <span class="a">403</span> forbidden
+<span class="a">404</span> not found · <span class="a">500</span> app error · <span class="a">502</span> bad backend</pre>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Second terminal: <code>tail -f /var/log/httpd/error_log</code>, then make a bad request and watch it land.</span></div>
+    </div>
+  </section>
+
+  <!-- 31 TROUBLESHOOTING -->
+  <section class="slide">
+    <div class="kicker"><span class="num">27</span><span class="dot"></span><span class="mod">Logs</span></div>
+    <div class="body">
+      <h2>Common failure modes on CentOS</h2>
+      <div class="grid2">
+        <div class="card"><h3><span class="tag danger">Permission denied</span></h3><p>File not readable by <span class="tag">apache</span>, or blocked by <b>SELinux</b> context. Check both.</p></div>
+        <div class="card"><h3><span class="tag danger">Address already in use</span></h3><p>Another process holds :80. Find it with <span class="tag">ss -tlnp</span>.</p></div>
+        <div class="card"><h3><span class="tag danger">configtest failed</span></h3><p>Syntax error. Run <span class="tag">apachectl configtest</span> — it names the file and line.</p></div>
+        <div class="card"><h3><span class="tag danger">Connection refused (remote)</span></h3><p>Service up locally but <b>firewalld</b> blocks the port. Open http/https.</p></div>
+      </div>
+      <p class="note">The pattern: works on <span class="tag">curl localhost</span> but not from outside → firewall or SELinux. Works for root but not apache → permissions or SELinux context.</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Break it live — <code>chmod 000 /var/www/demo/index.html</code> &#8594; curl &#8594; 403 &#8594; error_log names the cause &#8594; fix.</span></div>
+    </div>
+  </section>
+
+  <!-- 32 DIVIDER: SECURITY -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 10</div>
+    <div class="big">Hardening</div>
+    <p class="lead" style="margin-top:2vh">Least privilege, quiet banners, safe headers, and SELinux.</p>
+  </section>
+
+  <!-- 33 HARDENING -->
+  <section class="slide">
+    <div class="kicker"><span class="num">28</span><span class="dot"></span><span class="mod">Security</span></div>
+    <div class="body">
+      <h2>Hardening the configuration</h2>
+      <div class="cols">
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.d/hardening.conf</span></div>
+<pre><span class="k">ServerTokens</span> Prod        <span class="c"># hide version in headers</span>
+<span class="k">ServerSignature</span> Off      <span class="c"># no banner on error pages</span>
+<span class="k">TraceEnable</span> Off          <span class="c"># block TRACE method</span>
+
+<span class="a">&lt;Directory /&gt;</span>
+  <span class="k">Options</span> -Indexes         <span class="c"># no directory listing</span>
+  <span class="k">Require</span> all denied      <span class="c"># deny by default</span>
+<span class="a">&lt;/Directory&gt;</span></pre>
+        </div>
+        <div>
+          <table class="meaning">
+            <tr><th>Directive</th><th>What it does &amp; why it matters</th></tr>
+            <tr><td><code>ServerTokens Prod</code></td><td>Trims the <code>Server:</code> header to just <code>Apache</code>. Without it, httpd leaks its exact version + OS — a map for an attacker to look up known CVEs.</td></tr>
+            <tr><td><code>ServerSignature Off</code></td><td>Removes the version banner Apache prints at the bottom of its error pages (404/403). Same information leak, different place.</td></tr>
+            <tr><td><code>TraceEnable Off</code></td><td>Disables the HTTP <code>TRACE</code> method, which can be abused (Cross-Site Tracing) to read cookies the browser normally hides.</td></tr>
+            <tr><td><code>&lt;Directory /&gt;<br>Require all denied</code></td><td>Deny access to the <b>whole filesystem</b> by default; you then re-allow only your docroot. Stops a stray <code>Alias</code> from exposing <code>/etc</code>.</td></tr>
+          </table>
+        </div>
+      </div>
+      <p class="note">Put global tweaks in a <b>drop-in</b> file — create <span class="tag">/etc/httpd/conf.d/hardening.conf</span> (every <code>*.conf</code> there is auto-included) rather than editing <span class="tag">/etc/httpd/conf/httpd.conf</span> — easier to audit and it survives package updates.</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span><b>1.</b> <code>sudo vi /etc/httpd/conf.d/hardening.conf</code> and add <code>ServerTokens Prod</code> &nbsp;<b>2.</b> <code>sudo apachectl configtest</code> (expect <code>Syntax OK</code>) &nbsp;<b>3.</b> <code>sudo systemctl reload httpd</code> &nbsp;<b>4.</b> <code>curl -I localhost</code> → the <code>Server:</code> line now reads just <code>Apache</code>, no version.</span></div>
+    </div>
+  </section>
+
+  <!-- 34 SECURITY HEADERS -->
+  <section class="slide">
+    <div class="kicker"><span class="num">29</span><span class="dot"></span><span class="mod">Security</span></div>
+    <div class="body">
+      <h2>Security headers — the app layer defense</h2>
+      <div class="cols wide-right">
+        <div>
+          <ul class="pts tight">
+            <li><b>CSP</b> — blunts <b>XSS</b></li>
+            <li><b>X-Frame-Options</b> — blocks <b>clickjacking</b></li>
+            <li><b>X-Content-Type-Options</b> — stops MIME sniffing</li>
+            <li><b>SameSite cookies</b> — mitigates <b>CSRF</b></li>
+          </ul>
+          <p class="note">This is where the web-server config meets the vulnerability topics from our other labs — the server sets the guardrails the browser enforces.</p>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>vhost, or /etc/httpd/conf.d/security-headers.conf</span></div>
+<pre><span class="k">Header</span> always set <span class="a">X-Frame-Options</span> "DENY"
+<span class="k">Header</span> always set <span class="a">X-Content-Type-Options</span> "nosniff"
+<span class="k">Header</span> always set <span class="a">Content-Security-Policy</span> \
+  "default-src 'self'"
+<span class="k">Header</span> always set <span class="a">Referrer-Policy</span> \
+  "strict-origin-when-cross-origin"</pre>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Add <code>X-Frame-Options DENY</code>, reload, <code>curl -I localhost</code> — the header now shows up.</span></div>
+    </div>
+  </section>
+
+  <!-- SECURITY: CSP DEEP DIVE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">30</span><span class="dot"></span><span class="mod">Security</span></div>
+    <div class="body">
+      <h2>Content-Security-Policy in depth</h2>
+      <div class="cols">
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>vhost or /etc/httpd/conf.d/security-headers.conf</span></div>
+<pre><span class="a">&lt;IfModule mod_headers.c&gt;</span>
+  <span class="k">Header set</span> Content-Security-Policy "\
+    <span class="a">default-src</span> 'self'; \
+    <span class="a">script-src</span> 'self' https://analytics.example; \
+    <span class="a">style-src</span> 'self' 'unsafe-inline'; \
+    <span class="a">frame-ancestors</span> 'none'"
+<span class="a">&lt;/IfModule&gt;</span>
+
+<span class="c"># build the allowlist safely first (blocks nothing):</span>
+<span class="k">Header set</span> Content-Security-Policy-<span class="a">Report-Only</span> "default-src 'self'"</pre>
+        </div>
+        <div>
+          <ul class="pts tight">
+            <li>A response header saying <b>which sources</b> the browser may load &#8212; the browser enforces it.</li>
+            <li>Stops <b>XSS</b>: an injected <span class="tag">&lt;script src=evil&gt;</span> is blocked (not on the allowlist).</li>
+            <li><b>frame-ancestors 'none'</b> blocks <b>clickjacking</b> (page can't be framed).</li>
+            <li><b>Report-Only</b> logs violations but blocks nothing &#8212; roll it out first, find every legit source, then enforce.</li>
+          </ul>
+          <p class="note"><b>Careful:</b> too-strict CSP silently breaks the site (blocks legit CDNs/fonts). Verify in F12 &#8594; Network, or <span class="tag">curl -I</span>.</p>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span><code>curl -I https://demo... | grep -i content-security</code> &#8212; confirm the header ships; open F12 console to see a blocked script.</span></div>
+    </div>
+  </section>
+
+  <!-- SECURITY: XFO / NOSNIFF / SAMESITE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">31</span><span class="dot"></span><span class="mod">Security</span></div>
+    <div class="body">
+      <h2>X-Frame-Options, nosniff &amp; SameSite</h2>
+      <div class="cols">
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>vhost or /etc/httpd/conf.d/security-headers.conf</span></div>
+<pre><span class="a">&lt;IfModule mod_headers.c&gt;</span>
+  <span class="k">Header always set</span> X-Frame-Options <span class="a">"DENY"</span>
+  <span class="k">Header always set</span> X-Content-Type-Options <span class="a">"nosniff"</span>
+
+  <span class="c"># tighten cookies (better: set these in the app)</span>
+  <span class="k">Header always edit</span> Set-Cookie ^(.*)$ \
+    <span class="a">"$1; SameSite=Lax; Secure; HttpOnly"</span>
+<span class="a">&lt;/IfModule&gt;</span></pre>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:.75rem">
+            <h3>X-Frame-Options: DENY</h3>
+            <p>Page can't be loaded in an <span class="tag">&lt;iframe&gt;</span>. Blocks <b>clickjacking</b> &#8212; an attacker overlays your page invisibly and tricks the click. Modern form: CSP <span class="tag">frame-ancestors</span>.</p>
+          </div>
+          <div class="card" style="margin-bottom:.75rem">
+            <h3>X-Content-Type-Options: nosniff</h3>
+            <p>Browser must trust the declared <span class="tag">Content-Type</span>, not guess. Blocks an uploaded <span class="tag">avatar.jpg</span> that hides HTML/JS from being run as a page &#8212; <b>upload-based XSS</b>.</p>
+          </div>
+          <div class="card">
+            <h3>Set-Cookie: SameSite=Lax</h3>
+            <p>Cookie isn't sent on cross-site requests. Blocks <b>CSRF</b> &#8212; evil.com auto-submits a form to the bank using the victim's logged-in cookie. Pair with <span class="tag">Secure</span> + <span class="tag">HttpOnly</span>.</p>
+          </div>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Add the three headers, reload, <code>curl -I https://demo...</code> &#8212; all three lines appear in the response.</span></div>
+    </div>
+  </section>
+
+  <!-- SECURITY: NOSNIFF ATTACK/DEFENSE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">32</span><span class="dot"></span><span class="mod">Security</span></div>
+    <div class="body">
+      <h2>nosniff: stopping upload-based XSS</h2>
+      <div class="cols">
+        <div class="card" style="border-color:var(--danger);background:var(--danger-soft)">
+          <h3 style="color:var(--danger)">Without nosniff &#8212; attack</h3>
+          <ul class="pts tight" style="margin-top:.4em">
+            <li><b>1 &#183;</b> Attacker uploads <span class="tag">avatar.jpg</span> that is actually JavaScript.</li>
+            <li><b>2 &#183;</b> Server trusts the <span class="tag">.jpg</span> extension, stores it, serves <span class="tag">Content-Type: image/jpeg</span>.</li>
+            <li><b>3 &#183;</b> Victim opens <span class="tag">/uploads/avatar.jpg</span> directly.</li>
+            <li><b>4 &#183;</b> Browser sniffs the bytes, sees <span class="tag">&lt;script&gt;</span>, treats it as HTML and runs it &#8594; cookie stolen.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="card" style="border-color:var(--ok);margin-bottom:.8rem">
+            <h3 style="color:var(--ok)">With nosniff &#8212; blocked</h3>
+            <p>Browser is forced: "server said <b>image/jpeg</b> &#8594; handle it as an image, no guessing." The bytes aren't a valid image, so nothing renders and the hidden script never runs.</p>
+          </div>
+          <div class="term">
+            <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>/etc/httpd/conf.d/security.conf</span></div>
+<pre><span class="a">&lt;IfModule mod_headers.c&gt;</span>
+  <span class="k">Header set</span> X-Content-Type-Options <span class="a">"nosniff"</span>
+<span class="a">&lt;/IfModule&gt;</span></pre>
+          </div>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Verify: <code>curl -I https://demo... | grep -i x-content-type</code> &#8594; <code>nosniff</code>. Then open the fake .jpg &#8212; it no longer executes.</span></div>
+    </div>
+  </section>
+
+  <!-- SECURITY: SAMESITE ATTACK/DEFENSE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">33</span><span class="dot"></span><span class="mod">Security</span></div>
+    <div class="body">
+      <h2>SameSite cookies: stopping CSRF</h2>
+      <div class="cols">
+        <div class="card" style="border-color:var(--danger);background:var(--danger-soft)">
+          <h3 style="color:var(--danger)">Without SameSite &#8212; CSRF</h3>
+          <ul class="pts tight" style="margin-top:.4em">
+            <li><b>1 &#183;</b> Victim is logged into <span class="tag">bank.com</span>; browser holds the session cookie.</li>
+            <li><b>2 &#183;</b> Victim wanders onto <span class="tag">evil.com</span>.</li>
+            <li><b>3 &#183;</b> evil.com silently auto-submits a hidden form to bank.com: "transfer money".</li>
+            <li><b>4 &#183;</b> Browser attaches the bank cookie &#8594; bank sees a valid request &#8594; money gone.</li>
+          </ul>
+        </div>
+        <div>
+          <ul class="pts tight">
+            <li><b>SameSite=Lax</b> &#8212; cookie is not sent on cross-site requests &#8594; CSRF neutralized.</li>
+            <li><b>HttpOnly</b> &#8212; JavaScript (XSS) can't read it via <span class="tag">document.cookie</span>.</li>
+            <li><b>Secure</b> &#8212; cookie only travels over HTTPS &#8594; no plaintext leak on :80.</li>
+          </ul>
+          <div class="term" style="margin-top:.8rem">
+            <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>force the flags if the app doesn't set them</span></div>
+<pre><span class="a">&lt;IfModule mod_headers.c&gt;</span>
+  <span class="k">Header edit</span> Set-Cookie ^(.*)$ \
+    <span class="a">"$1; SameSite=Lax; Secure; HttpOnly"</span>
+<span class="a">&lt;/IfModule&gt;</span></pre>
+          </div>
+        </div>
+      </div>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span>Check in <b>F12 &#8594; Application &#8594; Cookies</b>: the <code>HttpOnly</code>, <code>Secure</code> and <code>SameSite</code> columns are all set.</span></div>
+    </div>
+  </section>
+
+  <!-- 35 FIREWALL + SELINUX -->
+  <section class="slide">
+    <div class="kicker"><span class="num">34</span><span class="dot"></span><span class="mod">Security</span></div>
+    <div class="body">
+      <h2>firewalld &amp; SELinux — the CentOS gatekeepers</h2>
+      <div class="term">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>the two things beginners forget</span></div>
+<pre><span class="c"># 1) firewalld — open the ports</span>
+<span class="p">#</span> firewall-cmd --permanent --add-service={http,https}
+<span class="p">#</span> firewall-cmd --reload
+
+<span class="c"># 2) SELinux — enforcing by default on CentOS</span>
+<span class="p">#</span> setsebool -P <span class="a">httpd_can_network_connect</span> 1   <span class="c"># allow proxy</span>
+<span class="p">#</span> semanage fcontext -a -t <span class="a">httpd_sys_content_t</span> \
+     "/srv/web(/.*)?"
+<span class="p">#</span> restorecon -Rv /srv/web                     <span class="c"># apply context</span>
+<span class="p">#</span> semanage port -a -t http_port_t -p tcp 8080  <span class="c"># serve on :8080</span></pre>
+      </div>
+      <p class="note"><b>Don't</b> disable SELinux to "fix" a problem. Learn <span class="tag">ausearch</span> / <span class="tag">audit2why</span> — the denial log tells you exactly which boolean or context to set.</p>
+      <div class="demo"><span class="lbl">▶ DEMO</span><span><code>getenforce</code> &#8594; Enforcing. Give a file the wrong context &#8594; 403 &#8594; <code>restorecon -Rv /var/www/demo</code> &#8594; works.</span></div>
+    </div>
+  </section>
+
+  <!-- 36 DIVIDER: LAB -->
+  <section class="slide divider">
+    <div class="brandbar"></div>
+    <div class="idx">Part 11</div>
+    <div class="big">Hands-on lab</div>
+    <p class="lead" style="margin-top:2vh">You’ve seen each step demoed live — now build it end-to-end on your own VM.</p>
+  </section>
+
+  <!-- ASSIGNMENT / RECAP -->
+  <section class="slide">
+    <div class="kicker"><span class="num">35</span><span class="dot"></span><span class="mod">Your turn</span></div>
+    <div class="body">
+      <h2>Build the full pipeline yourself</h2>
+      <div class="cols">
+        <ul class="pts tight">
+          <li><b>1</b> Install + start + open the firewall</li>
+          <li><b>2</b> Create a name-based vhost + DocumentRoot</li>
+          <li><b>3</b> Set the SELinux context on the web dir</li>
+          <li><b>4</b> Enable HTTPS with certbot + redirect 80&#8594;443</li>
+          <li><b>5</b> Proxy <span class="tag">/api</span> to a backend on :3000</li>
+          <li><b>6</b> Harden: ServerTokens, -Indexes, security headers</li>
+          <li><b>7</b> Verify: <span class="tag">ss</span> + <span class="tag">curl</span> + browser</li>
+        </ul>
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <h3>Break &amp; fix</h3>
+            <p>Sabotage it on purpose &#8212; <span class="tag danger">chmod 000</span>, a config typo, a wrong SELinux context &#8212; then let <span class="tag">error_log</span> lead you to the fix.</p>
+          </div>
+          <div class="card">
+            <h3>Deliverable</h3>
+            <p>A working HTTPS site + a short write-up of one failure you hit and how the log pinpointed it.</p>
+          </div>
+        </div>
+      </div>
+      <p class="note">Every step above was demoed live during the lecture &#8212; this is the same pipeline, start to finish, on your own VM.</p>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="slide">
+    <div class="kicker"><span class="num">36</span><span class="dot"></span><span class="mod">Wrap-up</span></div>
+    <div class="body">
+      <h2>Key takeaways</h2>
+      <ul class="pts">
+        <li>A web server is a <b>daemon</b> that binds a port and speaks HTTP — everything else is configuration.</li>
+        <li>On CentOS: <span class="tag">dnf</span> + <span class="tag">systemctl</span> + <span class="tag">/etc/httpd</span> + the <span class="tag">apache</span> user.</li>
+        <li>Serve static directly; <b>proxy dynamic</b> to an app server.</li>
+        <li>HTTPS is table stakes — automate certs with certbot.</li>
+        <li>Security is layered: <b>least privilege → config → headers → firewalld → SELinux</b>.</li>
+        <li>When in doubt, read <span class="tag">error_log</span> first.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 39 QA -->
+  <section class="slide title-slide">
+    <div class="brandbar"></div>
+    <div class="eyebrow">End of lecture</div>
+    <h1>Questions?</h1>
+    <p class="sub">Next session: we take the hardened server and attack it — mapping each vulnerability back to the config directive that stops it.</p>
+    <div class="meta">
+      <span>docs · <b>httpd.apache.org</b></span>
+      <span>SELinux · <b>the apache SELinux man page</b></span>
+      <span>test · <b>SSL Labs · testssl.sh</b></span>
+    </div>
+  </section>
+
+  <!-- APPENDIX: UBUNTU -->
+  <section class="slide">
+    <div class="kicker"><span class="num">A1</span><span class="dot"></span><span class="mod">Appendix</span></div>
+    <div class="body">
+      <h2>All steps on Ubuntu (apache2)</h2>
+      <div class="cols wide-right">
+        <div>
+          <p style="margin-bottom:1.2vh;font-size:clamp(.85rem,1.3vw,1.05rem);color:var(--muted)">Same roles, different names:</p>
+          <div class="layer">
+            <div class="row"><b>httpd</b> apache2</div>
+            <div class="row"><b>apache</b> www-data</div>
+            <div class="row"><b>/etc/httpd</b> /etc/apache2</div>
+            <div class="row"><b>dnf · firewalld</b> apt · ufw</div>
+            <div class="row"><b>SELinux</b> AppArmor</div>
+            <div class="row"><b>conf.d auto</b> a2ensite / a2enmod</div>
+          </div>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>Ubuntu: install → configure → TLS → test</span></div>
+<pre><span class="c"># 1  INSTALL</span>
+<span class="p">$</span> sudo apt update &amp;&amp; sudo apt install <span class="a">apache2</span> -y
+<span class="p">$</span> sudo systemctl enable --now apache2
+<span class="p">$</span> sudo ufw allow <span class="a">'Apache Full'</span>          <span class="c"># open 80 + 443</span>
+
+<span class="c"># 2  CONFIGURE the site</span>
+<span class="p">$</span> sudo mkdir -p /var/www/demo
+<span class="p">$</span> echo "Hello HCMUS" | sudo tee /var/www/demo/index.html
+<span class="p">$</span> sudo vi /etc/apache2/sites-available/<span class="a">demo.conf</span>
+<span class="p">$</span> sudo <span class="a">a2ensite</span> demo                     <span class="c"># enable the site</span>
+<span class="p">$</span> sudo <span class="a">a2enmod</span> ssl proxy proxy_http headers
+<span class="p">$</span> sudo apache2ctl configtest &amp;&amp; sudo systemctl reload apache2
+
+<span class="c"># 3  HTTPS</span>
+<span class="p">$</span> sudo apt install certbot python3-certbot-apache -y
+<span class="p">$</span> sudo certbot <span class="a">--apache</span> -d demo.hcmus.edu.vn
+
+<span class="c"># 4  TEST</span>
+<span class="p">$</span> systemctl is-active apache2
+<span class="p">$</span> ss -tlnp | grep <span class="a">':80\|:443'</span>
+<span class="p">$</span> curl -I http://localhost/</pre>
+        </div>
+      </div>
+      <p class="note">Ubuntu has no SELinux — just make sure files are readable by <span class="tag">www-data</span> (never <span class="tag danger">chmod 777</span>). Enable sites/modules with <span class="tag">a2ensite</span> / <span class="tag">a2enmod</span> instead of editing include files by hand.</p>
+    </div>
+  </section>
+
+  <!-- APPENDIX A2: NODE /api BACKEND (demo for slide 17) -->
+  <section class="slide">
+    <div class="kicker"><span class="num">A2</span><span class="dot"></span><span class="mod">Appendix · demo for slide 17</span></div>
+    <div class="body">
+      <h2>A tiny Node backend for <span style="font-family:var(--mono);color:var(--accent)">/api</span></h2>
+      <div class="cols">
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>1 · the Node backend</span></div>
+<pre><span class="c"># install Node from CentOS AppStream</span>
+<span class="p">[root@centos ~]#</span> dnf install <span class="a">nodejs</span> -y
+
+<span class="c"># /opt/api/api.js  — bind to localhost ONLY</span>
+<span class="k">const</span> http = require(<span class="a">'http'</span>);
+http.createServer((req, res) =&gt; {
+  res.setHeader(<span class="a">'Content-Type'</span>,<span class="a">'application/json'</span>);
+  res.end(JSON.stringify({ ok:<span class="k">true</span>, path:req.url }));
+}).listen(<span class="a">3000</span>, <span class="a">'127.0.0.1'</span>);
+
+<span class="p">[root@centos ~]#</span> node /opt/api/api.js &amp;   <span class="c"># run</span></pre>
+        </div>
+        <div class="term">
+          <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>2 · /etc/httpd/conf.d/demo.conf (inside vhost)</span></div>
+<pre><span class="c"># in the demo vhost (mod_proxy loaded by default)</span>
+<span class="k">ProxyPreserveHost</span> On
+<span class="k">ProxyPass</span>        /api  <span class="a">http://127.0.0.1:3000/</span>
+<span class="k">ProxyPassReverse</span> /api  <span class="a">http://127.0.0.1:3000/</span>
+
+<span class="c"># SELinux: let httpd open a network socket</span>
+<span class="p">#</span> setsebool -P <span class="a">httpd_can_network_connect</span> 1
+<span class="p">#</span> systemctl reload httpd
+
+<span class="p">#</span> curl localhost<span class="a">/api/hello</span>
+<span class="o">{"ok":true,"path":"/hello"}</span></pre>
+        </div>
+      </div>
+      <p class="note"><b>Bẫy #1 trên CentOS:</b> quên <span class="tag">httpd_can_network_connect</span> → Apache bị SELinux chặn, <span class="tag">/api</span> trả <b>503</b> dù Node đang chạy. Backend chỉ nghe <span class="tag">127.0.0.1</span> nên không ai chạm thẳng vào :3000 — mọi request phải đi qua Apache.</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- chrome -->
+<div class="footer">
+  <div class="l">Web Servers on Linux — CentOS + Apache httpd</div>
+  <div><span class="counter" id="cur">1</span> / <span id="total">52</span></div>
+</div>
+<div class="hint">← → navigate · F fullscreen</div>
+<div class="nav">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length;
+  let i=0;
+  document.getElementById('total').textContent=total;
+  const prog=document.getElementById('progress');
+  const cur=document.getElementById('cur');
+
+  function show(n){
+    i=Math.max(0,Math.min(total-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i+1)/total*100)+'%';
+    cur.textContent=i+1;
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('next').onclick=next;
+  document.getElementById('prev').onclick=prev;
+
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();next();}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prev();}
+    else if(e.key==='Home'){show(0);}
+    else if(e.key==='End'){show(total-1);}
+    else if(e.key==='f'||e.key==='F'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  // swipe on touch
+  let x0=null;
+  addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});
+  addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50){dx<0?next():prev();}
+    x0=null;
+  },{passive:true});
+
+  show(0);
+</script>
+</body>
+</html>

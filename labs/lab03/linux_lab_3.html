@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capstone Lab — Stand Up a Web Server · Module 3</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:    #07090f;
+  --bg2:   #0d1220;
+  --bg3:   #111828;
+  --bg4:   #172030;
+  --b:     rgba(80,140,255,0.1);
+  --b2:    rgba(80,140,255,0.18);
+  --text:  #ccd8f0;
+  --muted: #3d5080;
+  --dim:   #243060;
+  --navy:  #4d80ff;
+  --navy2: #7ba8ff;
+  --cyan:  #00d4ff;
+  --cyan2: #66e8ff;
+  --mint:  #00e5b0;
+  --mint2: #66f5d0;
+  --rose:  #ff5580;
+  --rose2: #ff88aa;
+  --gold:  #ffc940;
+  --gold2: #ffd870;
+  --mono:  'Space Mono', monospace;
+  --sans:  'Outfit', sans-serif;
+}
+
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(77,128,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77,128,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none; z-index: 0;
+}
+
+#progress { position: fixed; top: 0; left: 0; height: 2px; background: linear-gradient(90deg, var(--navy), var(--cyan), var(--mint)); transition: width 0.4s ease; z-index: 999; }
+
+.deck { width: 100vw; height: 100vh; position: relative; }
+
+.slide {
+  position: absolute; inset: 0;
+  display: none; flex-direction: column;
+  padding: 44px 60px 80px;
+  opacity: 0; transition: opacity 0.3s ease;
+  z-index: 1;
+}
+.slide.active { display: flex; opacity: 1; }
+
+.lbl {
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+}
+.lbl::before { content: '//'; color: var(--dim); }
+
+h1 { font-size: 54px; font-weight: 800; line-height: 1.0; letter-spacing: -0.03em; }
+h2 { font-size: 35px; font-weight: 800; line-height: 1.1; letter-spacing: -0.025em; }
+
+.n  { color: var(--navy2); }
+.cy { color: var(--cyan); }
+.m  { color: var(--mint); }
+.r  { color: var(--rose); }
+.g  { color: var(--gold); }
+
+.code {
+  background: #04060c;
+  border: 1px solid var(--b2);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.95;
+}
+.cc  { color: #1e2e50; }
+.cp  { color: var(--muted); }
+.cm  { color: var(--mint); }
+.cf  { color: var(--gold); }
+.ca  { color: var(--navy2); }
+.ck  { color: var(--rose2); }
+.cv  { color: var(--cyan2); }
+.co  { color: #253550; }
+.cg  { color: var(--mint2); }
+
+.card { background: var(--bg2); border: 1px solid var(--b); border-radius: 10px; padding: 18px 22px; }
+.ctitle { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+.note   { border-left: 2px solid var(--mint);  padding: 9px 14px; background: rgba(0,229,176,0.05); border-radius: 0 7px 7px 0; font-size: 13px; color: #6a9898; line-height: 1.7; }
+.warn   { border-left: 2px solid var(--gold);  padding: 9px 14px; background: rgba(255,201,64,0.05); border-radius: 0 7px 7px 0; font-size: 13px; color: #909070; line-height: 1.7; }
+.info   { border-left: 2px solid var(--navy);  padding: 9px 14px; background: rgba(77,128,255,0.05); border-radius: 0 7px 7px 0; font-size: 13px; color: #6a7a98; line-height: 1.7; }
+
+.tag { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 3px 9px; border-radius: 20px; border: 1px solid; margin: 2px; }
+.tn  { border-color: var(--navy);  color: var(--navy2); }
+.tc  { border-color: var(--cyan);  color: var(--cyan2); }
+.tm  { border-color: var(--mint);  color: var(--mint2); }
+.tr  { border-color: var(--rose);  color: var(--rose2); }
+.tg  { border-color: var(--gold);  color: var(--gold2); }
+
+.body { font-size: 14px; line-height: 1.8; color: #607088; }
+
+.ft { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ft th { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--b2); }
+.ft td { padding: 8px 10px; border-bottom: 1px solid rgba(77,128,255,0.05); }
+.ft tr:last-child td { border-bottom: none; }
+
+.nav { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; background: var(--bg2); border: 1px solid var(--b2); border-radius: 40px; padding: 9px 18px; z-index: 100; }
+.nbtn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 15px; padding: 4px 7px; border-radius: 5px; transition: color 0.2s, background 0.2s; }
+.nbtn:hover { color: var(--text); background: var(--bg3); }
+.ncnt { font-family: var(--mono); font-size: 11px; color: var(--muted); min-width: 42px; text-align: center; }
+.dots { display: flex; gap: 5px; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--b2); cursor: pointer; transition: background 0.2s, transform 0.2s; }
+.dot.on { background: var(--cyan); transform: scale(1.4); box-shadow: 0 0 5px var(--cyan); }
+.kbhint { position: fixed; bottom: 26px; right: 36px; font-family: var(--mono); font-size: 10px; color: var(--dim); }
+
+/* topology / pipeline */
+.flow { display: flex; align-items: stretch; gap: 0; }
+.flow-node {
+  flex: 1; border-radius: 8px; padding: 12px 10px;
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-align: center; border: 1px solid; line-height: 1.6;
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+}
+.flow-node small { font-weight: 400; font-size: 10px; color: var(--muted); }
+.flow-arrow { color: var(--dim); font-size: 18px; padding: 0 8px; flex-shrink: 0; align-self: center; }
+.fn-navy  { background: rgba(77,128,255,0.08); border-color: rgba(77,128,255,0.3); color: var(--navy2); }
+.fn-cyan  { background: rgba(0,212,255,0.08);  border-color: rgba(0,212,255,0.3);  color: var(--cyan2); }
+.fn-mint  { background: rgba(0,229,176,0.08);  border-color: rgba(0,229,176,0.3);  color: var(--mint2); }
+.fn-gold  { background: rgba(255,201,64,0.08); border-color: rgba(255,201,64,0.3); color: var(--gold2); }
+.fn-dim   { background: rgba(255,255,255,0.03);border-color: rgba(255,255,255,0.08); color: var(--muted); }
+
+/* lab card */
+.lab-card { background: var(--bg2); border: 1px solid var(--b); border-radius: 10px; padding: 18px 20px; }
+.lab-num  { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--b); float: right; }
+.lab-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.lab-steps { font-size: 12.5px; color: var(--muted); line-height: 2.0; }
+
+/* checklist */
+.check { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--b); font-size: 13px; color: #7088a0; line-height: 1.6; }
+.check:last-child { border-bottom: none; }
+.check .box { font-family: var(--mono); color: var(--mint); flex-shrink: 0; }
+
+#s1 { justify-content: center; }
+#s1::after {
+  content: '';
+  position: absolute; top: 18%; right: 8%;
+  width: 420px; height: 420px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,212,255,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+.eyebrow { font-family: var(--mono); font-size: 11px; color: var(--navy); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 20px; }
+code { font-family: var(--mono); font-size: 11px; }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="deck">
+
+<!-- ═══ S1 TITLE ═══ -->
+<div class="slide active" id="s1">
+  <div class="eyebrow">Module 3 · Network &amp; Security · Capstone Lab</div>
+  <h1>Stand Up a<br><span class="cy">Web Server</span></h1>
+  <p style="font-size:18px;color:var(--muted);margin-top:16px;font-weight:300;">Static IP → SSH keys → nginx → automated backups, as one continuous workflow</p>
+  <div style="display:flex;gap:20px;margin-top:44px;font-family:var(--mono);font-size:11px;color:var(--dim);">
+    <span>8 slides</span><span>·</span><span>Hands-on · 2 VMs</span><span>·</span><span>~120 min</span><span>·</span><span>Combines Modules 4 &amp; 5</span>
+  </div>
+</div>
+
+<!-- ═══ S2 OVERVIEW + TOPOLOGY ═══ -->
+<div class="slide" id="s2">
+  <div class="lbl">Slide 2 — Scenario &amp; topology</div>
+  <h2 style="margin-bottom:18px;">What you'll <span class="cy">build</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;gap:18px;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <p class="body">You'll provision a small server, lock down access to it, deploy a web service, and automate its backups. Each task feeds the next — the rsync backup at the end rides over the <strong style="color:var(--mint);">same SSH key channel</strong> you build in Task&nbsp;2.</p>
+      <div class="card">
+        <div class="ctitle">Two virtual machines</div>
+        <div class="flow" style="margin-top:6px;">
+          <div class="flow-node fn-navy">web-vm<small>192.168.56.10<br>nginx + web data</small></div>
+          <div class="flow-arrow">⇢</div>
+          <div class="flow-node fn-mint">SSH key<small>rsync over<br>port 22</small></div>
+          <div class="flow-arrow">⇢</div>
+          <div class="flow-node fn-gold">backup-vm<small>192.168.56.20<br>/opt/www-backup</small></div>
+        </div>
+      </div>
+      <div class="info">Lab assumes <strong style="color:var(--navy2);">Ubuntu 22.04/24.04</strong>, a non-root sudo user named <code>deploy</code> on both VMs, and a host-only network in the <code>192.168.56.0/24</code> range. Adjust IPs to your environment.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="card">
+        <div class="ctitle">The four tasks</div>
+        <table class="ft">
+          <tbody>
+            <tr><td style="font-family:var(--mono);color:var(--navy2);">01</td><td style="color:#7088a0;">Static IP on web-vm with <code>nmcli</code> / <code>nmtui</code></td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--mint2);">02</td><td style="color:#7088a0;">SSH key pair, web-vm → backup-vm</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--cyan2);">03</td><td style="color:#7088a0;">Install nginx, pin the version</td></tr>
+            <tr><td style="font-family:var(--mono);color:var(--gold2);">04</td><td style="color:#7088a0;">rsync backup on a schedule (systemd timer)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><strong style="color:var(--mint);">Prerequisites:</strong> both VMs powered on, console or initial SSH access to each, and <code>sudo</code> rights for <code>deploy</code>. On backup-vm, create the target now: <code>sudo mkdir -p /opt/www-backup &amp;&amp; sudo chown deploy /opt/www-backup</code>.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S3 TASK 1 — STATIC IP ═══ -->
+<div class="slide" id="s3">
+  <div class="lbl">Slide 3 — Task 01</div>
+  <h2 style="margin-bottom:18px;">Static IP with <span class="n">nmcli</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># 1. inspect the current state</span><br>
+<span class="cp">$ </span><span class="cm">ip addr show</span><br>
+<span class="cp">$ </span><span class="cm">nmcli con show</span>          <span class="cc"> # find your connection name</span><br>
+<span class="cp">$ </span><span class="cm">nmcli device status</span><br>
+<br>
+<span class="cc"># 2. set the static IP (replace CON with the name above)</span><br>
+<span class="cp">$ </span><span class="cm">sudo nmcli con mod</span> <span class="ca">"CON"</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cf">ipv4.method</span> <span class="cv">manual</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cf">ipv4.addresses</span> <span class="cv">192.168.56.10/24</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cf">ipv4.gateway</span>&nbsp;&nbsp;&nbsp;<span class="cv">192.168.56.1</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cf">ipv4.dns</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cv">"8.8.8.8 1.1.1.1"</span><br>
+<br>
+<span class="cc"># 3. apply</span><br>
+<span class="cp">$ </span><span class="cm">sudo nmcli con up</span> <span class="ca">"CON"</span>
+      </div>
+      <div class="info"><strong style="color:var(--navy2);">Prefer a TUI?</strong> <code>sudo nmtui</code> → "Edit a connection" walks the same fields with a menu. Either tool writes the same persistent config.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># 4. verify the address and route</span><br>
+<span class="cp">$ </span><span class="cm">ip addr show</span>; <span class="cm">ip route show</span><br>
+<span class="cp">$ </span><span class="cm">ping</span> <span class="cf">-c3</span> <span class="ca">8.8.8.8</span>            <span class="cc"> # gateway works?</span><br>
+<span class="cp">$ </span><span class="cm">ping</span> <span class="cf">-c3</span> <span class="ca">google.com</span>         <span class="cc"> # DNS works?</span>
+      </div>
+      <div class="card" style="border-left:2px solid var(--mint);">
+        <div class="ctitle">✓ Validation gate</div>
+        <p class="body" style="margin:0;">Reboot the VM, log back in, and run <code>ip addr</code>. The static IP <strong style="color:var(--text);">must persist</strong>. If it reverts, the change didn't save to the connection profile — re-check the connection name in step&nbsp;1.</p>
+      </div>
+      <div class="warn"><strong style="color:var(--gold);">If <code>nmcli con show</code> is empty,</strong> NetworkManager isn't managing the interface (some Ubuntu Server images use netplan). This lab assumes NetworkManager is in control.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S4 TASK 2 — SSH KEYS ═══ -->
+<div class="slide" id="s4">
+  <div class="lbl">Slide 4 — Task 02</div>
+  <h2 style="margin-bottom:18px;">SSH key pair, <span class="m">web-vm → backup-vm</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># on web-vm, as deploy: make a modern key pair</span><br>
+<span class="cp">$ </span><span class="cm">ssh-keygen</span> <span class="cf">-t</span> <span class="cv">ed25519</span> <span class="cf">-C</span> <span class="cv">"web-vm backup"</span><br>
+<span class="co">&nbsp;&nbsp;Enter file:&nbsp;~/.ssh/id_ed25519</span><br>
+<span class="co">&nbsp;&nbsp;Enter passphrase: ●●●●●●●●</span><br>
+<br>
+<span class="cc"># push the PUBLIC key to backup-vm</span><br>
+<span class="cp">$ </span><span class="cm">ssh-copy-id</span> <span class="ca">deploy@192.168.56.20</span><br>
+<br>
+<span class="cc"># test — should connect with no password</span><br>
+<span class="cp">$ </span><span class="cm">ssh</span> <span class="ca">deploy@192.168.56.20</span> <span class="cv">"hostname"</span><br>
+<span class="co">&nbsp;&nbsp;backup-vm</span>
+      </div>
+      <div class="note"><strong style="color:var(--mint);">This is the channel Task 4 uses.</strong> Once passwordless SSH works web-vm → backup-vm, rsync can run unattended over it.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Harden backup-vm — /etc/ssh/sshd_config</div>
+        <div class="code" style="font-size:12px;">
+<span class="ck">PasswordAuthentication</span> <span class="cv">no</span><br>
+<span class="ck">PermitRootLogin</span> <span class="cv">no</span><br>
+<br>
+<span class="cc"># test the config, THEN reload</span><br>
+<span class="cp">$ </span><span class="cm">sudo sshd -t</span><br>
+<span class="cp">$ </span><span class="cm">sudo systemctl reload</span> <span class="ca">ssh</span>
+        </div>
+      </div>
+      <div class="warn"><strong style="color:var(--gold);">Order matters — don't lock yourself out.</strong> Copy and test your key <em>before</em> setting <code>PasswordAuthentication no</code>. Keep a second session open while you reload, in case the new config rejects you.</div>
+      <div class="card" style="border-left:2px solid var(--mint);">
+        <div class="ctitle">✓ Validation gate</div>
+        <p class="body" style="margin:0;"><code>ssh deploy@192.168.56.20</code> succeeds with the key; password login is refused. Confirm with <code>ssh -o PubkeyAuthentication=no deploy@...</code> → should be <span class="r">denied</span>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S5 TASK 3 — NGINX + PIN ═══ -->
+<div class="slide" id="s5">
+  <div class="lbl">Slide 5 — Task 03</div>
+  <h2 style="margin-bottom:18px;">Install nginx, <span class="cy">pin the version</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># install on web-vm</span><br>
+<span class="cp">$ </span><span class="cm">sudo apt update</span><br>
+<span class="cp">$ </span><span class="cm">sudo apt install</span> <span class="ca">nginx</span><br>
+<br>
+<span class="cc"># confirm it serves</span><br>
+<span class="cp">$ </span><span class="cm">nginx -v</span><br>
+<span class="cp">$ </span><span class="cm">sudo nginx -t</span>            <span class="cc"> # config OK?</span><br>
+<span class="cp">$ </span><span class="cm">curl -I</span> <span class="ca">http://localhost</span>  <span class="cc"> # expect 200 OK</span><br>
+<br>
+<span class="cc"># add sample content (Task 4 backs this up)</span><br>
+<span class="cp">$ </span><span class="cm">echo</span> <span class="cv">"web-vm — v1"</span> | <span class="cm">sudo tee</span> <span class="ca">/var/www/html/index.html</span>
+      </div>
+      <div class="note"><strong style="color:var(--mint);">Why pin?</strong> A stray <code>apt upgrade</code> can swap nginx to a new release mid-term and change behaviour. Pinning freezes it until <em>you</em> decide to move.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="ctitle">Pin (hold) the installed version</div>
+        <div class="code" style="font-size:12px;">
+<span class="cp">$ </span><span class="cm">sudo apt-mark hold</span> <span class="ca">nginx</span><br>
+<span class="cp">$ </span><span class="cm">apt-mark showhold</span><br>
+<span class="co">&nbsp;&nbsp;nginx</span><br>
+<br>
+<span class="cc"># prove it: an upgrade now skips nginx</span><br>
+<span class="cp">$ </span><span class="cm">sudo apt upgrade</span><br>
+<span class="co">&nbsp;&nbsp;The following held back: nginx</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Or install one specific version</div>
+        <div class="code" style="font-size:12px;">
+<span class="cp">$ </span><span class="cm">apt-cache madison</span> <span class="ca">nginx</span>   <span class="cc"> # list versions</span><br>
+<span class="cp">$ </span><span class="cm">sudo apt install</span> <span class="ca">nginx=&lt;version&gt;</span><br>
+<span class="cc"># unpin later: sudo apt-mark unhold nginx</span>
+        </div>
+      </div>
+      <div class="card" style="border-left:2px solid var(--mint);">
+        <div class="ctitle">✓ Validation gate</div>
+        <p class="body" style="margin:0;"><code>curl http://localhost</code> returns your v1 page, and <code>apt-mark showhold</code> lists <code>nginx</code>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S6 TASK 4a — RSYNC ═══ -->
+<div class="slide" id="s6">
+  <div class="lbl">Slide 6 — Task 04 · part 1</div>
+  <h2 style="margin-bottom:18px;">Back up web data with <span class="g">rsync</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># from web-vm — over the SSH key channel</span><br>
+<span class="cc"># 1. ALWAYS dry-run first, especially with --delete</span><br>
+<span class="cp">$ </span><span class="cm">rsync</span> <span class="cf">-avz --delete -n</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ca">/var/www/html/</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ca">deploy@192.168.56.20:/opt/www-backup/</span><br>
+<br>
+<span class="cc"># 2. real run (drop the -n)</span><br>
+<span class="cp">$ </span><span class="cm">rsync</span> <span class="cf">-avz --delete</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ca">/var/www/html/ deploy@192.168.56.20:/opt/www-backup/</span><br>
+<span class="co">&nbsp;&nbsp;sent 1.2KB&nbsp;&nbsp;(first run: everything)</span>
+      </div>
+      <div class="warn"><strong style="color:var(--gold);">Two footguns.</strong> The trailing slash on <code>/var/www/html/</code> copies the <em>contents</em>, not the folder itself. And <code>--delete</code> removes anything on the backup that's gone from the source — which is exactly why the dry run comes first.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cc"># 3. verify on backup-vm</span><br>
+<span class="cp">$ </span><span class="cm">ssh</span> <span class="ca">deploy@192.168.56.20</span> <span class="cv">"ls -l /opt/www-backup/"</span><br>
+<br>
+<span class="cc"># 4. change a file, run again — only the delta moves</span><br>
+<span class="cp">$ </span><span class="cm">echo</span> <span class="cv">"web-vm — v2"</span> | <span class="cm">sudo tee</span> <span class="ca">/var/www/html/index.html</span><br>
+<span class="cp">$ </span><span class="cm">rsync</span> <span class="cf">-avz --delete</span> <span class="ca">/var/www/html/ deploy@...:/opt/www-backup/</span><br>
+<span class="co">&nbsp;&nbsp;sent 180 bytes&nbsp;&nbsp;(only the change)</span>
+      </div>
+      <div class="note"><strong style="color:var(--mint);">That's the point of rsync:</strong> the first run is a full copy; every run after transfers only what changed. Watch the "sent" byte count drop.</div>
+      <div class="card" style="border-left:2px solid var(--mint);">
+        <div class="ctitle">✓ Validation gate</div>
+        <p class="body" style="margin:0;">The v2 file appears on backup-vm, and a re-run with no changes transfers almost nothing.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S7 TASK 4b — SCHEDULE ═══ -->
+<div class="slide" id="s7">
+  <div class="lbl">Slide 7 — Task 04 · part 2</div>
+  <h2 style="margin-bottom:18px;">Automate it — <span class="g">systemd timer</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="card">
+        <div class="ctitle">Wrap the command in a script + two units</div>
+        <div class="code" style="font-size:11.5px;">
+<span class="cc"># /opt/backup-web.sh&nbsp;&nbsp;(chmod +x, owned by deploy)</span><br>
+<span class="ck">#!/usr/bin/env bash</span><br>
+<span class="cm">rsync</span> <span class="cf">-az --delete</span> <span class="ca">/var/www/html/</span> \<br>
+&nbsp;&nbsp;<span class="ca">deploy@192.168.56.20:/opt/www-backup/</span>
+        </div>
+        <div class="code" style="font-size:11.5px;margin-top:8px;">
+<span class="cc"># /etc/systemd/system/backup-web.service</span><br>
+<span class="ck">[Service]</span><br>
+Type=<span class="cv">oneshot</span><br>
+<span class="ck">User</span>=<span class="cv">deploy</span>              <span class="cc"> # owns the SSH key!</span><br>
+ExecStart=<span class="cv">/opt/backup-web.sh</span>
+        </div>
+        <div class="code" style="font-size:11.5px;margin-top:8px;">
+<span class="cc"># /etc/systemd/system/backup-web.timer</span><br>
+<span class="ck">[Timer]</span><br>
+OnCalendar=<span class="cv">hourly</span><br>
+Persistent=<span class="cv">true</span>          <span class="cc"> # catch missed runs</span><br>
+<span class="ck">[Install]</span><br>
+WantedBy=<span class="cv">timers.target</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="code">
+<span class="cp">$ </span><span class="cm">sudo systemctl daemon-reload</span><br>
+<span class="cp">$ </span><span class="cm">sudo systemctl enable</span> <span class="cf">--now</span> <span class="ca">backup-web.timer</span><br>
+<br>
+<span class="cc"># when does it next fire?</span><br>
+<span class="cp">$ </span><span class="cm">systemctl list-timers</span> <span class="ca">backup-web.timer</span><br>
+<br>
+<span class="cc"># run it once now, then read the log</span><br>
+<span class="cp">$ </span><span class="cm">sudo systemctl start</span> <span class="ca">backup-web.service</span><br>
+<span class="cp">$ </span><span class="cm">journalctl -u</span> <span class="ca">backup-web.service</span>
+      </div>
+      <div class="warn"><strong style="color:var(--gold);">The #1 reason this breaks:</strong> the service runs as a user that doesn't own the SSH key. The key lives in <code>deploy</code>'s <code>~/.ssh</code>, so the unit must set <code>User=deploy</code> — otherwise it runs as root and can't authenticate.</div>
+      <div class="info"><strong style="color:var(--navy2);">Prefer cron?</strong> Same job, one line: <code>0 * * * * /opt/backup-web.sh</code> in <code>crontab -e</code>. The timer wins on logging — <code>journalctl</code> shows every run.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S8 VALIDATION & SUBMISSION ═══ -->
+<div class="slide" id="s8">
+  <div class="lbl">Slide 8 — Wrap-up</div>
+  <h2 style="margin-bottom:18px;">Prove it works &amp; <span class="cy">submit</span></h2>
+  <div class="grid2" style="flex:1;align-items:start;">
+    <div class="card">
+      <div class="ctitle">Final checklist — all four tasks</div>
+      <div class="check"><span class="box">[✓]</span><span><strong style="color:var(--navy2);">01</strong> &nbsp;web-vm holds <code>192.168.56.10</code> after a reboot</span></div>
+      <div class="check"><span class="box">[✓]</span><span><strong style="color:var(--mint2);">02</strong> &nbsp;Passwordless SSH web-vm → backup-vm; password login refused</span></div>
+      <div class="check"><span class="box">[✓]</span><span><strong style="color:var(--cyan2);">03</strong> &nbsp;<code>curl localhost</code> serves your page; <code>apt-mark showhold</code> lists nginx</span></div>
+      <div class="check"><span class="box">[✓]</span><span><strong style="color:var(--gold2);">04</strong> &nbsp;Editing the page and waiting an hour updates <code>/opt/www-backup</code>; <code>journalctl</code> shows the run</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="warn">
+        <strong style="color:var(--gold);">3 mistakes that cost the most time:</strong><br>
+        1. <code>PasswordAuthentication no</code> set before the key was copied → locked out<br>
+        2. <code>rsync --delete</code> with no dry run → wiped the backup<br>
+        3. Timer service left as root → silent auth failures every hour
+      </div>
+      <div class="card">
+        <div class="ctitle">Submit</div>
+        <p class="body" style="margin:0;">A short report (PDF) with: your <code>history</code> output per VM, and one screenshot per validation gate above. State which IPs and connection name you used. One paragraph: which step broke first, and how you diagnosed it.</p>
+      </div>
+      <div class="note"><strong style="color:var(--mint);">You just built the spine of a real deployment:</strong> a server with a stable address, key-only access, a pinned service, and backups that run themselves and leave a log.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<nav class="nav">
+  <button class="nbtn" onclick="go(-1)">&#8592;</button>
+  <div class="dots" id="dots"></div>
+  <span class="ncnt" id="cnt">1 / 8</span>
+  <button class="nbtn" onclick="go(1)">&#8594;</button>
+</nav>
+<div class="kbhint">← → keys</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const N = slides.length;
+let cur = 0;
+const dotsEl = document.getElementById('dots');
+const cntEl  = document.getElementById('cnt');
+const prog   = document.getElementById('progress');
+
+for (let i = 0; i < N; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' on' : '');
+  d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+}
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  dotsEl.children[cur].classList.remove('on');
+  cur = Math.max(0, Math.min(n, N - 1));
+  slides[cur].style.display = 'flex';
+  requestAnimationFrame(() => requestAnimationFrame(() => slides[cur].classList.add('active')));
+  dotsEl.children[cur].classList.add('on');
+  cntEl.textContent = (cur + 1) + ' / ' + N;
+  prog.style.width = ((cur + 1) / N * 100) + '%';
+}
+
+function go(d) { goTo(cur + d); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+  if (e.key === 'Home') goTo(0);
+  if (e.key === 'End')  goTo(N - 1);
+});
+
+goTo(0);
+</script>
+</body>
+</html>

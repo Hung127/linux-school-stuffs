@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M3·L6 — Firewall & System Hardening</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F172A; --muted:#475569; --faint:#64748B;
+    --line:#E2E8F0; --paper:#FFFFFF; --panel:#F8FAFC;
+    --accent:#4338CA; --accent-soft:#EEF2FF; --accent-line:#C7D2FE;
+    --allow:#15803D; --allow-bg:#DCFCE7;
+    --deny:#B91C1C; --deny-bg:#FEE2E2;
+    --warn:#B45309; --warn-bg:#FEF3C7;
+    --term-bg:#0F172A; --term-line:#1E293B; --term-txt:#E2E8F0;
+    --term-dim:#94A3B8; --term-green:#4ADE80; --term-cyan:#67E8F9;
+    --term-amber:#FBBF24; --term-pink:#F9A8D4; --term-prompt:#818CF8;
+    --display:'Space Grotesk',sans-serif; --body:'Inter',sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#E9EBF0; font-family:var(--body); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  /* ---- Stage: 16:9, scales to viewport, container-query unit sizing ---- */
+  .stage{
+    position:relative;
+    width:min(100vw, calc(100vh * 16 / 9));
+    height:min(100vh, calc(100vw * 9 / 16));
+    background:var(--paper);
+    container-type:size;
+    overflow:hidden;
+    box-shadow:0 30px 80px rgba(15,23,42,.18);
+  }
+  .slide{
+    position:absolute; inset:0;
+    padding:6.2cqh 7cqw 5.4cqh;
+    display:none; flex-direction:column;
+    font-size:2.55cqh; line-height:1.5;
+    animation:fade .45s ease both;
+  }
+  .slide.active{display:flex}
+  @keyframes fade{from{opacity:0;transform:translateY(1.2cqh)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.slide{animation:none}}
+
+  /* ---- Shared chrome ---- */
+  .eyebrow{
+    font-family:var(--mono); font-size:1.7cqh; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--accent); font-weight:500;
+    display:flex; align-items:center; gap:1.2cqw;
+  }
+  .eyebrow .layer-tag{
+    color:var(--faint); font-size:1.5cqh; letter-spacing:.12em;
+    padding-left:1.2cqw; border-left:1px solid var(--line);
+  }
+  h1{font-family:var(--display); font-weight:700; line-height:1.05}
+  h2{font-family:var(--display); font-weight:600; font-size:5.2cqh; line-height:1.08; letter-spacing:-.01em}
+  .lede{color:var(--muted); font-size:2.7cqh; max-width:64cqw; margin-top:1.6cqh}
+  .rule{height:2px; background:var(--accent); width:9cqw; margin:2.2cqh 0}
+  .head{margin-bottom:3cqh}
+  .head h2{margin-top:1.4cqh}
+
+  /* ---- Terminal / code ---- */
+  .term{
+    background:var(--term-bg); border-radius:1.1cqh; overflow:hidden;
+    font-family:var(--mono); font-size:2.05cqh; line-height:1.62;
+    box-shadow:0 10px 30px rgba(15,23,42,.22);
+  }
+  .term-bar{
+    display:flex; align-items:center; gap:.8cqw;
+    padding:1cqh 1.6cqw; background:var(--term-line); border-bottom:1px solid #0b1220;
+  }
+  .term-bar i{width:1.3cqh; height:1.3cqh; border-radius:50%; display:inline-block}
+  .term-bar i:nth-child(1){background:#F87171}
+  .term-bar i:nth-child(2){background:#FBBF24}
+  .term-bar i:nth-child(3){background:#4ADE80}
+  .term-bar span{margin-left:1cqw; color:var(--term-dim); font-size:1.6cqh; letter-spacing:.04em}
+  .term-body{padding:1.6cqh 1.9cqw; color:var(--term-txt); white-space:pre-wrap}
+  .term-body .p{color:var(--term-prompt); font-weight:700}
+  .term-body .c{color:#fff}
+  .term-body .o{color:var(--term-dim)}
+  .term-body .g{color:var(--term-green)}
+  .term-body .y{color:var(--term-amber)}
+  .term-body .cy{color:var(--term-cyan)}
+  .term-body .pk{color:var(--term-pink)}
+  .term-body .cm{color:#64748B; font-style:italic}
+
+  code.k{
+    font-family:var(--mono); font-size:.9em; background:var(--accent-soft);
+    color:var(--accent); padding:.08em .42em; border-radius:.4em; font-weight:500;
+  }
+
+  /* ---- Layout helpers ---- */
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:3cqw; flex:1; min-height:0}
+  .cols.wide-left{grid-template-columns:1.15fr .85fr}
+  .stack{display:flex; flex-direction:column; gap:2cqh; min-height:0}
+  .grow{flex:1; min-height:0}
+
+  ul.clean{list-style:none; display:flex; flex-direction:column; gap:1.5cqh}
+  ul.clean li{position:relative; padding-left:3cqw; color:var(--ink)}
+  ul.clean li::before{
+    content:""; position:absolute; left:0; top:.95cqh;
+    width:1.1cqh; height:1.1cqh; border:2px solid var(--accent); border-radius:.25cqh;
+  }
+  ul.clean li b{font-weight:600}
+  ul.clean li span{color:var(--muted)}
+
+  .pill{display:inline-flex; align-items:center; gap:.6cqw; font-family:var(--mono);
+    font-size:1.7cqh; padding:.5cqh 1cqw; border-radius:.5cqh; font-weight:500}
+  .pill.allow{background:var(--allow-bg); color:var(--allow)}
+  .pill.deny{background:var(--deny-bg); color:var(--deny)}
+  .pill.warn{background:var(--warn-bg); color:var(--warn)}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:1.1cqh;
+    padding:2.2cqh 2cqw; display:flex; flex-direction:column; gap:1cqh;
+  }
+  .card h3{font-family:var(--display); font-size:2.6cqh; font-weight:600}
+  .card p{color:var(--muted); font-size:2.1cqh; line-height:1.45}
+
+  .callout{
+    border-left:4px solid var(--warn); background:var(--warn-bg);
+    padding:1.6cqh 2cqw; border-radius:0 .9cqh .9cqh 0; color:#7C2D12;
+    font-size:2.05cqh; line-height:1.45;
+  }
+  .callout b{color:#7C2D12}
+  .callout.info{border-color:var(--accent); background:var(--accent-soft); color:#312E81}
+  .callout.info b{color:#312E81}
+
+  /* ---- Defense-in-depth layers (signature) ---- */
+  .layers{display:flex; flex-direction:column; gap:1.2cqh; flex:1; justify-content:center}
+  .layer{
+    display:flex; align-items:center; gap:1.6cqw;
+    border:1px solid var(--accent-line); background:var(--accent-soft);
+    border-radius:.9cqh; padding:1.6cqh 2cqw;
+  }
+  .layer .num{font-family:var(--mono); font-weight:700; color:var(--accent);
+    font-size:2.2cqh; width:3cqw}
+  .layer .lt{flex:1}
+  .layer .lt b{font-family:var(--display); font-size:2.5cqh; font-weight:600; display:block}
+  .layer .lt span{color:var(--muted); font-size:1.9cqh}
+  .layer .tool{font-family:var(--mono); font-size:1.8cqh; color:var(--accent);
+    background:#fff; border:1px solid var(--accent-line); padding:.6cqh 1cqw; border-radius:.5cqh}
+
+  /* ---- Steps ---- */
+  .steps{display:flex; flex-direction:column; gap:1.7cqh; counter-reset:s}
+  .step{display:flex; gap:1.6cqw; align-items:flex-start}
+  .step .sn{
+    flex:none; width:4cqh; height:4cqh; border-radius:50%;
+    background:var(--accent); color:#fff; font-family:var(--mono); font-weight:700;
+    display:flex; align-items:center; justify-content:center; font-size:2cqh;
+  }
+  .step .sc{flex:1}
+  .step .sc b{font-weight:600; display:block; font-size:2.3cqh; margin-bottom:.4cqh}
+  .step .sc .term{margin-top:.8cqh; font-size:1.85cqh}
+  .step .sc p{color:var(--muted); font-size:2cqh}
+
+  .meta{
+    margin-top:auto; padding-top:2.4cqh; display:flex; justify-content:space-between;
+    align-items:center; color:var(--faint); font-family:var(--mono);
+    font-size:1.55cqh; letter-spacing:.06em; border-top:1px solid var(--line);
+  }
+  .meta .dots{display:flex; gap:.7cqw}
+  .meta .dots i{width:.9cqh; height:.9cqh; border-radius:50%; background:var(--line)}
+  .meta .dots i.on{background:var(--accent)}
+
+  /* Title slide */
+  .title-slide{justify-content:center}
+  .title-slide h1{font-size:9cqh; letter-spacing:-.02em}
+  .title-slide .sub{font-size:3cqh; color:var(--muted); margin-top:2cqh; max-width:70cqw}
+  .title-slide .course{font-family:var(--mono); color:var(--faint); font-size:2cqh;
+    letter-spacing:.1em; margin-top:4cqh; text-transform:uppercase}
+  .shield-row{display:flex; gap:1cqw; margin-top:3cqh; flex-wrap:wrap}
+  .shield-row .pill{font-size:1.9cqh; padding:.7cqh 1.3cqw; background:var(--accent-soft); color:var(--accent)}
+
+  .two-card{display:grid; grid-template-columns:1fr 1fr; gap:2.4cqw; flex:1}
+  .obj-list{display:flex; flex-direction:column; gap:1.3cqh}
+  .obj-list li{list-style:none; display:flex; gap:1.2cqw; align-items:flex-start; font-size:2.15cqh}
+  .obj-list li::before{content:"▸"; color:var(--accent); font-weight:700}
+
+  table.flow{width:100%; border-collapse:collapse; font-size:2cqh}
+  table.flow th{text-align:left; font-family:var(--mono); font-size:1.7cqh; color:var(--faint);
+    text-transform:uppercase; letter-spacing:.08em; padding:.8cqh 1cqw; border-bottom:2px solid var(--line)}
+  table.flow td{padding:1cqh 1cqw; border-bottom:1px solid var(--line); vertical-align:top}
+  table.flow td code{font-family:var(--mono); color:var(--accent); font-size:.95em}
+
+  /* ---- Controls ---- */
+  .nav{position:fixed; bottom:2.5vh; right:2.5vw; display:flex; gap:.6rem; z-index:20}
+  .nav button{
+    font-family:var(--mono); font-size:.85rem; border:1px solid #cbd5e1; background:#fff;
+    color:var(--ink); width:2.6rem; height:2.6rem; border-radius:.6rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:.15s;
+  }
+  .nav button:hover{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .nav button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  .counter{position:fixed; bottom:2.7vh; left:2.5vw; font-family:var(--mono);
+    font-size:.85rem; color:#475569; z-index:20}
+  .progress{position:fixed; top:0; left:0; height:4px; background:var(--accent); z-index:20; transition:width .3s}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="stage" id="stage">
+
+  <!-- 1 · TITLE -->
+  <section class="slide active title-slide">
+    <div class="eyebrow">Module 3 · Lesson 6 <span class="layer-tag">Linux OS &amp; Applications</span></div>
+    <h1>Firewall &amp;<br>System Hardening</h1>
+    <p class="sub">Turning a fresh, exposed Linux box into a defended one — layer by layer, from packet filtering to audit trails.</p>
+    <div class="shield-row">
+      <span class="pill">UFW</span><span class="pill">iptables</span><span class="pill">fail2ban</span>
+      <span class="pill">SSH</span><span class="pill">PAM</span><span class="pill">auditd</span><span class="pill">Lynis</span>
+    </div>
+    <div class="meta">
+      <span>HCMUS · Faculty of Information Technology</span>
+      <span class="dots"></span>
+    </div>
+  </section>
+
+  <!-- 2 · OBJECTIVES / MAP -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Lesson map</div>
+      <h2>What you'll walk away able to do</h2>
+    </div>
+    <div class="two-card">
+      <div class="card">
+        <h3>Theory</h3>
+        <ul class="obj-list">
+          <li>Filter traffic with <b>UFW</b> and read what <b>iptables</b> does underneath</li>
+          <li>Stop brute-force with <b>fail2ban</b> jails, filters, actions</li>
+          <li>Harden <b>SSH</b> and enforce policy with <b>PAM</b></li>
+          <li>Track sensitive-file access with <b>auditd</b></li>
+          <li>Read security logs (<b>journalctl</b>, auth.log) and score yourself with <b>Lynis</b></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Labs</h3>
+        <ul class="obj-list">
+          <li>Lock the firewall to ports <b>22 / 80 / 443</b> only</li>
+          <li>Simulate an SSH brute-force and confirm the IP is <b>banned</b></li>
+          <li>Watch <code class="k">/etc/passwd</code> &amp; <code class="k">/etc/shadow</code> for access</li>
+          <li>Run a <b>Lynis</b> audit, record the score, fix 3 HIGH warnings</li>
+        </ul>
+      </div>
+    </div>
+    <div class="meta"><span>Theory → Case studies → Labs</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 3 · THREAT MODEL -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Why harden</div>
+      <h2>A new server is an open door</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <p class="lede" style="max-width:none">Within minutes of getting a public IP, a server is scanned and probed. The defaults assume convenience, not safety.</p>
+        <ul class="clean">
+          <li><b>Open by default.</b> <span>Services bind to all interfaces; nothing filters who reaches them.</span></li>
+          <li><b>root over SSH.</b> <span>The most-guessed username, on the most-attacked port (22).</span></li>
+          <li><b>No record.</b> <span>If something is touched, nothing is watching or logging it.</span></li>
+        </ul>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>auth.log — minutes after boot</span></div>
+        <div class="term-body"><span class="cm"># Failed password for root from 45.x.x.x port 51244</span>
+<span class="cm"># Failed password for root from 193.x.x.x port 40021</span>
+<span class="cm"># Failed password for admin from 61.x.x.x port 33910</span>
+<span class="cm"># Invalid user test from 110.x.x.x</span>
+<span class="o">...thousands per day, fully automated.</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>The fix is not one tool — it's layers</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 4 · DEFENSE IN DEPTH (signature) -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">The mental model</div>
+      <h2>Defense in depth</h2>
+    </div>
+    <div class="layers">
+      <div class="layer"><span class="num">01</span><div class="lt"><b>Network filtering</b><span>Drop packets that should never reach a service</span></div><span class="tool">UFW · iptables</span></div>
+      <div class="layer"><span class="num">02</span><div class="lt"><b>Service exposure</b><span>Expose the fewest ports, on the right interfaces</span></div><span class="tool">SSH config</span></div>
+      <div class="layer"><span class="num">03</span><div class="lt"><b>Authentication</b><span>Make valid logins hard to guess and easy to limit</span></div><span class="tool">PAM · keys</span></div>
+      <div class="layer"><span class="num">04</span><div class="lt"><b>Active defense</b><span>Ban attackers automatically as they try</span></div><span class="tool">fail2ban</span></div>
+      <div class="layer"><span class="num">05</span><div class="lt"><b>Monitoring &amp; audit</b><span>See and record what happens — and prove it later</span></div><span class="tool">auditd · journalctl · Lynis</span></div>
+    </div>
+    <div class="meta"><span>No single layer is enough — each catches what the last missed</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 5 · UFW INTRO -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">UFW <span class="layer-tag">Layer 01 · Network filtering</span></div>
+      <h2>The uncomplicated firewall</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <p class="lede" style="max-width:none">UFW is a friendly front-end to the kernel's <code class="k">iptables/nftables</code>. You write intent; it generates the rules.</p>
+        <ul class="clean">
+          <li><b>Default-deny inbound.</b> <span>Block everything in, allow only what you name.</span></li>
+          <li><b>Allow outbound.</b> <span>Let the server reach out (updates, DNS).</span></li>
+          <li><b>Stateful.</b> <span>Replies to your own connections come back automatically.</span></li>
+        </ul>
+        <div class="callout"><b>Allow SSH before you enable.</b> On a remote box, <code class="k">ufw enable</code> with no <code class="k">allow 22</code> drops your own session instantly — and you can't reconnect. Always <code class="k">ufw allow 22/tcp</code> first, then enable.</div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>set the baseline policy</span></div>
+        <div class="term-body"><span class="p">$</span> <span class="c">sudo ufw default deny incoming</span>
+<span class="p">$</span> <span class="c">sudo ufw default allow outgoing</span>
+<span class="p">$</span> <span class="c">sudo ufw enable</span>
+<span class="g">Firewall is active and enabled on system startup</span>
+
+<span class="p">$</span> <span class="c">sudo ufw status verbose</span>
+<span class="o">Status: active</span>
+<span class="o">Default: </span><span class="y">deny (incoming)</span><span class="o">, </span><span class="g">allow (outgoing)</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>Start closed. Open deliberately.</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 6 · UFW allow / deny -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">UFW <span class="layer-tag">allow · deny</span></div>
+      <h2>Opening exactly what you need</h2>
+    </div>
+    <div class="cols">
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>rules</span></div>
+        <div class="term-body"><span class="cm"># by port + protocol</span>
+<span class="p">$</span> <span class="c">sudo ufw allow 22/tcp</span>
+<span class="p">$</span> <span class="c">sudo ufw allow 80,443/tcp</span>
+
+<span class="cm"># by service name (uses /etc/services)</span>
+<span class="p">$</span> <span class="c">sudo ufw allow https</span>
+
+<span class="cm"># scope to a source — admin subnet only</span>
+<span class="p">$</span> <span class="c">sudo ufw allow from 10.0.0.0/24 to any port 22</span>
+
+<span class="cm"># explicitly block a legacy port</span>
+<span class="p">$</span> <span class="c">sudo ufw deny 23</span>     <span class="o"># telnet</span></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>allow vs deny vs reject</h3>
+          <p><span class="pill allow">allow</span> let the packet through.<br>
+          <span class="pill deny">deny</span> drop silently — attacker sees a timeout.<br>
+          <span class="pill warn">reject</span> refuse with a reply — sender learns the port is closed.</p>
+        </div>
+        <div class="callout info"><b>Order &amp; specificity:</b> a narrow <code class="k">allow from</code> beats a broad rule. UFW evaluates rules top-to-bottom — list with <code class="k">ufw status numbered</code>, insert with <code class="k">ufw insert N</code>.</div>
+      </div>
+    </div>
+    <div class="meta"><span>Every open port is a promise you have to keep</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 7 · UFW limit / logging -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">UFW <span class="layer-tag">limit · logging</span></div>
+      <h2>Rate-limit and watch</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <div class="card">
+          <h3>limit — throttle abuse</h3>
+          <p><code class="k">ufw limit ssh</code> allows SSH but blocks a source IP that makes <b>6+ connections in 30 seconds</b> — a cheap brake on brute-force before fail2ban even reacts.</p>
+        </div>
+        <div class="card">
+          <h3>logging — leave a trail</h3>
+          <p>Levels: <b>off → low → medium → high → full</b>. Logs land in <code class="k">/var/log/ufw.log</code>. Use <b>medium</b> in the labs; <b>full</b> is noisy.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>limit + logging</span></div>
+        <div class="term-body"><span class="p">$</span> <span class="c">sudo ufw limit 22/tcp</span>
+<span class="p">$</span> <span class="c">sudo ufw logging medium</span>
+
+<span class="p">$</span> <span class="c">sudo tail -f /var/log/ufw.log</span>
+<span class="o">[UFW BLOCK] SRC=203.0.113.9 </span><span class="y">DPT=3306</span>
+<span class="o">[UFW BLOCK] SRC=198.51.100.4 </span><span class="y">DPT=23</span>
+<span class="o">[UFW LIMIT BLOCK] SRC=45.0.0.7 </span><span class="y">DPT=22</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>limit = first speed bump · logging = the camera</span><span class="dots"></span></div>
+  </section>
+
+
+  <!-- firewalld · basics -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">firewalld <span class="layer-tag">Red Hat · Layer 01 · Network filtering</span></div>
+      <h2>firewalld — the Red Hat firewall</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <p class="lede" style="max-width:none">RHEL / Rocky / Alma / Fedora ship <code class="k">firewalld</code>, not UFW. Same job as UFW — a friendly front-end to <code class="k">nftables</code> — but organised around <b>zones</b>.</p>
+        <ul class="clean">
+          <li><b>A zone is a trust level.</b> <span>Each network interface is assigned to one zone; the zone decides what's allowed.</span></li>
+          <li><b><code class="k">public</code> is the default.</b> <span>Deny-by-default inbound; only SSH and a few services pre-opened.</span></li>
+          <li><b>Other built-ins:</b> <span><code class="k">trusted</code> (allow all), <code class="k">internal</code>, <code class="k">dmz</code>, <code class="k">drop</code> (silent deny), <code class="k">block</code> (reject).</span></li>
+        </ul>
+        <div class="callout info"><b>Mental shift from UFW:</b> UFW keeps one flat rule list. firewalld groups rules by <i>zone</i>, so the same laptop can trust its home LAN and distrust airport Wi-Fi — just by switching the interface's zone.</div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>inspect zones</span></div>
+        <div class="term-body"><span class="p">$</span> <span class="c">sudo firewall-cmd --state</span>
+<span class="g">running</span>
+
+<span class="p">$</span> <span class="c">sudo firewall-cmd --get-default-zone</span>
+<span class="o">public</span>
+
+<span class="p">$</span> <span class="c">sudo firewall-cmd --list-all</span>
+<span class="cy">public</span> <span class="o">(active)</span>
+<span class="o">  interfaces: </span><span class="c">eth0</span>
+<span class="o">  services: </span><span class="g">ssh dhcpv6-client</span>
+<span class="o">  ports:</span>
+<span class="o">  target: </span><span class="y">default</span>  <span class="cm"># = deny inbound</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>A zone is "how much do I trust this network?"</span><span class="dots"></span></div>
+  </section>
+
+  <!-- firewalld · rules -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">firewalld <span class="layer-tag">service · port · --permanent</span></div>
+      <h2>Opening exactly what you need</h2>
+    </div>
+    <div class="cols">
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>rules</span></div>
+        <div class="term-body"><span class="cm"># prefer named services over raw ports</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --add-service=https</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --add-service=http</span>
+
+<span class="cm"># a raw port when no service name exists</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --add-port=8080/tcp</span>
+
+<span class="cm"># the TWO-STEP that everyone forgets:</span>
+<span class="cm"># 1) make it survive reboot   2) load it now</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --permanent --add-service=https</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --reload</span>
+
+<span class="cm"># remove a rule</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --permanent --remove-service=http</span></div>
+      </div>
+      <div class="stack">
+        <div class="callout"><b>The #1 firewalld gotcha — runtime vs permanent.</b> A plain <code class="k">--add-service</code> is <i>runtime only</i> and vanishes on reboot. For a lasting rule you must add <code class="k">--permanent</code> <b>and then</b> <code class="k">--reload</code>. Forgetting either is the classic "it worked, then it didn't after reboot".</div>
+        <div class="card">
+          <h3>Rich rules — scope &amp; rate-limit</h3>
+          <p>Fine-grained control, firewalld's answer to <code class="k">ufw allow from</code> + <code class="k">ufw limit</code>:</p>
+          <div class="term" style="font-size:1.8cqh"><div class="term-body"><span class="cm"># only the admin subnet may reach SSH</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --permanent \
+  --add-rich-rule='rule family=ipv4 \
+  source address=10.0.0.0/24 \
+  service name=ssh accept'</span>
+
+<span class="cm"># throttle SSH: max 6 new conns / minute</span>
+<span class="p">$</span> <span class="c">... service name=ssh \
+  limit value=6/m accept</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="meta"><span>--permanent writes the file · --reload applies it</span><span class="dots"></span></div>
+  </section>
+
+  <!-- firewalld · zones in action -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">firewalld <span class="layer-tag">zones in practice</span></div>
+      <h2>Two cables, two trust levels</h2>
+    </div>
+    <div class="cols wide-left">
+      <div class="stack">
+        <p class="lede" style="max-width:none">A database server has two NICs: <code class="k">eth0</code> faces the Internet, <code class="k">eth1</code> faces the private app network. You want SSH + HTTPS from outside, but the Postgres port <i>only</i> from inside.</p>
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span>assign interfaces to zones</span></div>
+          <div class="term-body"><span class="cm"># public NIC → public zone (SSH, HTTPS only)</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --permanent \
+  --zone=public --change-interface=eth0</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --permanent \
+  --zone=public --add-service=https</span>
+
+<span class="cm"># private NIC → internal zone (+ Postgres)</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --permanent \
+  --zone=internal --change-interface=eth1</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --permanent \
+  --zone=internal --add-port=5432/tcp</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --reload</span></div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>Why this beats a flat rule list</h3>
+          <p>Port 5432 is reachable <b>only</b> on the internal NIC. An attacker on the public interface can't even <i>see</i> the database port — it isn't "blocked", it simply doesn't exist in that zone.</p>
+        </div>
+        <div class="callout info"><b>UFW equivalent?</b> You'd write per-source rules like <code class="k">ufw allow from 10.0.0.0/24 to any port 5432</code>. It works, but zones make the <i>intent</i> explicit: "this cable is trusted, that one isn't."</div>
+      </div>
+    </div>
+    <div class="meta"><span>Zones model the network's shape, not just its ports</span><span class="dots"></span></div>
+  </section>
+
+  <!-- UFW <-> firewalld cheat sheet -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Reference <span class="layer-tag">Debian/Ubuntu ↔ Red Hat</span></div>
+      <h2>Same intent, two dialects</h2>
+    </div>
+    <table class="flow">
+      <tr><th>Intent</th><th>UFW (Debian / Ubuntu)</th><th>firewalld (RHEL / Rocky / Alma)</th></tr>
+      <tr><td>Turn it on</td><td><code>ufw enable</code></td><td><code>systemctl enable --now firewalld</code></td></tr>
+      <tr><td>Show state &amp; rules</td><td><code>ufw status verbose</code></td><td><code>firewall-cmd --list-all</code></td></tr>
+      <tr><td>Default-deny inbound</td><td><code>ufw default deny incoming</code></td><td>built in (<code>public</code> zone <code>target=default</code>)</td></tr>
+      <tr><td>Allow a port</td><td><code>ufw allow 443/tcp</code></td><td><code>firewall-cmd --permanent --add-port=443/tcp</code></td></tr>
+      <tr><td>Allow by service name</td><td><code>ufw allow https</code></td><td><code>firewall-cmd --permanent --add-service=https</code></td></tr>
+      <tr><td>Scope to a source</td><td><code>ufw allow from 10.0.0.0/24 to any port 22</code></td><td>rich-rule <code>source address=10.0.0.0/24 service name=ssh accept</code></td></tr>
+      <tr><td>Rate-limit SSH</td><td><code>ufw limit 22/tcp</code></td><td>rich-rule <code>service name=ssh limit value=6/m accept</code></td></tr>
+      <tr><td>Apply persistently</td><td>automatic (rules are saved)</td><td><code>--permanent</code> then <code>firewall-cmd --reload</code></td></tr>
+    </table>
+    <div class="callout info" style="margin-top:2cqh"><b>Pick by distro, not preference.</b> Don't install UFW on RHEL or firewalld on Ubuntu — fighting the platform's default creates confusing double-firewall states. Learn both <i>dialects</i>; the <i>grammar</i> (deny-by-default, open deliberately, scope narrowly) is identical.</div>
+    <div class="meta"><span>One firewall philosophy, two command sets</span><span class="dots"></span></div>
+  </section>
+  <!-- 8 · iptables chains -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">iptables <span class="layer-tag">underneath UFW</span></div>
+      <h2>The three chains</h2>
+    </div>
+    <div class="cols wide-left">
+      <div class="stack">
+        <table class="flow">
+          <tr><th>Chain</th><th>Handles</th></tr>
+          <tr><td><code>INPUT</code></td><td>Packets destined <b>for this host</b> (incoming to a local service)</td></tr>
+          <tr><td><code>OUTPUT</code></td><td>Packets <b>generated by this host</b> (outgoing)</td></tr>
+          <tr><td><code>FORWARD</code></td><td>Packets <b>passing through</b> — routing/gateway traffic</td></tr>
+        </table>
+        <div class="callout info"><b>Tables &amp; targets.</b> Default table is <code class="k">filter</code>. Common targets: <span class="pill allow">ACCEPT</span> <span class="pill deny">DROP</span> <span class="pill warn">REJECT</span>. UFW writes its rules into these very chains.</div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>raw rules</span></div>
+        <div class="term-body"><span class="cm"># default-drop INPUT, then open SSH</span>
+<span class="p">#</span> <span class="c">iptables -P INPUT DROP</span>
+<span class="p">#</span> <span class="c">iptables -A INPUT -i lo -j ACCEPT</span>
+<span class="p">#</span> <span class="c">iptables -A INPUT -m state \
+    --state ESTABLISHED,RELATED -j ACCEPT</span>
+<span class="p">#</span> <span class="c">iptables -A INPUT -p tcp \
+    --dport 22 -j ACCEPT</span>
+
+<span class="p">#</span> <span class="c">iptables -L INPUT -n -v --line-numbers</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>UFW is the steering wheel — iptables is the engine</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 9 · iptables NAT -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">iptables <span class="layer-tag">NAT basics</span></div>
+      <h2>Rewriting addresses with NAT</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <table class="flow">
+          <tr><th>nat chain</th><th>When it runs</th></tr>
+          <tr><td><code>PREROUTING</code></td><td>Right after arrival — used for <b>DNAT</b> (port forwarding)</td></tr>
+          <tr><td><code>POSTROUTING</code></td><td>Just before leaving — used for <b>SNAT / MASQUERADE</b></td></tr>
+        </table>
+        <ul class="clean">
+          <li><b>MASQUERADE</b> <span>shares one public IP with a private network (a gateway).</span></li>
+          <li><b>DNAT</b> <span>forwards an external port to an internal host.</span></li>
+        </ul>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>gateway NAT</span></div>
+        <div class="term-body"><span class="cm"># LAN behind one public IP (eth0 = WAN)</span>
+<span class="p">#</span> <span class="c">iptables -t nat -A POSTROUTING \
+    -o eth0 -j MASQUERADE</span>
+
+<span class="cm"># forward public :8080 -> internal web</span>
+<span class="p">#</span> <span class="c">iptables -t nat -A PREROUTING \
+    -p tcp --dport 8080 \
+    -j DNAT --to 192.168.1.10:80</span>
+
+<span class="p">#</span> <span class="c">sysctl -w net.ipv4.ip_forward=1</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>NAT moves packets; firewall rules still decide if they're allowed</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 10 · fail2ban intro -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">fail2ban <span class="layer-tag">Layer 04 · Active defense</span></div>
+      <h2>Ban the attacker, not just the packet</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <p class="lede" style="max-width:none">fail2ban reads your logs, matches failure patterns, and tells the firewall to block the offending IP — automatically, for a while.</p>
+        <ul class="clean">
+          <li><b>Jail</b> <span>= a watched log + the rules for acting on it.</span></li>
+          <li><b>Filter</b> <span>= the regex that recognizes a failed attempt.</span></li>
+          <li><b>Action</b> <span>= what to do on a match (usually add a firewall ban).</span></li>
+        </ul>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>the loop</span></div>
+        <div class="term-body"><span class="cy">log line</span>  →  <span class="y">filter regex</span>  →  count
+   ↓ (maxretry reached within findtime)
+<span class="pk">action</span>: iptables DROP this IP
+   ↓ (bantime elapses)
+<span class="g">unban</span> automatically
+
+<span class="o"># watches auth.log for "Failed password"</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>Turns a flood of guesses into a single short-lived block</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 11 · fail2ban config -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">fail2ban <span class="layer-tag">jail.local · filters · actions</span></div>
+      <h2>Configuring an SSH jail</h2>
+    </div>
+    <div class="cols">
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>/etc/fail2ban/jail.local</span></div>
+        <div class="term-body"><span class="cm"># never edit jail.conf — override here</span>
+<span class="pk">[sshd]</span>
+<span class="cy">enabled</span>  = true
+<span class="cy">port</span>     = 22
+<span class="cy">maxretry</span> = <span class="y">5</span>      <span class="o"># strikes</span>
+<span class="cy">findtime</span> = <span class="y">10m</span>    <span class="o"># window</span>
+<span class="cy">bantime</span>  = <span class="y">1h</span>     <span class="o"># -1 = forever</span>
+<span class="cy">backend</span>  = systemd</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>Where the pieces live</h3>
+          <p><b>Filters:</b> <code class="k">/etc/fail2ban/filter.d/sshd.conf</code> — the <code class="k">failregex</code> patterns.<br>
+          <b>Actions:</b> <code class="k">/etc/fail2ban/action.d/</code> — e.g. <code class="k">iptables-multiport</code>.</p>
+        </div>
+        <div class="term" style="font-size:1.85cqh">
+          <div class="term-bar"><i></i><i></i><i></i><span>check &amp; manage</span></div>
+          <div class="term-body"><span class="p">$</span> <span class="c">sudo fail2ban-client status sshd</span>
+<span class="o">Currently banned: 3</span>
+<span class="o">Banned IP list: 45.0.0.7 ...</span>
+<span class="p">$</span> <span class="c">sudo fail2ban-client set sshd \
+    unbanip 45.0.0.7</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="meta"><span>Edit jail.local, restart, then verify with the client</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 12 · SSH hardening -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">SSH <span class="layer-tag">Layer 02 · Service exposure</span></div>
+      <h2>Harden the front door</h2>
+    </div>
+    <div class="cols">
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>/etc/ssh/sshd_config</span></div>
+        <div class="term-body"><span class="cy">PermitRootLogin</span> <span class="g">no</span>
+<span class="cy">Port</span> <span class="y">2222</span>
+<span class="cy">AllowUsers</span> <span class="g">deploy mmt</span>
+<span class="cy">PasswordAuthentication</span> <span class="g">no</span>
+<span class="cy">PubkeyAuthentication</span> <span class="g">yes</span>
+<span class="cy">MaxAuthTries</span> <span class="y">3</span>
+
+<span class="p">$</span> <span class="c">sudo sshd -t</span>          <span class="o"># test config</span>
+<span class="p">$</span> <span class="c">sudo systemctl restart ssh</span></div>
+      </div>
+      <div class="stack">
+        <ul class="clean">
+          <li><b>Disable root login.</b> <span>Force a named user + <code class="k">sudo</code> — attributable and harder to guess.</span></li>
+          <li><b>Change the port.</b> <span>Cuts noise from automated scanners (obscurity, not security).</span></li>
+          <li><b>AllowUsers.</b> <span>An allow-list of who may even attempt SSH.</span></li>
+          <li><b>Keys over passwords.</b> <span>Removes guessable secrets entirely.</span></li>
+        </ul>
+        <div class="callout"><b>Don't lock yourself out.</b> Open the new port in the firewall <i>first</i>, and keep your current session open while you test a new login in a second terminal.</div>
+      </div>
+    </div>
+    <div class="meta"><span>Validate with sshd -t before every restart</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 13 · PAM -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">PAM <span class="layer-tag">Layer 03 · Authentication</span></div>
+      <h2>Policy where logins happen</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <div class="card">
+          <h3>Password quality — pam_pwquality</h3>
+          <p>In <code class="k">/etc/security/pwquality.conf</code>: <code class="k">minlen=12</code>, <code class="k">dcredit / ucredit / ocredit</code> to require digits, uppercase, symbols.</p>
+        </div>
+        <div class="card">
+          <h3>Lockouts — pam_faillock</h3>
+          <p>Lock an account after repeated failures: <code class="k">deny=5 unlock_time=900</code>. Inspect with <code class="k">faillock --user mmt</code>.</p>
+        </div>
+        <div class="card">
+          <h3>Login limits — limits.conf</h3>
+          <p><code class="k">/etc/security/limits.conf</code> caps sessions &amp; resources, e.g. <code class="k">@students hard maxlogins 2</code>.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>pwquality.conf</span></div>
+        <div class="term-body"><span class="cy">minlen</span>  = <span class="y">12</span>
+<span class="cy">dcredit</span> = <span class="y">-1</span>   <span class="o"># ≥1 digit</span>
+<span class="cy">ucredit</span> = <span class="y">-1</span>   <span class="o"># ≥1 uppercase</span>
+<span class="cy">ocredit</span> = <span class="y">-1</span>   <span class="o"># ≥1 symbol</span>
+<span class="cy">retry</span>   = <span class="y">3</span>
+
+<span class="p">$</span> <span class="c">faillock --user mmt</span>
+<span class="o">mmt:  When  Type  Source  Valid</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>PAM = the rulebook every service consults to let you in</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 14 · auditd -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">auditd <span class="layer-tag">Layer 05 · Audit</span></div>
+      <h2>Watching the crown-jewel files</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <p class="lede" style="max-width:none">The Linux Audit daemon records who touched what, when. Put watches on the files that define identity on the box.</p>
+        <ul class="clean">
+          <li><b>-w path</b> <span>watch a file or directory.</span></li>
+          <li><b>-p rwxa</b> <span>which access types: read, write, exec, attribute change.</span></li>
+          <li><b>-k key</b> <span>a label to search by later.</span></li>
+        </ul>
+        <div class="callout info"><b>Make it persistent:</b> put rules in <code class="k">/etc/audit/rules.d/hardening.rules</code> so they survive reboot.</div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>watch + search</span></div>
+        <div class="term-body"><span class="p">#</span> <span class="c">auditctl -w /etc/passwd -p wa -k identity</span>
+<span class="p">#</span> <span class="c">auditctl -w /etc/shadow -p rwa -k identity</span>
+
+<span class="cm"># later — who touched it?</span>
+<span class="p">#</span> <span class="c">ausearch -k identity -i</span>
+<span class="o">type=PATH name="/etc/shadow"</span>
+<span class="o">uid=1000 </span><span class="y">auid=1000</span><span class="o"> comm="cat"</span>
+
+<span class="p">#</span> <span class="c">aureport -f -i | tail</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>You can't investigate what you never recorded</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 15 · journalctl & auth.log -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Logs <span class="layer-tag">journalctl · auth.log</span></div>
+      <h2>Reading the security record</h2>
+    </div>
+    <div class="cols">
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>journalctl</span></div>
+        <div class="term-body"><span class="cm"># follow the SSH service live</span>
+<span class="p">$</span> <span class="c">journalctl -u ssh -f</span>
+
+<span class="cm"># auth events since boot, errors only</span>
+<span class="p">$</span> <span class="c">journalctl _SYSTEMD_UNIT=ssh.service \
+    --since today -p err</span>
+
+<span class="cm"># classic text log (Debian/Ubuntu)</span>
+<span class="p">$</span> <span class="c">grep "Failed password" \
+    /var/log/auth.log | wc -l</span>
+<span class="y">1843</span></div>
+      </div>
+      <div class="stack">
+        <table class="flow">
+          <tr><th>Look for</th><th>Means</th></tr>
+          <tr><td><code>Failed password</code></td><td>A rejected login — count spikes = brute-force</td></tr>
+          <tr><td><code>Accepted publickey</code></td><td>A successful key-based login (good)</td></tr>
+          <tr><td><code>Invalid user</code></td><td>Login for a non-existent account — pure probing</td></tr>
+          <tr><td><code>sudo: ... COMMAND</code></td><td>Privilege escalation — who ran what as root</td></tr>
+        </table>
+        <div class="callout info"><b>journald vs files:</b> systemd's journal is structured and filterable; <code class="k">auth.log</code> is plain text that's easy to <code class="k">grep</code>. Use both.</div>
+      </div>
+    </div>
+    <div class="meta"><span>The logs already hold the story — learn to ask them</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 16 · Lynis -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Lynis <span class="layer-tag">automated audit</span></div>
+      <h2>Score your hardening</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <p class="lede" style="max-width:none">Lynis scans the running system, checks hundreds of settings, and produces a <b>hardening index</b> plus prioritized findings.</p>
+        <ul class="clean">
+          <li><span class="pill warn">[WARNING]</span> <span>fix these — real gaps.</span></li>
+          <li><b>[SUGGESTION]</b> <span>nice-to-have improvements.</span></li>
+          <li><b>Hardening index 0–100</b> <span>track it over time, not as an absolute grade.</span></li>
+        </ul>
+        <div class="callout info">Reports: <code class="k">/var/log/lynis.log</code> (full) and <code class="k">/var/log/lynis-report.dat</code> (machine-readable).</div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>lynis audit system</span></div>
+        <div class="term-body"><span class="p">$</span> <span class="c">sudo lynis audit system</span>
+<span class="o">[+] SSH Support</span>
+  <span class="y">[WARNING]</span> Root login allowed (SSH-7412)
+  <span class="o">[SUGGESTION]</span> Set MaxAuthTries to 3
+
+<span class="cy">Hardening index :</span> <span class="y">[ 63 / 100 ]</span>
+<span class="o">Tests performed : 264</span>
+<span class="g">See /var/log/lynis.log for details</span></div>
+      </div>
+    </div>
+    <div class="meta"><span>Audit → fix the warnings → re-audit → watch the index climb</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 17 · CASE STUDY 1 -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Case study 1</div>
+      <h2>The clinic server under attack</h2>
+    </div>
+    <div class="cols wide-left">
+      <div class="stack">
+        <p class="lede" style="max-width:none">A small Vietnamese clinic runs its patient-record app on a Linux VPS. Defaults left in place: root SSH on port 22, password login, no monitoring.</p>
+        <table class="flow">
+          <tr><th>Layer</th><th>What it would have done</th></tr>
+          <tr><td><b>01 UFW</b></td><td>Closed everything except 443 — the bot never reaches 22</td></tr>
+          <tr><td><b>02 SSH</b></td><td>No root login, non-standard port — guesses fail outright</td></tr>
+          <tr><td><b>04 fail2ban</b></td><td>Bans the source IP after 5 tries</td></tr>
+          <tr><td><b>05 auditd</b></td><td>Records any access to <code>/etc/shadow</code> for the incident report</td></tr>
+        </table>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>Timeline</h3>
+          <p><b>00:00</b> — VPS gets a public IP.<br>
+          <b>00:04</b> — first scan hits port 22.<br>
+          <b>00:30</b> — ~2,000 root password guesses logged.<br>
+          <b>02:00</b> — weak password cracked; attacker reads patient data.</p>
+        </div>
+        <div class="callout"><b>Lesson:</b> any single layer would have broken this chain. With none, the breach was a matter of hours — and a reportable disclosure of health data.</div>
+      </div>
+    </div>
+    <div class="meta"><span>Defense in depth turns "hours to breach" into "never reached"</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 18 · CASE STUDY 2 -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Case study 2</div>
+      <h2>Locked out by good intentions</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <p class="lede" style="max-width:none">An admin hardens SSH correctly — but in the wrong order — and loses all access to a remote machine.</p>
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span>what went wrong</span></div>
+          <div class="term-body"><span class="cm"># changed port to 2222 and restarted...</span>
+<span class="p">$</span> <span class="c">sudo systemctl restart ssh</span>
+<span class="cm"># ...but firewall still only allows 22</span>
+<span class="p">$</span> <span class="c">ssh -p 2222 mmt@server</span>
+<span class="deny">ssh: connect ... Connection refused</span></div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>The safe sequence</h3>
+          <p><b>1.</b> Open the new port in UFW first.<br>
+          <b>2.</b> <code class="k">sshd -t</code> to validate config.<br>
+          <b>3.</b> Restart SSH.<br>
+          <b>4.</b> Test the new login in a <i>second</i> terminal — keep the first one open.<br>
+          <b>5.</b> Only then close the old port.</p>
+        </div>
+        <div class="callout"><b>Lesson:</b> hardening is a sequence, not a switch. Always keep an escape hatch (an open session, console access) until the new path is proven.</div>
+      </div>
+    </div>
+    <div class="meta"><span>Security changes fail safe only if you order them safely</span><span class="dots"></span></div>
+  </section>
+
+
+  <!-- CASE STUDY 3 · firewalld -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Case study 3 <span class="layer-tag">firewalld</span></div>
+      <h2>The rule that vanished at 3 a.m.</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <p class="lede" style="max-width:none">A junior admin on a Rocky Linux box opens a new API port during an incident. It works. A routine reboot that night takes the API offline — and no one knows why.</p>
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span>what happened</span></div>
+          <div class="term-body"><span class="cm"># during the incident — runtime only!</span>
+<span class="p">$</span> <span class="c">sudo firewall-cmd --add-port=9443/tcp</span>
+<span class="g">success</span>   <span class="cm"># API reachable, everyone relaxes</span>
+
+<span class="cm"># 02:00 — scheduled reboot</span>
+<span class="cm"># runtime rules are gone; only --permanent survives</span>
+<span class="p">$</span> <span class="c">curl https://api.internal:9443</span>
+<span class="deny">curl: (7) Failed to connect — refused</span></div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>The fix &amp; the habit</h3>
+          <p><b>1.</b> Add runtime rule to test fast.<br>
+          <b>2.</b> Once confirmed, re-add it <code class="k">--permanent</code>.<br>
+          <b>3.</b> <code class="k">--reload</code> and verify with <code class="k">--list-all</code>.<br>
+          <b>4.</b> Or capture current runtime into permanent in one shot:<br>
+          <code class="k">firewall-cmd --runtime-to-permanent</code>.</p>
+        </div>
+        <div class="callout"><b>Lesson:</b> on firewalld, "it works now" and "it survives reboot" are two separate states. The runtime/permanent split is powerful for safe testing — but only if every proven rule is written back to permanent before you walk away.</div>
+      </div>
+    </div>
+    <div class="meta"><span>Runtime is a draft · permanent is the saved file</span><span class="dots"></span></div>
+  </section>
+  <!-- 19 · LABS OVERVIEW -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Hands-on</div>
+      <h2>Four labs</h2>
+    </div>
+    <div class="layers">
+      <div class="layer"><span class="num">L1</span><div class="lt"><b>Configure the firewall (UFW or firewalld)</b><span>Open only ports 22, 80, 443 — verify the rest are closed</span></div><span class="tool">~15 min</span></div>
+      <div class="layer"><span class="num">L2</span><div class="lt"><b>fail2ban brute-force</b><span>Install, simulate an SSH attack, confirm the IP is banned</span></div><span class="tool">~25 min</span></div>
+      <div class="layer"><span class="num">L3</span><div class="lt"><b>auditd watches</b><span>Track access to /etc/passwd and /etc/shadow</span></div><span class="tool">~15 min</span></div>
+      <div class="layer"><span class="num">L4</span><div class="lt"><b>Lynis audit</b><span>Record the score, remediate 3 HIGH warnings, re-score</span></div><span class="tool">~30 min</span></div>
+    </div>
+    <div class="callout info" style="margin-top:2cqh"><b>Setup:</b> use two VMs (or VM + your laptop) — a <i>target</i> and an <i>attacker</i> — on the same network. Snapshot the target first so you can roll back.</div>
+    <div class="meta"><span>Work in pairs: one defends, one attacks</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 20 · LAB 1 -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Lab 1 <span class="layer-tag">UFW · 22 / 80 / 443</span></div>
+      <h2>Lock the firewall down</h2>
+    </div>
+    <div class="cols">
+      <div class="steps">
+        <div class="step"><span class="sn">1</span><div class="sc"><b>Set default-deny policy</b>
+          <div class="term"><div class="term-body"><span class="p">$</span> <span class="c">sudo ufw default deny incoming</span>
+<span class="p">$</span> <span class="c">sudo ufw default allow outgoing</span></div></div></div></div>
+        <div class="step"><span class="sn">2</span><div class="sc"><b>Allow exactly the three ports</b>
+          <div class="term"><div class="term-body"><span class="p">$</span> <span class="c">sudo ufw allow 22/tcp</span>
+<span class="p">$</span> <span class="c">sudo ufw allow 80,443/tcp</span></div></div></div></div>
+        <div class="step"><span class="sn">3</span><div class="sc"><b>Enable &amp; verify</b>
+          <div class="term"><div class="term-body"><span class="p">$</span> <span class="c">sudo ufw enable</span>
+<span class="p">$</span> <span class="c">sudo ufw status numbered</span></div></div></div></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>Prove it works</h3>
+          <p>From the attacker VM, scan the target:</p>
+          <div class="term" style="font-size:1.85cqh"><div class="term-body"><span class="p">$</span> <span class="c">nmap -p 22,80,443,3306,23 target</span>
+<span class="g">22/tcp   open</span>
+<span class="g">80/tcp   open</span>
+<span class="g">443/tcp  open</span>
+<span class="o">3306/tcp filtered</span>
+<span class="o">23/tcp   filtered</span></div></div>
+        </div>
+        <div class="callout info"><b>On Red Hat?</b> Do the same with firewalld: <code class="k">firewall-cmd --permanent --add-service={ssh,http,https}</code> then <code class="k">--reload</code>. Verify with <code class="k">firewall-cmd --list-all</code> — the nmap result is identical.</div>
+        <div class="callout"><b>Deliverable:</b> a screenshot of the status output (<code class="k">ufw status numbered</code> or <code class="k">firewall-cmd --list-all</code>) and the nmap result showing only 22/80/443 open.</div>
+      </div>
+    </div>
+    <div class="meta"><span>filtered = the firewall dropped it silently</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 21 · LAB 2 -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Lab 2 <span class="layer-tag">fail2ban · brute-force</span></div>
+      <h2>Trip the trap, confirm the ban</h2>
+    </div>
+    <div class="cols">
+      <div class="steps">
+        <div class="step"><span class="sn">1</span><div class="sc"><b>Install &amp; enable</b>
+          <div class="term"><div class="term-body"><span class="p">$</span> <span class="c">sudo apt install fail2ban -y</span>
+<span class="p">$</span> <span class="c">sudo systemctl enable --now fail2ban</span></div></div></div></div>
+        <div class="step"><span class="sn">2</span><div class="sc"><b>Configure a strict sshd jail</b><p>In <code class="k">/etc/fail2ban/jail.local</code>: <code class="k">maxretry=3</code>, <code class="k">findtime=5m</code>, <code class="k">bantime=10m</code>, then <code class="k">restart</code>.</p></div></div>
+        <div class="step"><span class="sn">3</span><div class="sc"><b>Simulate the attack</b><p>From the attacker VM, fail SSH on purpose several times:</p>
+          <div class="term"><div class="term-body"><span class="p">$</span> <span class="c">for i in 1 2 3 4; do \
+   ssh wronguser@target; done</span></div></div></div></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>Confirm the ban</h3>
+          <div class="term" style="font-size:1.85cqh"><div class="term-body"><span class="p">$</span> <span class="c">sudo fail2ban-client status sshd</span>
+<span class="o">Currently failed: 0</span>
+<span class="o">Currently banned: </span><span class="y">1</span>
+<span class="o">Banned IP list: </span><span class="pk">192.168.56.20</span>
+
+<span class="p">$</span> <span class="c">sudo iptables -L -n | grep .56.20</span>
+<span class="deny">DROP  all  --  192.168.56.20</span></div></div>
+        </div>
+        <div class="callout"><b>Deliverable:</b> the attacker IP in the banned list <i>and</i> the matching iptables DROP rule. Bonus: unban it with <code class="k">fail2ban-client set sshd unbanip</code>.</div>
+      </div>
+    </div>
+    <div class="meta"><span>The ban should appear after the 3rd failed attempt</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 22 · LAB 3 -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Lab 3 <span class="layer-tag">auditd · passwd &amp; shadow</span></div>
+      <h2>Catch access to identity files</h2>
+    </div>
+    <div class="cols">
+      <div class="steps">
+        <div class="step"><span class="sn">1</span><div class="sc"><b>Install auditd</b>
+          <div class="term"><div class="term-body"><span class="p">$</span> <span class="c">sudo apt install auditd -y</span>
+<span class="p">$</span> <span class="c">sudo systemctl enable --now auditd</span></div></div></div></div>
+        <div class="step"><span class="sn">2</span><div class="sc"><b>Add persistent watches</b><p>Append to <code class="k">/etc/audit/rules.d/identity.rules</code>, then <code class="k">augenrules --load</code>:</p>
+          <div class="term"><div class="term-body"><span class="c">-w /etc/passwd -p wa -k identity</span>
+<span class="c">-w /etc/shadow -p rwa -k identity</span></div></div></div></div>
+        <div class="step"><span class="sn">3</span><div class="sc"><b>Trigger an event</b>
+          <div class="term"><div class="term-body"><span class="p">$</span> <span class="c">sudo cat /etc/shadow > /dev/null</span></div></div></div></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>Find who did it</h3>
+          <div class="term" style="font-size:1.85cqh"><div class="term-body"><span class="p">$</span> <span class="c">sudo ausearch -k identity -i | tail</span>
+<span class="o">type=SYSCALL ... comm="cat"</span>
+<span class="o">name="/etc/shadow" </span><span class="y">auid=1000</span>
+<span class="o">uid=0 success=yes</span></div></div>
+        </div>
+        <div class="callout"><b>Deliverable:</b> the <code class="k">ausearch</code> output showing your read of <code class="k">/etc/shadow</code>, with the <code class="k">auid</code> (the human behind the action).</div>
+      </div>
+    </div>
+    <div class="meta"><span>auid survives su/sudo — it ties the act back to the real user</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 23 · LAB 4 -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Lab 4 <span class="layer-tag">Lynis · audit &amp; remediate</span></div>
+      <h2>Score, fix, re-score</h2>
+    </div>
+    <div class="cols">
+      <div class="steps">
+        <div class="step"><span class="sn">1</span><div class="sc"><b>Run the baseline audit</b>
+          <div class="term"><div class="term-body"><span class="p">$</span> <span class="c">sudo apt install lynis -y</span>
+<span class="p">$</span> <span class="c">sudo lynis audit system</span></div></div>
+          <p>Record the <b>hardening index</b> (e.g. 63/100).</p></div></div>
+        <div class="step"><span class="sn">2</span><div class="sc"><b>Pick 3 HIGH warnings</b><p>From the report, choose three — likely: root SSH login, missing password policy, no firewall.</p></div></div>
+        <div class="step"><span class="sn">3</span><div class="sc"><b>Remediate &amp; re-run</b><p>Apply fixes (you built most in this lesson), then <code class="k">lynis audit system</code> again and compare.</p></div></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>Example remediations</h3>
+          <p><b>SSH-7412</b> → <code class="k">PermitRootLogin no</code><br>
+          <b>AUTH-9286</b> → set <code class="k">pwquality</code> minlen/complexity<br>
+          <b>FIRE-4513</b> → enable UFW (Lab 1)</p>
+        </div>
+        <div class="callout"><b>Deliverable:</b> a short before/after table — index, the 3 warning IDs, what you changed, and the new index. The number should rise.</div>
+      </div>
+    </div>
+    <div class="meta"><span>The goal isn't 100 — it's a measured, justified improvement</span><span class="dots"></span></div>
+  </section>
+
+  <!-- 24 · SUMMARY -->
+  <section class="slide">
+    <div class="head">
+      <div class="eyebrow">Wrap-up</div>
+      <h2>What to carry forward</h2>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <ul class="clean">
+          <li><b>Start closed.</b> <span>Default-deny inbound; open only what a service truly needs.</span></li>
+          <li><b>No single layer suffices.</b> <span>Firewall, SSH, PAM, fail2ban, auditd each cover a different gap.</span></li>
+          <li><b>Order matters.</b> <span>Open the path before you close the old one — keep an escape hatch.</span></li>
+          <li><b>Measure it.</b> <span>Logs tell the story; Lynis turns posture into a number you can improve.</span></li>
+        </ul>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h3>The five layers, one line each</h3>
+          <p><b>01</b> UFW / iptables — filter packets<br>
+          <b>02</b> SSH config — shrink exposure<br>
+          <b>03</b> PAM — strengthen auth<br>
+          <b>04</b> fail2ban — ban attackers live<br>
+          <b>05</b> auditd / journalctl / Lynis — watch, record, score</p>
+        </div>
+        <div class="callout info"><b>Next lesson:</b> centralizing and shipping these logs — turning local auth.log into a monitored SOC feed.</div>
+      </div>
+    </div>
+    <div class="meta"><span>Module 3 · Lesson 6 — Firewall &amp; System Hardening</span><span class="dots"></span></div>
+  </section>
+
+</div>
+
+<div class="progress" id="progressbar" style="display:none"></div>
+<div class="counter" id="counter">01 / 24</div>
+<div class="nav">
+  <button id="prev" aria-label="Previous slide">←</button>
+  <button id="full" aria-label="Toggle fullscreen">⤢</button>
+  <button id="next" aria-label="Next slide">→</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let i = 0;
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+
+  // build dot indicators in each meta row
+  document.querySelectorAll('.meta .dots').forEach(d=>{
+    for(let k=0;k<total;k++){ const s=document.createElement('i'); d.appendChild(s); }
+  });
+
+  function pad(n){return String(n).padStart(2,'0');}
+  function show(n){
+    i = Math.max(0, Math.min(total-1, n));
+    slides.forEach((s,idx)=>s.classList.toggle('active', idx===i));
+    counter.textContent = pad(i+1)+' / '+pad(total);
+    progress.style.width = ((i+1)/total*100)+'%';
+    const active = slides[i];
+    const dots = active.querySelectorAll('.dots i');
+    dots.forEach((d,idx)=>d.classList.toggle('on', idx===i));
+  }
+  function next(){show(i+1);}
+  function prev(){show(i-1);}
+
+  document.getElementById('next').onclick=next;
+  document.getElementById('prev').onclick=prev;
+  document.getElementById('full').onclick=()=>{
+    if(!document.fullscreenElement){document.documentElement.requestFullscreen?.();}
+    else{document.exitFullscreen?.();}
+  };
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){show(0);}
+    else if(e.key==='End'){show(total-1);}
+    else if(e.key.toLowerCase()==='f'){document.getElementById('full').click();}
+  });
+
+  // click left/right third of the stage to navigate
+  document.getElementById('stage').addEventListener('click',e=>{
+    const r=e.currentTarget.getBoundingClientRect();
+    const x=e.clientX-r.left;
+    if(x < r.width*0.33) prev(); else if(x > r.width*0.67) next();
+  });
+
+  show(0);
+</script>
+</body>
+</html>
