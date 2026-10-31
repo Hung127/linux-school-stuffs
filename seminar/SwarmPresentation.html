@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker Swarm Orchestration — Module 5 · Session 8</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   NextSlide — viewport-base.css
+   Core CSS embedded in every generated presentation.
+   Handles: slide container, layouts, typography, navigation,
+   print styles, and utility classes.
+
+   All colors/fonts via --ns-* CSS variables (set by preset).
+   ============================================================ */
+
+/* ===== RESET ===== */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img, svg, video {
+  display: block;
+  max-width: 100%;
+}
+
+a { color: var(--ns-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ===== SLIDE CONTAINER ===== */
+
+.ns-deck {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.slide {
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  background: var(--ns-bg);
+  transform: scale(var(--ns-scale, 1));
+  transform-origin: center center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 400ms ease, visibility 400ms ease;
+  display: flex;
+  overflow: hidden;
+}
+
+.slide.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.slide-content {
+  width: 100%;
+  height: 100%;
+  padding: var(--ns-slide-padding);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== TYPOGRAPHY ===== */
+
+h1, h2, h3, h4 {
+  font-family: var(--ns-font-heading);
+  font-weight: var(--ns-heading-weight);
+  color: var(--ns-text);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: clamp(40px, 4.5vw, 56px); }
+h2 { font-size: clamp(32px, 3.5vw, 44px); }
+h3 { font-size: clamp(24px, 2.8vw, 36px); }
+h4 { font-size: clamp(20px, 2.2vw, 28px); }
+
+p, li, td, span, label {
+  font-family: var(--ns-font-body);
+  font-weight: var(--ns-body-weight);
+  color: var(--ns-text);
+  line-height: 1.5;
+  font-size: clamp(18px, 2vw, 24px);
+}
+
+.subtitle {
+  font-family: var(--ns-font-body);
+  font-size: clamp(20px, 2.2vw, 28px);
+  color: var(--ns-text-muted);
+  line-height: 1.4;
+}
+
+.meta {
+  font-family: var(--ns-font-body);
+  font-size: clamp(14px, 1.5vw, 18px);
+  color: var(--ns-text-muted);
+}
+
+code, pre, .mono {
+  font-family: var(--ns-font-mono);
+  font-weight: 400;
+}
+
+strong, b { font-weight: 600; }
+em, i { font-style: italic; }
+
+ul, ol {
+  padding-left: var(--ns-space-lg);
+}
+
+li {
+  margin-bottom: var(--ns-space-xs);
+}
+
+/* ===== LAYOUT: TITLE ===== */
+
+[data-layout="title"] .slide-content {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+[data-layout="title"] h1 {
+  font-size: clamp(48px, 5.5vw, 72px);
+  max-width: 80%;
+}
+
+[data-layout="title"] .subtitle {
+  margin-top: var(--ns-space-md);
+  max-width: 60%;
+}
+
+[data-layout="title"] .meta {
+  margin-top: var(--ns-space-lg);
+}
+
+/* ===== LAYOUT: SECTION ===== */
+
+[data-layout="section"] .slide-content {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+[data-layout="section"] h1 {
+  font-size: clamp(48px, 5.5vw, 72px);
+  max-width: 70%;
+}
+
+[data-layout="section"] .subtitle {
+  margin-top: var(--ns-space-md);
+  max-width: 50%;
+}
+
+[data-layout="section"]::after {
+  content: '';
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 4px;
+  background: var(--ns-primary);
+  border-radius: 2px;
+}
+
+/* ===== LAYOUT: CONTENT ===== */
+
+[data-layout="content"] .slide-content {
+  justify-content: flex-start;
+  padding-top: 80px;
+}
+
+[data-layout="content"] h1 {
+  margin-bottom: var(--ns-space-lg);
+}
+
+[data-layout="content"] p,
+[data-layout="content"] ul,
+[data-layout="content"] ol {
+  max-width: 75%;
+}
+
+/* ===== LAYOUT: TWO-COLUMN ===== */
+
+[data-layout="two-column"] .slide-content {
+  padding-top: 80px;
+}
+
+[data-layout="two-column"] h1 {
+  margin-bottom: var(--ns-space-xl);
+}
+
+.ns-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ns-space-xl);
+  flex: 1;
+}
+
+.ns-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== LAYOUT: IMAGE-LEFT ===== */
+
+[data-layout="image-left"] .slide-content {
+  padding: 0;
+}
+
+[data-layout="image-left"] .ns-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  height: 100%;
+}
+
+.ns-split-image {
+  overflow: hidden;
+}
+
+.ns-split-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ns-split-text {
+  padding: var(--ns-slide-padding);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ===== LAYOUT: IMAGE-RIGHT ===== */
+
+[data-layout="image-right"] .slide-content {
+  padding: 0;
+}
+
+[data-layout="image-right"] .ns-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  height: 100%;
+}
+
+[data-layout="image-right"] .ns-split-text {
+  order: -1;
+}
+
+/* ===== LAYOUT: IMAGE-FULL ===== */
+
+[data-layout="image-full"] {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+[data-layout="image-full"] .slide-content {
+  justify-content: flex-end;
+  padding-bottom: 96px;
+}
+
+[data-layout="image-full"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.3) 40%,
+    transparent 100%
+  );
+  z-index: 0;
+}
+
+[data-layout="image-full"] h1,
+[data-layout="image-full"] p,
+[data-layout="image-full"] .subtitle {
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.ns-hero {
+  position: absolute;
+  inset: 0;
+}
+
+.ns-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ===== LAYOUT: CHART ===== */
+
+[data-layout="chart"] .slide-content {
+  padding-top: 80px;
+  align-items: center;
+}
+
+[data-layout="chart"] h1 {
+  margin-bottom: var(--ns-space-xl);
+  text-align: center;
+}
+
+.ns-chart-container {
+  width: 80%;
+  max-width: 1400px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== LAYOUT: QUOTE ===== */
+
+[data-layout="quote"] .slide-content {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.ns-quote {
+  max-width: 75%;
+  position: relative;
+}
+
+.ns-quote blockquote {
+  font-family: var(--ns-font-heading);
+  font-size: clamp(28px, 3.5vw, 44px);
+  font-weight: var(--ns-heading-weight);
+  font-style: italic;
+  color: var(--ns-text);
+  line-height: 1.3;
+  position: relative;
+}
+
+.ns-quote blockquote::before {
+  content: '\201C';
+  font-size: 120px;
+  position: absolute;
+  top: -40px;
+  left: -30px;
+  color: var(--ns-primary);
+  opacity: 0.2;
+  font-family: Georgia, serif;
+  line-height: 1;
+}
+
+.ns-attribution {
+  margin-top: var(--ns-space-lg);
+  font-family: var(--ns-font-body);
+  font-size: clamp(16px, 1.8vw, 22px);
+  color: var(--ns-text-muted);
+}
+
+/* ===== LAYOUT: BULLETS ===== */
+
+[data-layout="bullets"] .slide-content {
+  padding-top: 80px;
+}
+
+[data-layout="bullets"] h1 {
+  margin-bottom: var(--ns-space-xl);
+}
+
+.ns-bullets {
+  list-style: none;
+  padding-left: 0;
+  max-width: 75%;
+}
+
+.ns-bullets li {
+  padding: var(--ns-space-sm) 0;
+  padding-left: var(--ns-space-xl);
+  position: relative;
+  font-size: clamp(20px, 2.2vw, 28px);
+  border-bottom: 1px solid var(--ns-bg-alt);
+}
+
+.ns-bullets li:last-child {
+  border-bottom: none;
+}
+
+.ns-bullets li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ns-primary);
+}
+
+/* ===== LAYOUT: COMPARISON ===== */
+
+[data-layout="comparison"] .slide-content {
+  padding-top: 80px;
+}
+
+[data-layout="comparison"] h1 {
+  margin-bottom: var(--ns-space-xl);
+  text-align: center;
+}
+
+.ns-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ns-space-xl);
+  flex: 1;
+}
+
+.ns-compare-card {
+  background: var(--ns-bg-alt);
+  border-radius: var(--ns-border-radius);
+  padding: var(--ns-space-xl);
+  display: flex;
+  flex-direction: column;
+}
+
+.ns-compare-card h3 {
+  margin-bottom: var(--ns-space-md);
+  color: var(--ns-primary);
+}
+
+/* ===== LAYOUT: TIMELINE ===== */
+
+[data-layout="timeline"] .slide-content {
+  padding-top: 80px;
+}
+
+[data-layout="timeline"] h1 {
+  margin-bottom: var(--ns-space-xl);
+}
+
+/* ===== LAYOUT: BLANK ===== */
+
+[data-layout="blank"] .slide-content {
+  justify-content: center;
+  align-items: center;
+}
+
+/* ===== NAVIGATION UI ===== */
+
+.ns-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(128, 128, 128, 0.2);
+  z-index: 1000;
+}
+
+.ns-progress-bar {
+  height: 100%;
+  background: var(--ns-primary);
+  transition: width 300ms ease;
+  width: 0%;
+}
+
+.ns-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.ns-nav-prev,
+.ns-nav-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.15);
+  border: none;
+  color: var(--ns-text);
+  font-size: 36px;
+  width: 48px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  border-radius: var(--ns-border-radius);
+}
+
+.ns-nav:hover .ns-nav-prev,
+.ns-nav:hover .ns-nav-next,
+.ns-deck:hover .ns-nav-prev,
+.ns-deck:hover .ns-nav-next {
+  opacity: 0.6;
+}
+
+.ns-nav-prev:hover,
+.ns-nav-next:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.ns-nav-prev { left: 16px; }
+.ns-nav-next { right: 16px; }
+
+.ns-counter {
+  position: fixed;
+  bottom: 16px;
+  right: 24px;
+  font-family: var(--ns-font-body);
+  font-size: 14px;
+  color: var(--ns-text-muted);
+  opacity: 0.5;
+  z-index: 100;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== SPEAKER NOTES (hidden) ===== */
+
+.notes {
+  display: none;
+}
+
+/* ===== BLACK SCREEN ===== */
+
+.black-screen .slide {
+  visibility: hidden !important;
+}
+
+.black-screen {
+  background: #000 !important;
+}
+
+.black-screen .ns-progress,
+.black-screen .ns-nav,
+.black-screen .ns-counter {
+  display: none;
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mb-xs { margin-bottom: var(--ns-space-xs); }
+.mb-sm { margin-bottom: var(--ns-space-sm); }
+.mb-md { margin-bottom: var(--ns-space-md); }
+.mb-lg { margin-bottom: var(--ns-space-lg); }
+.mb-xl { margin-bottom: var(--ns-space-xl); }
+.mb-2xl { margin-bottom: var(--ns-space-2xl); }
+
+.mt-xs { margin-top: var(--ns-space-xs); }
+.mt-sm { margin-top: var(--ns-space-sm); }
+.mt-md { margin-top: var(--ns-space-md); }
+.mt-lg { margin-top: var(--ns-space-lg); }
+.mt-xl { margin-top: var(--ns-space-xl); }
+.mt-2xl { margin-top: var(--ns-space-2xl); }
+
+.gap-xs { gap: var(--ns-space-xs); }
+.gap-sm { gap: var(--ns-space-sm); }
+.gap-md { gap: var(--ns-space-md); }
+.gap-lg { gap: var(--ns-space-lg); }
+.gap-xl { gap: var(--ns-space-xl); }
+.gap-2xl { gap: var(--ns-space-2xl); }
+
+.accent-text { color: var(--ns-primary); }
+.muted-text { color: var(--ns-text-muted); }
+.bg-alt { background: var(--ns-bg-alt); }
+.rounded { border-radius: var(--ns-border-radius); }
+
+.hide-in-print { /* handled in @media print below */ }
+
+/* ===== PRINT STYLES (PDF EXPORT) ===== */
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 0;
+  }
+
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  .ns-deck {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    transform: none !important;
+  }
+
+  .slide {
+    width: 100vw !important;
+    height: 100vh !important;
+    transform: none !important;
+    position: relative !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    break-after: page;
+    break-inside: avoid;
+  }
+
+  .slide:last-child {
+    page-break-after: auto;
+  }
+
+  /* Preserve backgrounds and colors */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Disable all animations and transitions */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  [class*="animate-"] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+
+  /* Hide navigation and UI elements */
+  .ns-progress,
+  .ns-nav,
+  .ns-counter,
+  .notes,
+  .hide-in-print {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   PRESET: Corporate Pro  (light theme)
+   ============================================================ */
+
+:root {
+  /* Colors */
+  --ns-bg: #ffffff;
+  --ns-bg-alt: #f1f5f9;
+  --ns-text: #1e293b;
+  --ns-text-muted: #475569;
+  --ns-primary: #2563eb;
+  --ns-secondary: #475569;
+  --ns-accent: #dc2626;
+
+  /* Typography */
+  --ns-font-heading: 'Be Vietnam Pro', 'Segoe UI', 'Noto Sans', sans-serif;
+  --ns-font-body: 'Be Vietnam Pro', 'Segoe UI', 'Noto Sans', sans-serif;
+  --ns-font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  --ns-heading-weight: 700;
+  --ns-body-weight: 400;
+
+  /* Spacing */
+  --ns-space-xs: 8px;
+  --ns-space-sm: 16px;
+  --ns-space-md: 24px;
+  --ns-space-lg: 32px;
+  --ns-space-xl: 48px;
+  --ns-space-2xl: 64px;
+
+  /* Layout */
+  --ns-slide-padding: 64px 80px;
+  --ns-border-radius: 8px;
+}
+
+/* ============================================================
+   LARGE-TEXT SCALE — classroom projector.
+   The slide canvas is a fixed 1920x1080 box that gets scaled to
+   the viewport, so sizes are given in px (not vw): a 26px body
+   reads the same on a laptop and on a classroom projector.
+   ============================================================ */
+
+h1 { font-size: 72px; }
+h2 { font-size: 54px; }
+h3 { font-size: 40px; }
+h4 { font-size: 32px; }
+
+p, li, td, span, label { font-size: 32px; }
+
+.subtitle { font-size: 38px; }
+.meta { font-size: 26px; }
+code, pre, .mono { font-size: 28px; }
+
+[data-layout="title"] h1 { font-size: 92px; }
+[data-layout="section"] h1 { font-size: 88px; }
+.ns-bullets li { font-size: 34px; }
+.ns-quote blockquote { font-size: 54px; }
+.ns-counter { font-size: 18px; }
+
+/* ============================================================
+   DECK COMPONENTS
+   ============================================================ */
+
+/* --- terminal / code block (light theme) --- */
+.ns-term {
+  background: var(--ns-bg-alt);
+  border-left: 5px solid var(--ns-primary);
+  border-radius: var(--ns-border-radius);
+  padding: 20px 22px;
+  overflow: hidden;
+}
+
+.ns-term-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--ns-font-body);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ns-text-muted);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--ns-text-muted);
+}
+
+.ns-term pre {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ns-term pre span { font-size: inherit; }
+.ns-term .prm { color: var(--ns-primary); font-weight: 600; }
+.ns-term .cmd { color: var(--ns-text); font-weight: 600; }
+.ns-term .out { color: var(--ns-text-muted); }
+.ns-term .cmt { color: var(--ns-text-muted); font-style: italic; }
+.ns-term .bad { color: var(--ns-accent); font-weight: 600; }
+.ns-term .good { color: var(--ns-primary); font-weight: 600; }
+
+/* --- callout --- */
+.ns-callout {
+  border-left: 5px solid var(--ns-primary);
+  background: var(--ns-bg-alt);
+  border-radius: 0 var(--ns-border-radius) var(--ns-border-radius) 0;
+  padding: 22px 26px;
+  font-size: 32px;
+  line-height: 1.45;
+}
+
+.ns-callout.warn { border-left-color: var(--ns-accent); }
+
+/* --- chips / badges --- */
+.ns-chip {
+  display: inline-block;
+  padding: 4px 16px;
+  border-radius: 999px;
+  font-size: 24px;
+  font-weight: 600;
+  background: var(--ns-bg-alt);
+  color: var(--ns-text-muted);
+  white-space: nowrap;
+}
+
+.ns-chip.primary { background: var(--ns-bg-alt); color: var(--ns-primary); }
+.ns-chip.accent  { background: var(--ns-bg-alt); color: var(--ns-accent); }
+
+/* --- generic two-column grid --- */
+.ns-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  min-height: 0;
+}
+
+.ns-grid2 > * { min-width: 0; }
+
+.ns-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* --- vertically centred slide body: title, content and callout read as
+       one group, so the whitespace is symmetric instead of pooling
+       at the bottom of the slide --- */
+.slide-content.centered {
+  justify-content: center;
+  align-items: stretch;
+  padding-top: 64px;
+  padding-bottom: 72px;
+}
+
+.slide-content.centered h1 { text-align: left; }
+.slide-content.centered .ns-compare { flex: 0 0 auto; }
+
+/* --- slide 4: comparison list --- */
+.ns-compare-list {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 8px;
+}
+
+.ns-compare-list li {
+  padding: 10px 0 10px 40px;
+  position: relative;
+  border-bottom: 1px solid var(--ns-bg);
+  font-size: 30px;
+  line-height: 1.4;
+}
+
+.ns-compare-list li:last-child { border-bottom: none; }
+
+.ns-compare-list li::before {
+  content: '✕';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  color: var(--ns-accent);
+  font-weight: 700;
+}
+
+.ns-compare-list.ok li::before {
+  content: '✓';
+  color: var(--ns-primary);
+}
+
+/* --- slide 5: roles + reconciliation --- */
+.ns-roles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.ns-role {
+  background: var(--ns-bg-alt);
+  border-radius: var(--ns-border-radius);
+  padding: 24px 28px;
+  border-top: 5px solid var(--ns-primary);
+}
+
+.ns-role h3 {
+  font-size: 38px;
+  margin-bottom: 8px;
+}
+
+.ns-role .role-line {
+  font-family: var(--ns-font-mono);
+  font-size: 26px;
+  color: var(--ns-primary);
+  margin-bottom: 10px;
+}
+
+.ns-recon {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  margin-top: 32px;
+}
+
+.ns-recon-box {
+  flex: 1;
+  background: var(--ns-bg-alt);
+  border-radius: var(--ns-border-radius);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ns-recon-box b {
+  font-family: var(--ns-font-heading);
+  font-size: 34px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.ns-recon-box span {
+  font-size: 28px;
+  color: var(--ns-text-muted);
+  line-height: 1.35;
+}
+
+.ns-recon-box.fix {
+  border: 2px solid var(--ns-primary);
+  background: var(--ns-bg);
+}
+
+.ns-recon-arrow {
+  align-self: center;
+  font-size: 48px;
+  color: var(--ns-primary);
+  font-weight: 700;
+}
+
+/* --- slide 6: routing mesh diagram --- */
+.ns-mesh {
+  display: grid;
+  grid-template-columns: 530px 70px 420px 70px 1fr;
+  align-items: center;
+  gap: 0;
+  margin: 8px 0 28px;
+}
+
+.ns-mesh-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ns-mesh-box {
+  background: var(--ns-bg-alt);
+  border-radius: var(--ns-border-radius);
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ns-mesh-box b {
+  font-family: var(--ns-font-heading);
+  font-size: 34px;
+}
+
+.ns-mesh-box span {
+  font-size: 25px;
+  color: var(--ns-text-muted);
+  font-family: var(--ns-font-mono);
+  white-space: nowrap;
+}
+
+.ns-mesh-box .ns-mesh-tag {
+  font-family: var(--ns-font-body);
+  font-size: 24px;
+  color: var(--ns-primary);
+  font-weight: 600;
+}
+
+.ns-mesh-arrow {
+  font-size: 52px;
+  color: var(--ns-primary);
+  font-weight: 700;
+  text-align: center;
+}
+
+.ns-mesh-tasks {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.ns-mesh-task {
+  flex: 1;
+  text-align: center;
+  background: var(--ns-bg);
+  border: 2px solid var(--ns-primary);
+  border-radius: var(--ns-border-radius);
+  padding: 12px 8px;
+  font-family: var(--ns-font-mono);
+  font-size: 26px !important;
+  color: var(--ns-primary) !important;
+  font-weight: 600;
+}
+
+/* --- slide 7: parameter table --- */
+.ns-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 30px;
+}
+
+.ns-table th {
+  text-align: left;
+  font-family: var(--ns-font-heading);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--ns-text-muted);
+  padding: 12px 18px 12px 0;
+  border-bottom: 2px solid var(--ns-text);
+}
+
+.ns-table td {
+  padding: 16px 18px 16px 0;
+  border-bottom: 1px solid var(--ns-bg-alt);
+  vertical-align: top;
+  line-height: 1.35;
+}
+
+.ns-table tr:last-child td { border-bottom: none; }
+
+.ns-table code {
+  font-size: 26px;
+  color: var(--ns-primary);
+  background: var(--ns-bg-alt);
+  padding: 3px 10px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+/* --- slide 16: requirement checklist --- */
+.ns-req {
+  display: grid;
+  grid-template-columns: 84px 1fr 180px;
+  gap: 10px 22px;
+  align-items: center;
+}
+
+.ns-req-item {
+  display: contents;
+}
+
+.ns-req-id {
+  font-family: var(--ns-font-mono);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ns-primary);
+}
+
+.ns-req-txt { font-size: 29px; }
+
+.ns-req-slide {
+  font-family: var(--ns-font-mono);
+  font-size: 25px;
+  color: var(--ns-text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ns-req-head {
+  font-family: var(--ns-font-heading);
+  font-size: 24px;
+  color: var(--ns-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ns-text);
+}
+
+/* ============================================================
+   ANIMATIONS — fade + slight rise only, 500ms, staggered
+   ============================================================ */
+
+[class*="animate-"] {
+  opacity: 0;
+  animation-duration: 500ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+.slide.active [class*="animate-"] {
+  animation-play-state: running;
+}
+
+.slide:not(.active) [class*="animate-"] {
+  animation-play-state: paused;
+  opacity: 0;
+}
+
+@keyframes ns-fade-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation-name: ns-fade-up; }
+
+@keyframes ns-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in { animation-name: ns-fade-in; }
+
+@keyframes ns-scale-up {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-up { animation-name: ns-scale-up; }
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  [class*="animate-"] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* ===== INTRO / ILLUSTRATION ADD-ONS ===== */
+.ill{width:100%;height:auto}
+.ill text{font-family:var(--ns-font-body);fill:var(--ns-text);font-size:26px}
+.ill .t-s{font-size:26px;fill:var(--ns-text-muted)}
+.ill .t-b{font-size:30px;font-weight:700}
+.ill .t-p{fill:var(--ns-primary);font-weight:600}
+.ill .t-w{fill:#fff;font-weight:700}
+.f-p{fill:var(--ns-primary)}.f-a{fill:var(--ns-accent)}.f-alt{fill:var(--ns-bg-alt)}.f-bg{fill:var(--ns-bg)}.f-m{fill:var(--ns-text-muted)}.f-t{fill:var(--ns-text)}
+.st-m{stroke:var(--ns-text-muted);stroke-width:3}.st-p{stroke:var(--ns-primary);stroke-width:4}
+.ln{fill:none;stroke:var(--ns-text-muted);stroke-width:3;stroke-linecap:round}
+.ln-p{fill:none;stroke:var(--ns-primary);stroke-width:5}
+.ln-a{fill:none;stroke:var(--ns-accent);stroke-width:6;stroke-linecap:round}
+.ns-def{background:var(--ns-bg-alt);border-left:5px solid var(--ns-primary);border-radius:0 8px 8px 0;padding:16px 24px}
+.ns-def b{font-family:var(--ns-font-heading);font-size:34px;display:block}
+.ns-def p{font-size:27px;margin:4px 0 0;line-height:1.35}
+.ns-def .ana{color:var(--ns-primary);font-weight:500}
+.ns-gloss{display:grid;grid-template-columns:250px 1fr 1fr;gap:12px 28px;align-items:start;margin-bottom:20px}
+.ns-gloss>span{font-size:27px;line-height:1.35}
+.ns-gloss .h{font-family:var(--ns-font-heading);font-size:26px;letter-spacing:.06em;text-transform:uppercase;color:var(--ns-text-muted);border-bottom:2px solid var(--ns-text);padding-bottom:6px}
+.ns-gloss .k{font-weight:700;color:var(--ns-primary);font-size:30px}
+.ns-four{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.ns-card{background:var(--ns-bg-alt);border-radius:8px;padding:20px 24px;border-top:5px solid var(--ns-primary)}
+.ns-card h3{font-size:34px;margin:10px 0 8px}
+.ns-card p{font-size:26px;line-height:1.35;margin-top:8px}
+.ns-card p.tech{color:var(--ns-text-muted)}
+</style>
+</head>
+
+<body>
+<div class="ns-deck">
+
+  <div class="ns-progress"><div class="ns-progress-bar"></div></div>
+
+  <!-- ============ 1 · TITLE ============ -->
+  <section class="slide active" data-slide="1" data-layout="title">
+    <div class="slide-content">
+      <h1 class="animate-fade-up">Docker Swarm Orchestration</h1>
+      <p class="subtitle animate-fade-up delay-200">Cụm container nhiều máy: Manager/Worker, Routing Mesh, Rolling Update, Secrets và tự phục hồi</p>
+      <p class="meta animate-fade-up delay-400">HCMUS · Seminar Linux · Hạ tầng 2 VM (mỗi VM 1 GB RAM)</p>
+    </div>
+    <aside class="notes">Chào lớp. Hôm nay mình đi theo một câu chuyện: web đặt trà sữa của một cửa hàng online chuẩn bị cho đợt sale 11.11.
+
+Bốn chương, mỗi chương theo cùng một nhịp: tình huống thực tế → lý thuyết → demo chạy thật trên 2 máy ảo (một Manager, một Worker). Không dùng slide ảnh thay cho demo.
+
+Nếu demo trễ, có thể lướt nhanh phần đọc log ở chương 2; bốn demo chính là phần không được bỏ.</aside>
+  </section>
+
+  <!-- ============ 2 · ROADMAP ============ -->
+  <section class="slide" data-slide="2" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:36px;">Lộ trình bốn chương — và hạ tầng để chạy chúng</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>Agenda</span><span>4 chương</span></div>
+            <pre><span class="cmd">1.</span> Dựng cụm &amp; Routing Mesh
+<span class="cmd">2.</span> Rolling Update zero-downtime
+<span class="cmd">3.</span> Quản lý bí mật (Secrets)
+<span class="cmd">4.</span> Sự cố &amp; tự phục hồi
+<span class="cmt">mỗi chương: tình huống → lý thuyết → demo</span></pre>
+          </div>
+        </div>
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>Hạ tầng</span><span>trước giờ</span></div>
+            <pre><span class="cmd">VM1</span> <span class="out">Manager</span>  <span class="cmt">192.168.73.129</span>
+<span class="cmd">VM2</span> <span class="out">Worker</span>   <span class="cmt">192.168.73.128</span>
+
+<span class="cmt">port Swarm cần mở giữa 2 VM:</span>
+<span class="cmd">2377/tcp</span>   <span class="cmt">quản lý cluster</span>
+<span class="cmd">7946/tcp+udp</span> <span class="cmt">giao tiếp node</span>
+<span class="cmd">4789/udp</span>   <span class="cmt">overlay network</span></pre>
+          </div>
+        </div>
+      </div>
+      <p class="ns-callout mt-lg animate-fade-up delay-300"><b>Lưu ý 1 GB RAM:</b> mỗi VM chỉ có 1 GB. Khi Worker chết, cả 3 replica phải dồn về Manager — nếu Manager không đủ tài nguyên thì Swarm <b>không</b> đảm bảo được 3/3. Dùng image nhỏ (<code>nginx:alpine</code>), tắt service không cần thiết.</p>
+    </div>
+    <aside class="notes">Nói nhanh phần này. Nhấn mạnh ba điều:
+
+1) IP ở đây là IP của lớp hành chính. Trên máy các bạn thay bằng IP thật của VM (deck dùng placeholder MANAGER_IP / WORKER_IP).
+2) Ba port phải mở giữa hai VM, nếu không thì Worker join sẽ treo im lặng.
+3) Cảnh báo 1 GB RAM ngay từ đầu để không ai bất ngờ khi thấy 2/3 ở chương 4. Đây là giới hạn của hạ tầng, không phải lỗi Swarm.
+
+Hỏi lớp: ai từng chạy nhiều container bằng tay trên một máy chưa? Câu trả lời dẫn thẳng sang phần sau.</aside>
+  </section>
+
+  <!-- ============ NEW · CÂU CHUYỆN ============ -->
+  <section class="slide" data-slide="3" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Câu chuyện xuyên suốt: web đặt trà sữa "Nhà Mình" chuẩn bị sale 11.11</h1>
+      <div class="ns-four animate-fade-up delay-200">
+        <div class="ns-card"><span class="ns-chip primary">Chương 1</span><h3>Khách đổ về</h3><p>Ngày thường 1 máy là đủ. Tối 11.11 cần nhiều bản sao, nhiều máy, mà khách vẫn gõ một địa chỉ.</p><p class="tech">Manager/Worker · Routing Mesh</p></div>
+        <div class="ns-card"><span class="ns-chip primary">Chương 2</span><h3>Sai giá giữa sale</h3><p>Phát hiện lỗi hiển thị giá, phải sửa web ngay khi khách đang đặt đơn.</p><p class="tech">Rolling Update</p></div>
+        <div class="ns-card"><span class="ns-chip primary">Chương 3</span><h3>Mật khẩu database</h3><p>Bạn thực tập định dán mật khẩu vào lệnh rồi gửi nhóm Zalo của team.</p><p class="tech">Docker Secret</p></div>
+        <div class="ns-card"><span class="ns-chip accent">Chương 4</span><h3>20h tối mất điện</h3><p>Một máy chủ tắt đột ngột đúng giờ cao điểm, và không ai trực để gõ lệnh dựng lại.</p><p class="tech">Tự phục hồi</p></div>
+      </div>
+      <p class="ns-callout mt-lg animate-fade-up delay-400">Mỗi chương theo cùng một nhịp: <b>tình huống</b> → <b>lý thuyết</b> → <b>demo thật</b> trên 2 VM. Lý thuyết nào cũng được kiểm chứng ngay bằng lệnh bạn thấy chạy.</p>
+    </div>
+    <aside class="notes">Giới thiệu nhân vật: bạn là dev của một cửa hàng trà sữa online. Cả buổi đi theo bốn sự cố rất đời thường. Hỏi lớp: bạn nào từng canh sale 11.11 hay 12.12 mà web sập chưa? Đó là lý do cần orchestration.</aside>
+  </section>
+
+  <!-- ============ NEW 3 · NHẬP MÔN: CONTAINER & DOCKER ============ -->
+  <section class="slide" data-slide="4" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:28px;">Nhập môn: Container và Docker là gì?</h1>
+      <div class="ns-grid2 animate-fade-up delay-200" style="grid-template-columns:1.15fr 1fr; align-items:center;">
+        <div class="ns-stack" style="gap:16px;">
+          <div class="ns-def"><b>Container</b><p>Một "gói" chạy được của ứng dụng: code + thư viện + cấu hình, tách biệt với phần còn lại của máy.</p><p class="ana">Giống thùng container trên tàu biển: hàng bên trong khác nhau, nhưng thùng chuẩn nên cảng nào cũng bốc được.</p></div>
+          <div class="ns-def"><b>Image</b><p>Bản mẫu chỉ-đọc dùng để tạo container, ví dụ <code>nginx:alpine</code>.</p><p class="ana">Giống công thức nấu ăn hay khuôn bánh: một khuôn làm ra nhiều chiếc bánh giống hệt nhau.</p></div>
+          <div class="ns-def"><b>Docker Engine</b><p>Phần mềm tạo, chạy và dừng container trên <b>một</b> máy.</p><p class="ana">Giống cần cẩu ở cảng: xếp và dỡ từng thùng, nhưng chỉ ở một bến.</p></div>
+        </div>
+        <svg class="ill" viewBox="0 0 760 500" role="img" aria-label="Tàu chở các container">
+          <rect class="f-alt" width="760" height="500" rx="14"/>
+          <text class="t-b" x="380" y="60" text-anchor="middle">Mỗi thùng = 1 app + đồ nó cần</text>
+          <text class="t-s" x="380" y="100" text-anchor="middle">Thùng chuẩn → tàu nào, cảng nào cũng chở được</text>
+          <rect class="f-p" x="230" y="170" width="150" height="80" rx="6"/><rect class="f-m" x="390" y="170" width="150" height="80" rx="6"/>
+          <rect class="f-p" x="150" y="260" width="150" height="80" rx="6"/><rect class="f-a" x="310" y="260" width="150" height="80" rx="6"/><rect class="f-m" x="470" y="260" width="150" height="80" rx="6"/>
+          <text class="t-w" x="305" y="219" text-anchor="middle">api</text><text class="t-w" x="465" y="219" text-anchor="middle">cache</text>
+          <text class="t-w" x="225" y="309" text-anchor="middle">web</text><text class="t-w" x="385" y="309" text-anchor="middle">db</text><text class="t-w" x="545" y="309" text-anchor="middle">nginx</text>
+          <path class="f-t" d="M90 350 H670 L610 430 H150Z"/>
+          <path class="ln-p" opacity=".5" d="M0 455 Q47 435 95 455 T190 455 T285 455 T380 455 T475 455 T570 455 T665 455 T760 455"/>
+        </svg>
+      </div>
+      <p class="ns-callout mt-lg animate-fade-up delay-400"><b>Vấn đề:</b> Docker Engine chỉ lo một máy. Khi cần chạy hàng chục container trên nhiều máy, ta cần thêm một "người điều phối" — đó là <b>Docker Swarm</b>.</p>
+    </div>
+    <aside class="notes">Mục tiêu slide: ai chưa từng dùng Docker vẫn theo kịp phần sau. Ba từ cần nhớ: Container (thùng hàng), Image (khuôn mẫu), Docker Engine (cần cẩu một bến). Câu chốt: Engine chỉ lo một máy, cần thêm lớp điều phối cho nhiều máy.</aside>
+  </section>
+
+  <!-- ============ NEW 4 · DOCKER SWARM LÀ GÌ ============ -->
+  <section class="slide" data-slide="5" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:20px;">Docker Swarm là gì? Hãy nghĩ tới một nhà hàng</h1>
+      <svg class="ill animate-fade-up delay-200" viewBox="0 0 1480 400" role="img" aria-label="Nhà hàng: khách gọi món, bếp trưởng chia việc cho đầu bếp">
+        <defs><marker id="ah" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path class="f-p" d="M0 0 L12 6 L0 12Z"/></marker></defs>
+        <rect class="f-alt st-m" x="10" y="100" width="300" height="200" rx="14"/>
+        <text class="t-s" x="160" y="150" text-anchor="middle">Phiếu gọi món</text>
+        <text class="t-b" x="160" y="205" text-anchor="middle">3 phần phở</text>
+        <text class="t-p" x="160" y="260" text-anchor="middle">= Service web ×3</text>
+        <line class="ln-p" x1="320" y1="200" x2="505" y2="200" marker-end="url(#ah)"/>
+        <circle class="f-p" cx="660" cy="200" r="120"/>
+        <text class="t-w" x="660" y="196" text-anchor="middle" style="font-size:34px">Bếp trưởng</text>
+        <text class="t-w" x="660" y="240" text-anchor="middle" style="font-size:28px">= Manager</text>
+        <line class="ln-p" x1="760" y1="140" x2="985" y2="95" marker-end="url(#ah)"/>
+        <line class="ln-p" x1="760" y1="260" x2="985" y2="305" marker-end="url(#ah)"/>
+        <rect class="f-alt st-p" x="1000" y="15" width="470" height="170" rx="14"/>
+        <text class="t-b" x="1025" y="62">Đầu bếp A = Worker 1</text>
+        <circle class="f-bg st-p" cx="1100" cy="130" r="38"/><text class="t-p" x="1100" y="138" text-anchor="middle" style="font-size:24px">web.1</text>
+        <circle class="f-bg st-p" cx="1210" cy="130" r="38"/><text class="t-p" x="1210" y="138" text-anchor="middle" style="font-size:24px">web.2</text>
+        <text class="t-s" x="1256" y="138">= 2 Task (2 đĩa)</text>
+        <rect class="f-alt st-p" x="1000" y="215" width="470" height="170" rx="14"/>
+        <text class="t-b" x="1025" y="262">Đầu bếp B = Worker 2</text>
+        <circle class="f-bg st-p" cx="1100" cy="330" r="38"/><text class="t-p" x="1100" y="338" text-anchor="middle" style="font-size:24px">web.3</text>
+        <text class="t-s" x="1165" y="338">= 1 Task (1 đĩa)</text>
+      </svg>
+      <p class="ns-callout mt-md animate-fade-up delay-400"><b>Docker Swarm</b> là chế độ cụm có sẵn trong Docker Engine: gom nhiều máy thành một nhóm. Bạn chỉ nói "cần 3 bản sao của app" — Swarm tự chia việc cho các máy và luôn giữ đủ 3 bản, như bếp trưởng lo đủ 3 đĩa cho khách.</p>
+    </div>
+    <aside class="notes">Dùng hình nhà hàng xuyên suốt buổi: khách chỉ gọi món (khai báo kết quả), bếp trưởng (Manager) quyết định ai nấu, đầu bếp (Worker) nấu. Một đĩa = một Task. Hỏi lớp: nếu đầu bếp A nghỉ đột xuất thì sao? → bếp trưởng giao các đĩa cho người còn lại — đó chính là demo 4.</aside>
+  </section>
+
+  <!-- ============ NEW 5 · TỪ ĐIỂN SWARM ============ -->
+  <section class="slide" data-slide="6" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Từ điển 5 từ khoá của Swarm</h1>
+      <div class="ns-gloss animate-fade-up delay-200">
+        <span class="h">Khái niệm</span><span class="h">Nghĩa kỹ thuật</span><span class="h">Ví dụ nhà hàng</span>
+        <span class="k">Node</span><span>Một máy (thật hoặc ảo) đã vào cụm; có hai loại: Manager và Worker</span><span>Một đầu bếp trong bếp</span>
+        <span class="k">Service</span><span>Mô tả app cần chạy thế nào: image, số bản sao, port</span><span>Một món trên thực đơn: "phở, 3 phần"</span>
+        <span class="k">Task</span><span>Một container cụ thể chạy cho service, nằm trên một node</span><span>Một đĩa phở đang đặt trên bàn</span>
+        <span class="k">Replica</span><span>Số bản sao của service (<code>--replicas 3</code>)</span><span>Số phần khách đã gọi</span>
+        <span class="k">Desired / Actual</span><span>Trạng thái bạn khai báo / trạng thái đang chạy thật</span><span>Số đĩa khách gọi / số đĩa đã ra bàn</span>
+      </div>
+      <svg class="ill animate-fade-up delay-400" viewBox="0 0 1760 160" role="img" aria-label="Service web được chia thành 3 Task trên 2 Node">
+        <defs><marker id="ah2" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path class="f-p" d="M0 0 L12 6 L0 12Z"/></marker></defs>
+        <rect class="f-p" x="0" y="35" width="380" height="90" rx="12"/><text class="t-w" x="190" y="90" text-anchor="middle">Service: web × 3</text>
+        <line class="ln-p" x1="395" y1="80" x2="545" y2="80" marker-end="url(#ah2)"/>
+        <rect class="f-alt st-m" x="560" y="5" width="570" height="150" rx="14"/><text class="t-s" x="585" y="38">Node 1 (Manager)</text>
+        <rect class="f-bg st-p" x="590" y="62" width="250" height="70" rx="10"/><text class="t-p" x="715" y="107" text-anchor="middle">web.1</text>
+        <rect class="f-bg st-p" x="870" y="62" width="250" height="70" rx="10"/><text class="t-p" x="995" y="107" text-anchor="middle">web.2</text>
+        <rect class="f-alt st-m" x="1170" y="5" width="570" height="150" rx="14"/><text class="t-s" x="1195" y="38">Node 2 (Worker)</text>
+        <rect class="f-bg st-p" x="1200" y="62" width="250" height="70" rx="10"/><text class="t-p" x="1325" y="107" text-anchor="middle">web.3</text>
+      </svg>
+    </div>
+    <aside class="notes">Đây là bảng tra cứu để cả lớp cùng ngôn ngữ trước khi vào lý thuyết. Chỉ vào hình: một Service, ba Task, rải trên hai Node. Từ đây trở đi mỗi khi nói "Task" là nói "một đĩa cụ thể", "Service" là "món trong thực đơn".</aside>
+  </section>
+
+  <!-- ============ 4 · A1 CONTAINER ORCHESTRATION ============ -->
+  <section class="slide" data-slide="7" data-layout="comparison">
+   <div class="slide-content centered">
+    <h1 class="animate-fade-up" style="font-size:52px;">Vì sao <code style="font-size:inherit">docker run</code> một máy không đủ cho đợt sale?</h1>
+    <div class="ns-compare">
+      <div class="ns-compare-card animate-fade-up delay-200">
+        <h3>docker run — một máy</h3>
+        <ul class="ns-compare-list">
+          <li>Chỉ một host, một container cho mỗi service</li>
+          <li>Muốn thêm bản sao thì tự gõ lệnh <code>docker run</code></li>
+          <li>Container chết thì phải tự đứng dậy thay</li>
+          <li>IP container đổi mỗi lần restart</li>
+          <li>Mật khẩu nằm trong biến môi trường, lộ khi inspect</li>
+        </ul>
+      </div>
+      <div class="ns-compare-card animate-fade-up delay-400">
+        <h3>Production — cần có</h3>
+        <ul class="ns-compare-list ok">
+          <li>Nhiều host, workload trải đều nhiều máy</li>
+          <li>Khai báo "3 replicas", hệ thống tự đạt tới</li>
+          <li>Tự phát hiện sự cố và tạo lại Task</li>
+          <li>Một địa chỉ IP ổn định cho cả service</li>
+          <li>Secret được mount vào container, không nằm trong lệnh</li>
+        </ul>
+      </div>
+    </div>
+    <p class="ns-callout mt-lg animate-fade-up delay-500">Container Orchestration = lớp điều phối giữa "lệnh bạn gõ" và "trạng thái hệ thống thực sự". <b>Docker Swarm</b> là lớp đó, dùng chính Docker Engine, không cài thêm gì.</p>
+   </div>
+   <aside class="notes">Điểm mấu chốt: người dùng khai báo KẾT QUẢ (3 replicas), không khai báo CÁCH LÀM. Swarm lo phần "cách làm". Đó là toàn bộ khác biệt giữa `docker run` và orchestration.
+
+Hỏi lớp: "Nếu app của các bạn chạy 3 bản sao, ai sẽ chạy lệnh khi 1 container chết?" — câu trả lời "phải có người can thiệp" chính là lập luận cần orchestration.
+
+Lưu ý: Swarm là built-in của Docker Engine, cùng một `dockerd`, không phải Kubernetes. Nói rõ để lớp không nghĩ phải cài thêm gì.</aside>
+  </section>
+
+  <!-- ============ NEW · CHƯƠNG 1 ============ -->
+  <section class="slide" data-slide="8" data-layout="blank">
+    <div class="slide-content centered">
+      <span class="ns-chip primary animate-fade-up" style="align-self:flex-start">Chương 1 · Dựng cụm và Routing Mesh</span>
+      <h1 class="animate-fade-up" style="font-size:52px; margin:12px 0 24px;">Sale 11.11: một máy không gánh nổi</h1>
+      <div class="ns-def animate-fade-up delay-200"><b>Tình huống</b><p>Ngày thường web đặt trà sữa chạy trên 1 máy. Tối 11.11 khách đổ về gấp nhiều lần: bạn cần 3 bản sao web, rải trên 2 máy, mà khách vẫn chỉ gõ một địa chỉ.</p><p class="ana">Giống quán mở thêm quầy pha chế: chủ quán chia đơn, khách chỉ cần đứng ở cửa.</p></div>
+      <div class="ns-grid2 mt-md animate-fade-up delay-400">
+        <div class="ns-def"><b>Câu hỏi cho lớp</b><p>Ai chia việc cho các máy? Và khách vào bằng máy nào thì đơn cũng đến đúng nơi?</p></div>
+        <div class="ns-def"><b>Ta sẽ học rồi làm ngay</b><p>Manager và Worker, rồi demo dựng cụm 3 replicas. Sau đó Routing Mesh, rồi demo curl vào IP của cả hai VM.</p></div>
+      </div>
+    </div>
+    <aside class="notes">Mở chương bằng câu hỏi: nếu phải tự chạy docker run trên từng máy, bạn nhớ nổi bao nhiêu máy? Sau đó sang lý thuyết Manager/Worker, rồi demo 1a, rồi Routing Mesh, rồi demo 1b.</aside>
+  </section>
+
+  <!-- ============ 5 · A2 MANAGER / WORKER ============ -->
+  <section class="slide" data-slide="9" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:28px;">Manager &amp; Worker: Desired State được hiệu chỉnh liên tục</h1>
+      <div class="ns-roles animate-fade-up delay-200">
+        <div class="ns-role">
+          <h3>Manager Node</h3>
+          <div class="role-line">Orchestrator · Scheduler · Dispatcher</div>
+          <p class="muted-text">Lưu Desired State trong Raft store, lập lịch Task, cấp lệnh xuống Worker. Mặc định cũng chạy Task được như một Worker.</p>
+        </div>
+        <div class="ns-role">
+          <h3>Worker Node</h3>
+          <div class="role-line">Agent · Docker Engine</div>
+          <p class="muted-text">Chạy Task được giao, gửi Heartbeat kèm trạng thái mỗi ~5 giây. Không tự quyết định — chờ Manager lệnh.</p>
+        </div>
+      </div>
+      <div class="ns-recon animate-fade-up delay-400">
+        <div class="ns-recon-box">
+          <b>Desired State</b>
+          <span>3 replicas · nginx:alpine</span>
+        </div>
+        <div class="ns-recon-arrow">→</div>
+        <div class="ns-recon-box">
+          <b>Actual State</b>
+          <span>2 replicas — 1 Task vừa chết</span>
+        </div>
+        <div class="ns-recon-arrow">→</div>
+        <div class="ns-recon-box fix">
+          <b>Orchestrator + Scheduler</b>
+          <span>Tạo Task mới → đặt lên Node còn sống → Actual trở lại = Desired</span>
+        </div>
+      </div>
+      <p class="ns-callout mt-lg animate-fade-up delay-500"><b>Reconciliation</b> = vòng lặp so sánh Actual với Desired, lặp lại liên tục. Khi sự cố xảy ra, <b>Desired State không hề thay đổi</b> — chỉ Actual State bị suy giảm.</p>
+    </div>
+    <aside class="notes">Hai vế của bài học:
+
+1) Phân vai: Manager = bộ não (không chạy app là mục đích, nhưng mặc định vẫn chạy được), Worker = cơ tay (chạy Task, báo cáo trạng thái).
+2) Reconciliation: Desired State là cái bạn khai, Actual State là cái đang chạy. Swarm liên tục ép Actual về Desired. Khi có sự cố, Desired không đổi — đó là lý do hệ thống tự phục hồi được mà không cần ai can thiệp.
+
+Câu hỏi hay cho lớp: "Nếu Manager chết thì sao?" → Trả lời: một Manager là điểm lỗi đơn của control plane; cần 3 Manager (quorum) cho production. Nói thêm một câu, đừng đi sâu — phần HA thuộc module khác.
+
+Demo 4 sẽ chứng minh đúng cái vòng lặp này bằng hành vi quan sát được.</aside>
+  </section>
+
+  <!-- ============ 9 · DEMO 1a ============ -->
+  <section class="slide" data-slide="10" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Demo 1a — Khởi tạo cụm và deploy service 3 replicas</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>bước 1–2</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker swarm init</span> --advertise-addr MANAGER_IP
+<span class="prm">$</span> <span class="cmd">docker swarm join-token</span> worker
+<span class="out">→ in ra lệnh join dành cho Worker</span></pre>
+          </div>
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM2 · Worker</span><span>bước 3</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker swarm join</span> \
+    --token WORKER_TOKEN MANAGER_IP:2377
+<span class="out">→ This node joined a swarm as a worker.</span></pre>
+          </div>
+        </div>
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>bước 4</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker service create</span> \
+    --name web --replicas 3 \
+    --publish published=8080,target=80 \
+    --update-parallelism 1 --update-delay 5s \
+    --update-order start-first \
+    nginx:1.26-alpine</pre>
+          </div>
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>bước 5</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker node ls</span>
+<span class="prm">$</span> <span class="cmd">docker service ls</span>
+<span class="out">→ 2 node Ready · web 3/3</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">Thao tác tay, dừng sau mỗi lệnh để lớp đọc output.
+
+Sau `swarm init`: output có "This node is a manager" và cảnh báo "Only advertise address is set" — bảo các bạn bỏ qua, chỉ cảnh báo.
+
+Sau `join`: Worker in ra "This node joined a swarm as a worker." Nếu treo → kiểm tra port 2377.
+
+Sau `service create`: đợi vài giây rồi `docker service ls` phải ra `3/3`. Nếu là `0/3` hoặc `3/3` nhưng Pending → xem `docker service ps web`.
+
+`docker node ls` phải có 2 dòng, cả hai Ready, dòng đầu có dấu `*` là Leader.
+
+Giải thích nhanh tham số publish: published=8080 (port trên host), target=80 (port trong container nginx).</aside>
+  </section>
+
+  <!-- ============ 6 · A3 ROUTING MESH ============ -->
+  <section class="slide" data-slide="11" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Routing Mesh: truy cập Service từ IP của bất kỳ Node nào</h1>
+      <div class="ns-mesh animate-fade-up delay-200">
+        <div class="ns-mesh-col">
+          <div class="ns-mesh-box">
+            <b>Client</b>
+            <span>curl http://MANAGER_IP:8080</span>
+            <span>curl http://WORKER_IP:8080</span>
+          </div>
+        </div>
+        <div class="ns-mesh-arrow">→</div>
+        <div class="ns-mesh-col">
+          <div class="ns-mesh-box">
+            <b>Node manager</b>
+            <span class="ns-mesh-tag">ingress :8080</span>
+          </div>
+          <div class="ns-mesh-box">
+            <b>Node worker</b>
+            <span class="ns-mesh-tag">ingress :8080</span>
+          </div>
+        </div>
+        <div class="ns-mesh-arrow">→</div>
+        <div class="ns-mesh-col">
+          <div class="ns-mesh-box">
+            <b>Overlay network</b>
+            <span>VXLAN · 4789/udp</span><span>mạng ảnh trên nhiều host</span>
+            <div class="ns-mesh-tasks">
+              <span class="ns-mesh-task">web.1</span>
+              <span class="ns-mesh-task">web.2</span>
+              <span class="ns-mesh-task">web.3</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="ns-callout animate-fade-up delay-400">Mỗi Node có một <b>ingress</b> lắng nghe port đã publish. Request đến IP của node nào cũng được — Routing Mesh chuyển tiếp qua overlay tới một Task đang chạy, <b>kể cả node đó không có replica nào</b>.</p>
+    </div>
+    <aside class="notes">Overlay network là mạng ảnh lớp 2 chạy trên các container của nhiều host khác nhau, đóng gói bằng VXLAN trên UDP 4789. Container ở VM1 "thấy" container ở VM2 như thể cùng một switch.
+
+Routing Mesh là lớp định tuyến trên đó: port publish không gắn vào container cụ thể mà gắn vào ingress của mọi node trong cụm.
+
+Hệ quả quan trọng: client không cần biết Task nào đang chạy, và ta có thể publish một service trên nhiều node. Đây cũng là lý do demo 1 curl được cả hai IP.
+
+Nói thêm một câu về đánh đổi: routing qua ingress có chi phí, với hệ thống cực lớn thì người ta hay dùng overlay + service DNS thay vì publish port. Nhưng ở mức seminar này thì publish port là cách trực quan nhất.</aside>
+  </section>
+
+  <!-- ============ 10 · DEMO 1b ============ -->
+  <section class="slide" data-slide="12" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Demo 1b — Chứng minh Routing Mesh: curl IP của cả hai VM</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>quan sát</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker node ls</span>
+<span class="out">manager  Ready  Active  Leader</span>
+<span class="out">worker   Ready  Active</span>
+
+<span class="prm">$</span> <span class="cmd">docker service ps</span> web
+<span class="out">web.1  nginx  worker   Running</span>
+<span class="out">web.2  nginx  worker   Running</span>
+<span class="out">web.3  nginx  manager  Running</span></pre>
+          </div>
+        </div>
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>Client</span><span>bằng chứng</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">curl -I</span> http://MANAGER_IP:8080
+<span class="out">HTTP/1.1 200 OK</span>
+
+<span class="prm">$</span> <span class="cmd">curl -I</span> http://WORKER_IP:8080
+<span class="out">HTTP/1.1 200 OK</span></pre>
+          </div>
+          <p class="ns-callout">Cả hai IP đều trả <b>200 OK</b>, dù Worker chỉ chạy 2/3 replica. Request đến Worker đã được Routing Mesh chuyển tiếp qua overlay tới Task đang chạy.</p>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">Đây là bằng chứng quan trọng nhất của demo 1. Chạy curl tới cả hai IP, đợi cả hai trả 200 OK.
+
+Chỉ vào `docker service ps web`: nếu Scheduler đặt cả 3 replica lên Manager thì càng dễ thấy — Worker hoàn toàn không có Task nào mà vẫn trả 200 OK.
+
+Câu hỏi cho lớp: "Request của các bạn đi đường nào?" → Client → Worker:8080 → ingress của Worker → overlay VXLAN → Task web.1 hoặc web.2 trên Worker. Nếu Task nằm ở VM khác thì đi tiếp qua mạng VM.
+
+Kết luận: ứng dụng không cần biết Task nào sống, và ta có thể đổi replica từ máy này sang máy khác mà không đổi địa chỉ truy cập.</aside>
+  </section>
+
+  <!-- ============ NEW · CHƯƠNG 2 ============ -->
+  <section class="slide" data-slide="13" data-layout="blank">
+    <div class="slide-content centered">
+      <span class="ns-chip primary animate-fade-up" style="align-self:flex-start">Chương 2 · Rolling Update</span>
+      <h1 class="animate-fade-up" style="font-size:52px; margin:12px 0 24px;">Đang sale thì phát hiện sai giá</h1>
+      <div class="ns-def animate-fade-up delay-200"><b>Tình huống</b><p>Lúc 20h bạn thấy web hiện sai giá một món. Phải đổi sang phiên bản đã sửa ngay, trong khi hàng trăm khách đang bấm đặt.</p><p class="ana">Giống thay bóng đèn hành lang: thay từng bóng một, hành lang không bao giờ tối hẳn.</p></div>
+      <div class="ns-grid2 mt-md animate-fade-up delay-400">
+        <div class="ns-def"><b>Câu hỏi cho lớp</b><p>Có cách nào đổi phiên bản mà không đóng cửa quán, và làm sao chứng minh không rớt đơn nào?</p></div>
+        <div class="ns-def"><b>Ta sẽ học rồi làm ngay</b><p>Rolling Update và các tham số parallelism, delay, start-first. Rồi demo đổi v1 → v2 và đo bằng log curl thật.</p></div>
+      </div>
+    </div>
+    <aside class="notes">Mở chương: nếu đóng web để cập nhật thì mất bao nhiêu đơn? Từ đó dẫn vào lý thuyết rồi demo 2.</aside>
+  </section>
+
+  <!-- ============ 7 · A4 ROLLING UPDATE ============ -->
+  <section class="slide" data-slide="14" data-layout="content">
+   <div class="slide-content centered">
+    <h1 class="animate-fade-up" style="font-size:52px;">Rolling Update: cập nhật dần, không dừng cả service</h1>
+    <table class="ns-table animate-fade-up delay-200">
+      <thead>
+        <tr><th style="width:32%">Tham số</th><th style="width:38%">Ý nghĩa</th><th>Ảnh hưởng</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--update-parallelism N</code></td>
+          <td>Số Task được thay thế <b>đồng thời</b></td>
+          <td><code>1</code> = cập nhật tuần tự, an toàn nhất</td>
+        </tr>
+        <tr>
+          <td><code>--update-delay 5s</code></td>
+          <td>Thời gian chờ <b>giữa hai lượt</b> cập nhật</td>
+          <td>Để Task mới ổn định trước khi dừng Task cũ</td>
+        </tr>
+        <tr>
+          <td><code>--update-order start-first</code></td>
+          <td>Khởi động Task mới <b>trước</b>, dừng Task cũ sau</td>
+          <td>Luôn có Task sẵn sàng phục vụ trong lúc rollout</td>
+        </tr>
+        <tr>
+          <td><code>--update-failure-action pause</code></td>
+          <td>Dừng rollout khi Task mới lỗi</td>
+          <td>Không lan tay sai một bản release hỏng</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="ns-callout mt-lg animate-fade-up delay-400"><b>Zero-downtime là kết quả quan sát được, không phải cam kết của cấu hình.</b> Nó còn phụ thuộc ứng dụng (session, kết nối DB), health check, tài nguyên. Vì vậy demo 2 đo bằng log thật chứ không nói suông.</p>
+   </div>
+   <aside class="notes">Giải thích trực giác của start-first: với stop-first, giữa lúc Task cũ dừng và Task mới lên, service có thể không còn Task nào → request rơi. Với start-first, Task mới đã chạy và sẵn sàng thì Task cũ mới bị dừng.
+
+update-parallelism = 1 nghĩa là tuần tự hoàn toàn: mất nhiều thời gian hơn (3 task × 5s delay) nhưng không bao giờ giảm số Task đang phục vụ.
+
+update-delay là khoảng nghỉ giữa các lượt, không phải timeout của Task. Nói rõ để lớp không nhầm.
+
+Câu hỏi: "Tăng parallelism lên 3 thì được không?" → Được, nhanh hơn, nhưng giảm độ an toàn và tăng rủi ro lỗi tài nguyên. Tùy hệ thống.</aside>
+  </section>
+
+  <!-- ============ 11 · DEMO 2a ============ -->
+  <section class="slide" data-slide="15" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Demo 2 — Rolling Update v1 → v2, đo gián đoạn bằng log thật</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>Terminal 2 · Client</span><span>chạy song song</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">while true</span>; <span class="cmd">do</span>
+  <span class="cmd">printf</span> '%s ' "$(date '+%H:%M:%S')"
+  <span class="cmd">curl</span> --max-time 2 -s -o /dev/null \
+    -w '%{http_code}\n' http://MANAGER_IP:8080 \
+    || <span class="cmd">echo</span> "CURL_FAILED"
+  <span class="cmd">sleep</span> 0.2
+<span class="cmd">done</span> | <span class="cmd">tee</span> rolling-update.log</pre>
+          </div>
+        </div>
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>cập nhật</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker service update</span> \
+    --image nginx:1.28-alpine \
+    --update-parallelism 1 \
+    --update-delay 5s \
+    --update-order start-first \
+    --update-failure-action pause \
+    web</pre>
+          </div>
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>theo dõi</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker service ps</span> web
+<span class="out">web.1  1.26  Shutdown</span>
+<span class="out">web.1  1.28  Running  ← task mới</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">Thứ tự: mở terminal thứ hai, chạy vòng lặp curl TRƯỚC, rồi mới update. Nếu update trước thì log sẽ không bắt được giai đoạn chuyển tiếp.
+
+Vòng lặp ghi ra: timestamp + mã HTTP, hoặc CURL_FAILED nếu request lỗi. `tee` vừa in ra màn hình vừa lưu file — lớp thấy log chạy ngay và sau đó mình phân tích file.
+
+Sau khi update xong, `docker service ps web` sẽ có cả Task cũ (Shutdown) và Task mới (Running) cho cùng một slot. Chỉ vào cặp Task đó: cùng tên slot web.1, nhưng Task ID khác nhau.
+
+Giải thích: Task trong Swarm là bất biến (immutable). Swarm không khởi động lại Task cũ, mà tạo Task mới cho cùng một slot.
+
+Dừng vòng lặp curl bằng Ctrl+C sau khi update xong, rồi sang slide kế tiếp để phân tích log.</aside>
+  </section>
+
+  <!-- ============ 12 · DEMO 2b ============ -->
+  <section class="slide" data-slide="16" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Demo 2b — Đọc log: tỉ lệ request thành công</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>Client</span><span>phân tích</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">grep -c</span> '200' rolling-update.log
+<span class="good">498</span>
+<span class="prm">$</span> <span class="cmd">grep -c</span> 'CURL_FAILED' rolling-update.log
+<span class="good">0</span>
+
+<span class="prm">$</span> <span class="cmd">tail</span> -15 rolling-update.log
+<span class="out">14:22:31 200</span>
+<span class="out">14:22:31 200</span>
+<span class="out">14:22:32 200</span></pre>
+          </div>
+        </div>
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>kết quả</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker service ls</span>
+<span class="out">web  replicated  3/3  nginx:1.28-alpine</span>
+
+<span class="prm">$</span> <span class="cmd">docker service ps</span> web
+<span class="out">web.1  1.28  Running</span>
+<span class="out">web.2  1.28  Running</span>
+<span class="out">web.3  1.28  Running</span></pre>
+          </div>
+          <p class="ns-callout"><b>498/498 request thành công, 0 lỗi</b> trong suốt quá trình rollout. Đây là bằng chứng đo được, không phải lời hứa của cấu hình.</p>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">Đây là slide "chứng minh". Số liệu 498/0 là ví dụ minh hoạ — trên lớp thật sẽ là con số khác, nhưng tỉ lệ 100% là điều cần đạt.
+
+Nếu lớp thấy có CURL_FAILED: đừng giấu, phân tích. Thường do Task chưa sẵn sàng nhận traffic (thiếu health check), ứng dụng cần thời gian khởi động, hoặc tài nguyên 1 GB bị tranh chấp lúc cả 4 Task cùng chạy.
+
+Đây là điểm dạy: "zero-downtime" phụ thuộc cả cấu hình lẫn ứng dụng và tài nguyên. Nếu thêm `--health-cmd` thì Swarm còn chỉ đưa traffic vào Task đã khoẻ.
+
+Liên hệ về đổi image: nếu image tag không đổi (ví dụ vẫn là :latest) thì Swarm sẽ không rollout lại, vì nó so sánh theo digest. Dùng tag có version khác như ở đây.</aside>
+  </section>
+
+  <!-- ============ NEW · CHƯƠNG 3 ============ -->
+  <section class="slide" data-slide="17" data-layout="blank">
+    <div class="slide-content centered">
+      <span class="ns-chip primary animate-fade-up" style="align-self:flex-start">Chương 3 · Docker Secret</span>
+      <h1 class="animate-fade-up" style="font-size:52px; margin:12px 0 24px;">Mật khẩu database không nên nằm trong lệnh</h1>
+      <div class="ns-def animate-fade-up delay-200"><b>Tình huống</b><p>Bạn thực tập gõ docker run -e DB_PASSWORD=... rồi chụp màn hình gửi nhóm Zalo cho tiện. Từ lúc đó, ai trong nhóm hay ai chạy docker inspect đều thấy mật khẩu.</p><p class="ana">Giống dán mật khẩu wifi lên cửa kính quán: tiện, nhưng ai đi ngang cũng thấy.</p></div>
+      <div class="ns-grid2 mt-md animate-fade-up delay-400">
+        <div class="ns-def"><b>Câu hỏi cho lớp</b><p>Mật khẩu nên nằm ở đâu để Service dùng được mà không ai vô tình nhìn thấy?</p></div>
+        <div class="ns-def"><b>Ta sẽ học rồi làm ngay</b><p>Docker Secret: vòng đời từ lệnh tạo đến file trong container. Rồi demo tạo secret và đọc tại /run/secrets.</p></div>
+      </div>
+    </div>
+    <aside class="notes">Hỏi lớp: bạn nào từng lỡ push file .env hoặc gửi mật khẩu qua chat? Dẫn vào lý thuyết Secret rồi demo 3.</aside>
+  </section>
+
+  <!-- ============ NEW 11 · A5 SECRET ============ -->
+  <section class="slide" data-slide="18" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Secret: giữ mật khẩu ngoài lệnh và ngoài image</h1>
+      <div class="ns-def animate-fade-up delay-200"><b>Secret là gì?</b><p>Dữ liệu nhạy cảm (mật khẩu DB, API key, chứng chỉ) do Swarm giữ và chỉ giao cho Task được cấp quyền.</p><p class="ana">Như két sắt có phát chìa: ai được cấp mới mở được, không dán mật khẩu lên màn hình.</p></div>
+      <svg class="ill mt-md animate-fade-up delay-300" viewBox="0 0 1760 140" role="img" aria-label="Đường đi của secret từ lệnh tạo tới file trong container"><defs><marker id="ah3" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path class="f-p" d="M0 0 L12 6 L0 12Z"/></marker></defs><rect class="f-alt st-m" x="0" y="10" width="380" height="120" rx="14"/><text class="t-b" x="190" y="62" text-anchor="middle" style="font-size:30px;font-weight:700">1 · Bạn tạo</text><text class="t-s" x="190" y="102" text-anchor="middle" style="font-size:24px;">docker secret create</text><line class="ln-p" x1="390" y1="70" x2="452" y2="70" marker-end="url(#ah3)"/><rect class="f-alt st-m" x="460" y="10" width="380" height="120" rx="14"/><text class="t-b" x="650" y="62" text-anchor="middle" style="font-size:30px;font-weight:700">2 · Manager lưu</text><text class="t-s" x="650" y="102" text-anchor="middle" style="font-size:24px;">Raft store, mã hoá at-rest</text><line class="ln-p" x1="850" y1="70" x2="912" y2="70" marker-end="url(#ah3)"/><rect class="f-alt st-m" x="920" y="10" width="380" height="120" rx="14"/><text class="t-b" x="1110" y="62" text-anchor="middle" style="font-size:30px;font-weight:700">3 · Node được cấp</text><text class="t-s" x="1110" y="102" text-anchor="middle" style="font-size:24px;">chỉ Node có Task dùng nó</text><line class="ln-p" x1="1310" y1="70" x2="1372" y2="70" marker-end="url(#ah3)"/><rect class="f-p" x="1380" y="10" width="380" height="120" rx="14"/><text class="t-w" x="1570" y="62" text-anchor="middle" style="font-size:30px;font-weight:700">4 · Container đọc</text><text class="t-w" x="1570" y="102" text-anchor="middle" style="font-size:24px;font-weight:400">/run/secrets/db_password</text></svg>
+      <div class="ns-grid2 mt-md animate-fade-up delay-400">
+        <div class="ns-def" style="border-left-color:var(--ns-accent)"><b>Biến môi trường (-e)</b><ul class="ns-compare-list"><li>Lộ khi chạy <code>docker inspect</code></li><li>Nằm trong shell history và log</li><li>Có thể bị đóng vào image</li></ul></div>
+        <div class="ns-def"><b>Docker Secret</b><ul class="ns-compare-list ok"><li>Giá trị không nằm trong lệnh hay image</li><li>Chỉ ở RAM của Task được cấp</li><li>Xoá sạch khi Task dừng</li></ul></div>
+      </div>
+      <p class="ns-callout warn mt-md animate-fade-up delay-500"><b>Secret bất biến:</b> muốn đổi mật khẩu phải tạo secret mới rồi <code>--secret-rm</code> / <code>--secret-add</code>. Ai vào được container vẫn đọc được file, nên secret tốt hơn env var chứ chưa phải hoàn hảo.</p>
+    </div>
+    <aside class="notes">Lý thuyết cho demo 3. Ba ý: (1) secret được tạo ở Manager, lưu trong Raft store đã mã hoá; (2) Swarm chỉ gửi secret tới Node đang chạy Task cần nó; (3) trong container, secret là file nằm trên tmpfs (RAM) ở /run/secrets/&lt;tên&gt;, mất khi Task dừng. So sánh với biến môi trường: env var hiện trong docker inspect. Nói thật giới hạn: secret không sửa tại chỗ, và ai đọc được trong container thì đọc được file.</aside>
+  </section>
+
+  <!-- ============ 13 · DEMO 3 SECRETS ============ -->
+  <section class="slide" data-slide="19" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Demo 3 — Secret: mật khẩu Database, không dùng biến môi trường</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>tạo + gắn secret</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">printf</span> '%s' 'demo-db-password' | \
+    <span class="cmd">docker secret create</span> db_password -
+
+<span class="prm">$</span> <span class="cmd">docker secret ls</span>
+<span class="out">db_password   1 minute ago</span>
+
+<span class="prm">$</span> <span class="cmd">docker service update</span> \
+    --secret-add db_password web
+<span class="out">→ web đang rolling update (như Chương 2)</span></pre>
+          </div>
+        </div>
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>Trong container web</span><span>kiểm chứng</span></div>
+<pre><span class="prm">$</span> <span class="cmd">CT</span>=$(<span class="cmd">docker ps</span> -q -f name=web | <span class="cmd">head</span> -1)
+
+<span class="prm">$</span> <span class="cmd">docker exec</span> $CT sh -c 'ls /run/secrets/'
+<span class="out">db_password</span>
+
+<span class="prm">$</span> <span class="cmd">docker exec</span> $CT sh -c \
+  "test -s /run/secrets/db_password \
+   &amp;&amp; <span class="cmd">echo</span> MOUNTED"
+<span class="out">MOUNTED</span></pre>
+          </div>
+          <p class="ns-callout"><b>Env var</b> lộ trong <code>docker inspect</code> và <code>docker ps</code>. <b>Secret</b> nằm ở file <code>/run/secrets/</code>, chỉ tồn tại trong container được cấp. Giống bạn thực tập ở chương này: lần sau không cần dán mật khẩu vào nhóm Zalo nữa.</p>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">Slide Demo 3. Mở đầu bằng lý do: mật khẩu trong -e DB_PASSWORD=... nằm trong shell history, trong docker inspect, trong image layer, trong log của orchestrator.
+
+Thao tác: docker secret create db_password - đọc mật khẩu từ stdin, nên mật khẩu không nằm trong command line.
+
+Nhấn mạnh dòng docker service update --secret-add db_password web: gắn secret vào service đang chạy CHÍNH LÀ một lần rolling update — web.1, web.2, web.3 được thay từng cái như Chương 2. Có thể chạy docker service inspect --pretty web để thấy secret trong Spec.
+
+Phần chứng minh: exec THẲNG vào một container của service web — không tạo thêm service kiểm chứng nào khác (cách cũ dùng một service alpine riêng, dễ gây hiểu lầm vì gắn vào web mà lại đọc ở chỗ khác). docker ps -f name=web lấy ID container của task đầu tiên; docker exec vào đó: ls /run/secrets/ cho thấy file db_password tồn tại; test -s nghĩa là file không rỗng; MOUNTED là tín hiệu nhìn được mà không cần in giá trị. Không cat mật khẩu ra màn hình — đúng tinh thần két sắt; ứng dụng thật đọc file này bằng code (ví dụ fs.readFileSync("/run/secrets/db_password") trong Node).
+
+Lưu ý giới hạn (như cũ): secret được mã hoá trong Raft store của Manager, nhưng bất kỳ ai vào được container cũng đọc được file; secret không sửa tại chỗ — phải tạo secret mới rồi --secret-rm / --secret-add. Vault là bước tiếp theo, ngoài phạm vi seminar.</aside>
+  </section>
+
+  <!-- ============ NEW · CHƯƠNG 4 ============ -->
+  <section class="slide" data-slide="20" data-layout="blank">
+    <div class="slide-content centered">
+      <span class="ns-chip primary animate-fade-up" style="align-self:flex-start">Chương 4 · Tự phục hồi</span>
+      <h1 class="animate-fade-up" style="font-size:52px; margin:12px 0 24px;">20h tối, máy chủ mất điện</h1>
+      <div class="ns-def animate-fade-up delay-200"><b>Tình huống</b><p>Đúng giờ cao điểm, một máy chủ tắt đột ngột. Nhân viên đã nghỉ, không ai trực để gõ lệnh dựng lại. Khách vẫn đang đặt trà sữa.</p><p class="ana">Giống một ca trực nghỉ đột xuất: trưởng ca lập tức điều người ca khác sang, khách không phải chờ.</p></div>
+      <div class="ns-grid2 mt-md animate-fade-up delay-400">
+        <div class="ns-def"><b>Câu hỏi cho lớp</b><p>Hệ thống phát hiện sự cố bằng cách nào, và mất bao lâu để đủ số bản sao trở lại?</p></div>
+        <div class="ns-def"><b>Ta sẽ học rồi làm ngay</b><p>Container Failure khác Node Failure ra sao, Heartbeat và Reconciliation. Rồi demo tắt hẳn VM Worker.</p></div>
+      </div>
+    </div>
+    <aside class="notes">Chương cuối, gom lại ý Desired State đã học ở chương 1. Dẫn vào lý thuyết rồi demo 4: tắt cứng VM, không dùng docker stop.</aside>
+  </section>
+
+  <!-- ============ NEW 12 · A6 TỰ PHỤC HỒI ============ -->
+  <section class="slide" data-slide="21" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Tự phục hồi: khi container hoặc cả Node gặp sự cố</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-def"><b>Container Failure</b><p>Tiến trình trong container thoát hoặc health check lỗi, nhưng Node vẫn sống. Swarm tạo Task mới thay thế, thường chỉ vài giây.</p><p class="ana">Như một cầu thủ bị thẻ đỏ: sân vẫn nguyên, chỉ cần người khác vào.</p></div>
+        <div class="ns-def" style="border-left-color:var(--ns-accent)"><b>Node Failure</b><p>Cả máy mất điện hoặc mất mạng, mọi Task trên máy biến mất cùng lúc. Manager phát hiện qua Heartbeat rồi dồn Task sang Node còn sống.</p><p class="ana">Như cả một ca trực nghỉ ốm: cần người ca khác sang gánh.</p></div>
+      </div>
+      <svg class="ill mt-md animate-fade-up delay-300" viewBox="0 0 1760 140" role="img" aria-label="Các bước Swarm phát hiện và phục hồi khi Node chết"><defs><marker id="ah4" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path class="f-p" d="M0 0 L12 6 L0 12Z"/></marker></defs><rect class="f-alt st-m" x="0" y="10" width="380" height="120" rx="14"/><text class="t-b" x="190" y="62" text-anchor="middle" style="font-size:30px;font-weight:700">1 · Heartbeat</text><text class="t-s" x="190" y="102" text-anchor="middle" style="font-size:24px;">Worker báo ~5 giây/lần</text><line class="ln-p" x1="390" y1="70" x2="452" y2="70" marker-end="url(#ah4)"/><rect class="f-alt st-m" x="460" y="10" width="380" height="120" rx="14"/><text class="t-b" x="650" y="62" text-anchor="middle" style="font-size:30px;font-weight:700">2 · Mất liên lạc</text><text class="t-s" x="650" y="102" text-anchor="middle" style="font-size:24px;">Node = Down (~15–20 giây)</text><line class="ln-p" x1="850" y1="70" x2="912" y2="70" marker-end="url(#ah4)"/><rect class="f-alt st-m" x="920" y="10" width="380" height="120" rx="14"/><text class="t-b" x="1110" y="62" text-anchor="middle" style="font-size:30px;font-weight:700">3 · Tạo Task mới</text><text class="t-s" x="1110" y="102" text-anchor="middle" style="font-size:24px;">cùng slot, Task ID mới</text><line class="ln-p" x1="1310" y1="70" x2="1372" y2="70" marker-end="url(#ah4)"/><rect class="f-p" x="1380" y="10" width="380" height="120" rx="14"/><text class="t-w" x="1570" y="62" text-anchor="middle" style="font-size:30px;font-weight:700">4 · Đặt lên Node sống</text><text class="t-w" x="1570" y="102" text-anchor="middle" style="font-size:24px;font-weight:400">Actual quay về = Desired</text></svg>
+      <p class="ns-callout warn mt-md animate-fade-up delay-400"><b>Desired State vẫn là 3.</b> Swarm chỉ phục hồi được khi còn đủ tài nguyên (1 GB RAM!) và còn Manager. Nó cũng không tự dời Task về Worker khi Worker sống lại.</p>
+    </div>
+    <aside class="notes">Lý thuyết cho demo 4. Phân biệt hai loại sự cố: Container Failure (Node vẫn heartbeat bình thường) và Node Failure (mất heartbeat, Node = Down). Demo 4 là Node Failure. Bốn bước ở hình: Heartbeat ~5 giây, mất liên lạc quá hạn thì Down, Orchestrator tạo Task mới (Task cũ chuyển Shutdown, không restart lại), Scheduler đặt lên Node còn sống. Nhấn mạnh: Desired State không đổi, chỉ Actual State giảm. Nhắc giới hạn: thiếu RAM thì Task mới kẹt Pending; một Manager là điểm lỗi đơn.</aside>
+  </section>
+
+  <!-- ============ 14 · DEMO 4a ============ -->
+  <section class="slide" data-slide="22" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Demo 4a — Tắt đột ngột VM Worker, quan sát Manager phát hiện</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM2 · Worker</span><span>tắt đột ngột</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">sudo shutdown</span> -h now
+<span class="cmt"># hoặc tắt cứng từ hypervisor</span>
+<span class="cmt"># KHÔNG dừng container — phải mất</span>
+<span class="cmt"># luôn kết nối với cụm</span></pre>
+          </div>
+        </div>
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>theo dõi</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">watch</span> -n 2 'docker node ls; \
+    docker service ps web'
+
+<span class="cmt">…chờ ~15–20 giây…</span>
+<span class="out">worker   Down   Active</span></pre>
+          </div>
+          <p class="ns-callout warn">Manager phát hiện bằng <b>Heartbeat timeout</b>: Worker gửi nhịp tim mỗi ~5 giây; mất liên lạc quá hạn thì node chuyển sang <b>STATUS = Down</b>. Không phải phát hiện tức thì — có độ trễ.</p>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">Bước này cần cẩn thận: tắt đột ngột VM, không phải `docker stop`. Nếu chỉ dừng container thì đó là Container Failure (demo khác), không phải Node Failure — Worker vẫn heartbeat bình thường và Manager không đánh dấu Down.
+
+Cách tắt tốt nhất trong phòng máy: dùng lệnh shutdown của hypervisor, hoặc `sudo poweroff`. Nếu dùng `sudo shutdown -h now` mà VM đã tắt sạch thì Manager phải chờ heartbeat timeout.
+
+Giải thích cơ chế: Worker Agent gửi heartbeat mỗi ~5 giây kèm trạng thái các Task. Manager hết hạn → đánh dấu Down. Khoảng 15–20 giây là con số quan sát được trong thực tế, có thể lâu hơn tuỳ mạng.
+
+Chạy `watch -n 2` để lớp thấy node đổi trạng thái ngay trên màn hình. Đợi đến khi thấy Down rồi mới sang slide kế tiếp.</aside>
+  </section>
+
+  <!-- ============ 15 · DEMO 4b ============ -->
+  <section class="slide" data-slide="23" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:24px;">Demo 4b — Swarm tự tạo Task thay thế trên Node còn sống</h1>
+      <div class="ns-grid2 animate-fade-up delay-200">
+        <div class="ns-stack">
+          <div class="ns-term">
+            <div class="ns-term-head"><span>VM1 · Manager</span><span>sau khi Worker chết</span></div>
+            <pre><span class="prm">$</span> <span class="cmd">docker service ps</span> web
+<span class="out">web.1  Shutdown  worker</span>
+<span class="out">web.2  Shutdown  worker</span>
+<span class="out">web.1  Running   manager  ← mới</span>
+<span class="out">web.2  Running   manager  ← mới</span>
+<span class="out">web.3  Running   manager</span>
+
+<span class="prm">$</span> <span class="cmd">docker service ls</span>
+<span class="good">web  replicated  3/3</span></pre>
+          </div>
+        </div>
+        <div class="ns-stack">
+          <p class="ns-callout"><b>Desired State = 3 không đổi.</b> Actual State tụt xuống khi Worker chết; Orchestrator tạo Task mới (Task ID mới, cùng tên slot) và Scheduler đặt lên Node còn sống.</p>
+          <p class="ns-callout warn"><b>Hai điều cần biết:</b> Manager mặc định cũng chạy Task được (availability <code>Active</code>). Và Swarm <b>không</b> tự dời Task về lại Worker khi Worker sống lại — muốn cân bằng thì <code>docker service update --force web</code>.</p>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">Kết quả cần chỉ ra: Task cũ trên Worker ở trạng thái Shutdown, Task mới có Task ID khác nhưng cùng tên slot (web.1, web.2), và toàn bộ dồn về Manager.
+
+Nói rõ: Task là bất biến. Swarm không restart Task cũ mà tạo Task mới — vì Task cũ giữ lại lịch sử để điều tra.
+
+Nói rõ về giới hạn: nếu Manager không đủ tài nguyên cho 3 Task (chỉ 1 GB RAM!), Task mới sẽ kẹt ở trạng thái Pending và service sẽ là 2/3. Đó là giới hạn hạ tầng, không phải lỗi Swarm. Nếu bị vậy, nói thẳng với lớp: "đây là lý do yêu cầu hạ tầng của đề bài là 2 VM × 1 GB".
+
+Hiện tượng non-rebalancing: Worker sống lại thì Task vẫn nằm ở Manager, vì dời lại sẽ gây gián đoạn không cần thiết. Dùng --force nếu muốn cân bằng lại.
+
+Câu hỏi kết: "Nếu cả Manager lại chết thì sao?" → Không còn Manager thì không ai điều phối được; đó là lý do production cần 3 Manager (quorum Raft). Nối lại phần HA ở module 6.</aside>
+  </section>
+
+  <!-- ============ NEW 11 · BỐN HÌNH ẢNH ĐỜI THƯỜNG ============ -->
+  <section class="slide" data-slide="24" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:28px;">Ôn lại cả câu chuyện bằng bốn hình ảnh đời thường</h1>
+      <div class="ns-four animate-fade-up delay-200">
+        <div class="ns-card">
+          <svg class="ill" viewBox="0 0 300 150" role="img" aria-label="Lễ tân dẫn khách"><path class="ln" d="M58 35 L116 65 M58 75 H114 M58 115 L116 85 M184 65 L242 35 M186 75 H242 M184 85 L242 115"/><rect class="f-m" x="10" y="20" width="48" height="30" rx="6"/><rect class="f-m" x="10" y="60" width="48" height="30" rx="6"/><rect class="f-m" x="10" y="100" width="48" height="30" rx="6"/><circle class="f-p" cx="150" cy="75" r="36"/><rect class="f-bg st-p" x="242" y="20" width="48" height="30" rx="6"/><rect class="f-bg st-p" x="242" y="60" width="48" height="30" rx="6"/><rect class="f-bg st-p" x="242" y="100" width="48" height="30" rx="6"/></svg>
+          <h3>Routing Mesh</h3>
+          <p>Như lễ tân khách sạn: khách vào cửa nào, lễ tân cũng dẫn đúng tới phòng còn trống.</p>
+          <p class="tech">Swarm: gọi IP node nào cũng được, request tự chuyển tới Task đang chạy.</p>
+        </div>
+        <div class="ns-card">
+          <svg class="ill" viewBox="0 0 300 150" role="img" aria-label="Thay bóng đèn từng cái"><circle class="f-p" cx="60" cy="60" r="34"/><circle class="f-bg st-p" cx="150" cy="60" r="34" style="stroke:var(--ns-accent)"/><circle class="f-m" cx="240" cy="60" r="34"/><rect class="f-t" x="40" y="98" width="40" height="14" rx="3"/><rect class="f-t" x="130" y="98" width="40" height="14" rx="3"/><rect class="f-t" x="220" y="98" width="40" height="14" rx="3"/><text class="t-s" x="40" y="140" text-anchor="middle">mới</text><text class="t-s" x="150" y="140" text-anchor="middle">đang thay</text><text class="t-s" x="266" y="140" text-anchor="middle">cũ</text></svg>
+          <h3>Rolling Update</h3>
+          <p>Như thay bóng đèn hành lang: thay từng bóng một, hành lang luôn còn sáng.</p>
+          <p class="tech">Swarm: thay Task cũ bằng Task mới từng cái, service không dừng.</p>
+        </div>
+        <div class="ns-card">
+          <svg class="ill" viewBox="0 0 300 150" role="img" aria-label="Két sắt thay vì giấy nhớ"><rect class="f-p" x="30" y="25" width="110" height="100" rx="10"/><circle class="f-bg" cx="85" cy="75" r="24"/><circle class="f-p" cx="85" cy="75" r="8"/><rect class="f-alt st-m" x="180" y="30" width="90" height="90" rx="6"/><path class="ln" d="M196 58 H254 M196 78 H244 M196 98 H250"/><path class="ln-a" d="M186 36 L264 114 M264 36 L186 114"/></svg>
+          <h3>Secret</h3>
+          <p>Như két sắt có phát chìa, thay vì dán mật khẩu lên màn hình ai cũng thấy.</p>
+          <p class="tech">Swarm: mật khẩu thành file <code>/run/secrets/</code>, không nằm trong lệnh hay biến môi trường.</p>
+        </div>
+        <div class="ns-card">
+          <svg class="ill" viewBox="0 0 300 150" role="img" aria-label="Cầu thủ dự bị vào thay"><circle class="f-p" cx="60" cy="50" r="26"/><circle class="f-m" cx="150" cy="50" r="26" opacity=".45"/><path class="ln-a" d="M134 34 L166 66 M166 34 L134 66"/><circle class="f-p" cx="240" cy="50" r="26"/><circle class="f-p" cx="150" cy="120" r="22"/><polygon class="f-p" points="140,92 160,92 150,76"/><text class="t-s" x="185" y="115">thay</text><text class="t-s" x="185" y="142">người</text></svg>
+          <h3>Tự phục hồi</h3>
+          <p>Như cầu thủ dự bị: một người chấn thương, huấn luyện viên đưa người khác vào ngay.</p>
+          <p class="tech">Swarm: Node chết → Manager tạo Task mới trên node còn sống.</p>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">Slide ôn nhanh cuối buổi. Mỗi thẻ: một hình đời thường rồi một câu kỹ thuật. Có thể hỏi lớp đoán thẻ nào ứng với chương nào: Routing Mesh → chương 1, Rolling Update → chương 2, Secret → chương 3, Tự phục hồi → chương 4.</aside>
+  </section>
+
+  <!-- ============ NEW · SO SÁNH SWARM / KUBERNETES ============ -->
+  <section class="slide" data-slide="25" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:28px;">Swarm hay Kubernetes? Hai mức độ của cùng một bài toán</h1>
+      <div class="ns-compare animate-fade-up delay-200">
+        <div class="ns-compare-card">
+          <h3>Docker Swarm</h3>
+          <ul class="ns-compare-list ok">
+            <li><b>Cài đặt:</b> có sẵn trong Docker Engine — <code>docker swarm init</code> là xong</li>
+            <li><b>Vận hành:</b> ít thành phần, học nhanh, ít thao tác</li>
+            <li><b>Quy mô:</b> cụm nhỏ – vừa, vài chục node</li>
+            <li><b>Chọn khi:</b> học orchestration, hệ thống nhỏ, team đã dùng Docker</li>
+          </ul>
+        </div>
+        <div class="ns-compare-card">
+          <h3>Kubernetes (K8s)</h3>
+          <ul class="ns-compare-list ok">
+            <li><b>Cài đặt:</b> nhiều thành phần — kubelet, etcd, API server</li>
+            <li><b>Vận hành:</b> phức tạp, cả hệ sinh thái YAML</li>
+            <li><b>Quy mô:</b> hàng nghìn node, chuẩn ngành production</li>
+            <li><b>Chọn khi:</b> hệ thống lớn, cần ecosystem (Helm, auto-scaling)</li>
+          </ul>
+        </div>
+      </div>
+      <p class="ns-callout mt-lg animate-fade-up delay-400"><b>Chọn theo bài toán, không theo trend:</b> Swarm như quán trà sữa 2 quầy tự điều phối — đủ cho nhu cầu hiện tại; Kubernetes như chuỗi hàng trăm quán có bộ máy quản lý riêng. Quan trọng hơn: <b>bốn khái niệm đã học chuyển thẳng sang K8s, chỉ đổi tên gọi</b> — <code>service</code> → <code>Deployment</code>, <code>secret</code> → <code>Secret</code>, rolling update là mặc định, self-heal tự có.</p>
+    </div>
+    <aside class="notes">Slide mở rộng, trả lời câu hỏi hay gặp: "Vì sao seminar chọn Swarm mà không phải Kubernetes?"
+
+Hai công cụ giải cùng một bài toán — điều phối container — ở hai quy mô khác nhau.
+
+Swarm: có sẵn trong Docker Engine, một lệnh swarm init là có cụm. Đủ để chứng minh cả bốn khái niệm của buổi học. Kubernetes: chuẩn ngành, hệ sinh thái lớn nhất (Helm, auto-scaling, operator), nhưng để chạy cần cả bộ: kubelet, etcd, API server.
+
+Nhấn mạnh: chọn Swarm không phải vì K8s kém, mà vì bài toán 2 VM × 1 GB không cần K8s. Chọn công cụ theo bài toán, không theo trend.
+
+Chốt quan trọng nhất: hôm nay học khái niệm, không học riêng một công cụ. Sang K8s: service của Swarm ~ Deployment của K8s; secret vẫn là Secret; rolling update là mặc định của Deployment; self-heal là ReplicaSet tự tạo pod mới. Ai theo kịp bốn chương hôm nay sẽ đọc được manifest Kubernetes mà không bối rối.</aside>
+  </section>
+
+  <!-- ============ 16 · SUMMARY ============ -->
+  <section class="slide" data-slide="26" data-layout="blank">
+    <div class="slide-content centered">
+      <h1 class="animate-fade-up" style="font-size:52px; margin-bottom:28px;">Tổng kết — từ một máy sập đến cụm tự phục hồi</h1>
+      <div class="ns-req animate-fade-up delay-200">
+        <div class="ns-req-head">Mã</div>
+        <div class="ns-req-head">Nội dung yêu cầu</div>
+        <div class="ns-req-head" style="text-align:right">Ở đâu</div>
+
+        <div class="ns-req-item"><span class="ns-req-id">A1</span><span class="ns-req-txt">Container Orchestration: vì sao Docker đơn lẻ không đủ cho Production</span><span class="ns-req-slide">Mở đầu</span></div>
+        <div class="ns-req-item"><span class="ns-req-id">A2</span><span class="ns-req-txt">Manager / Worker · Desired State và cơ chế Reconciliation</span><span class="ns-req-slide">Chương 1</span></div>
+        <div class="ns-req-item"><span class="ns-req-id">A3</span><span class="ns-req-txt">Routing Mesh · Overlay network · truy cập Service từ IP mọi Node</span><span class="ns-req-slide">Chương 1</span></div>
+        <div class="ns-req-item"><span class="ns-req-id">A4</span><span class="ns-req-txt">Rolling Update · update-parallelism · update-delay</span><span class="ns-req-slide">Chương 2</span></div>
+
+        <div class="ns-req-item"><span class="ns-req-id">B1</span><span class="ns-req-txt">Khởi tạo cụm, join Worker, 3 replicas · chứng minh Routing Mesh bằng 2 IP</span><span class="ns-req-slide">Chương 1</span></div>
+        <div class="ns-req-item"><span class="ns-req-id">B2</span><span class="ns-req-txt">Cập nhật image v1 → v2, script curl ghi log, đo tỉ lệ request</span><span class="ns-req-slide">Chương 2</span></div>
+        <div class="ns-req-item"><span class="ns-req-id">B3</span><span class="ns-req-txt">docker secret truyền mật khẩu Database vào Service, thay env var</span><span class="ns-req-slide">Chương 3</span></div>
+        <div class="ns-req-item"><span class="ns-req-id">B4</span><span class="ns-req-txt">Tắt VM Worker · Swarm phát hiện và tạo lại Task trên Node còn sống</span><span class="ns-req-slide">Chương 4</span></div>
+      </div>
+      <p class="ns-callout mt-lg animate-fade-up delay-400"><b>Hai câu để nhớ:</b> (1) bạn khai báo <b>kết quả</b> — 3 replicas — Swarm lo phần còn lại. (2) Địa chỉ IP của Service không đổi dù bạn thay cả 3 Task, vì Routing Mesh đứng trước.</p>
+    </div>
+    <aside class="notes">Slide này là bảng đối chiếu yêu cầu — để thầy và lớp thấy ngay mọi yêu cầu trong đề đều đã có phần lý thuyết và phần demo.
+
+Đọc nhanh, không đọc hết 8 dòng.
+
+Chốt bằng hai câu ở cuối:
+1) Bạn khai báo kết quả, Swarm lo cách làm. Đó là toàn bộ ý nghĩa của orchestration.
+2) IP của Service là ổn định, không phụ thuộc Task nào đang chạy.
+
+Câu hỏi kết để mở: "Nếu muốn 3 replica trải trên 3 máy, và 1 máy chết, thì chuyện gì xảy ra?" — dẫn tới câu trả lời ở demo tự phục hồi. Hoặc nhảy thẳng vào phần HA ở module 6.</aside>
+  </section>
+
+  <!-- ============ NAVIGATION ============ -->
+  <div class="ns-nav">
+    <button class="ns-nav-prev" aria-label="Previous slide">&#8249;</button>
+    <button class="ns-nav-next" aria-label="Next slide">&#8250;</button>
+  </div>
+
+  <div class="ns-counter">
+    <span class="ns-current">1</span> / <span class="ns-total">26</span>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== STATE =====
+  const SLIDE_WIDTH = 1920;
+  const SLIDE_HEIGHT = 1080;
+
+  let currentSlide = 1;
+  let totalSlides = 0;
+  let isBlackScreen = false;
+
+  const deck = document.querySelector('.ns-deck');
+  const slides = document.querySelectorAll('.slide');
+  const progressBar = document.querySelector('.ns-progress-bar');
+  const counterCurrent = document.querySelector('.ns-current');
+  const counterTotal = document.querySelector('.ns-total');
+  const navPrev = document.querySelector('.ns-nav-prev');
+  const navNext = document.querySelector('.ns-nav-next');
+
+  totalSlides = slides.length;
+
+  // ===== VIEWPORT SCALING =====
+  function updateScale() {
+    const scaleX = window.innerWidth / SLIDE_WIDTH;
+    const scaleY = window.innerHeight / SLIDE_HEIGHT;
+    const scale = Math.min(scaleX, scaleY);
+    document.documentElement.style.setProperty('--ns-scale', scale);
+  }
+
+  let resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateScale, 100);
+  });
+  updateScale();
+
+  // ===== SLIDE NAVIGATION =====
+  function goToSlide(n) {
+    n = Math.max(1, Math.min(n, totalSlides));
+    if (n === currentSlide && document.querySelector('.slide.active')) return;
+
+    // Deactivate current
+    const prev = document.querySelector('.slide.active');
+    if (prev) {
+      prev.classList.remove('active');
+      resetAnimations(prev);
+    }
+
+    // Activate target
+    currentSlide = n;
+    const target = document.querySelector('[data-slide="' + n + '"]');
+    if (target) {
+      target.classList.add('active');
+      triggerAnimations(target);
+      runCounterAnimations(target);
+    }
+
+    // Update UI
+    updateProgressBar();
+    updateCounter();
+    updateHash();
+
+    // Sync presenter
+    syncPresenter();
+  }
+
+  function nextSlide() {
+    if (currentSlide < totalSlides) goToSlide(currentSlide + 1);
+  }
+
+  function prevSlide() {
+    if (currentSlide > 1) goToSlide(currentSlide - 1);
+  }
+
+  // ===== PROGRESS BAR =====
+  function updateProgressBar() {
+    if (progressBar) {
+      const pct = (currentSlide / totalSlides) * 100;
+      progressBar.style.width = pct + '%';
+    }
+  }
+
+  // ===== COUNTER =====
+  function updateCounter() {
+    if (counterCurrent) counterCurrent.textContent = currentSlide;
+    if (counterTotal) counterTotal.textContent = totalSlides;
+  }
+
+  // ===== URL HASH =====
+  function updateHash() {
+    history.replaceState(null, '', '#slide-' + currentSlide);
+  }
+
+  function readHash() {
+    const hash = window.location.hash;
+    const match = hash.match(/^#slide-(\d+)$/);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (n >= 1 && n <= totalSlides) return n;
+    }
+    return 1;
+  }
+
+  window.addEventListener('hashchange', function () {
+    const n = readHash();
+    if (n !== currentSlide) goToSlide(n);
+  });
+
+  // ===== ANIMATION TRIGGERS =====
+  function triggerAnimations(slide) {
+    const animated = slide.querySelectorAll('[class*="animate-"]');
+    animated.forEach(function (el) {
+      // Force restart: remove and re-add animation
+      const classes = Array.from(el.classList);
+      const animClass = classes.find(function (c) { return c.startsWith('animate-'); });
+      if (animClass && animClass !== 'animate-counter-up') {
+        el.classList.remove(animClass);
+        void el.offsetWidth; // trigger reflow
+        el.classList.add(animClass);
+      }
+    });
+  }
+
+  function resetAnimations(slide) {
+    const animated = slide.querySelectorAll('[class*="animate-"]');
+    animated.forEach(function (el) {
+      el.style.opacity = '0';
+    });
+  }
+
+  // ===== COUNTER-UP ANIMATION =====
+  function runCounterAnimations(slide) {
+    const counters = slide.querySelectorAll('.animate-counter-up');
+    counters.forEach(function (el) {
+      const target = parseFloat(el.getAttribute('data-target'));
+      if (isNaN(target)) return;
+
+      const duration = 1500;
+      const startTime = performance.now();
+      const isFloat = target % 1 !== 0;
+      const prefix = el.textContent.match(/^[^0-9]*/)[0] || '';
+      const suffix = el.textContent.match(/[^0-9]*$/)[0] || '';
+
+      function tick(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const value = eased * target;
+
+        if (isFloat) {
+          el.textContent = prefix + value.toFixed(1) + suffix;
+        } else {
+          el.textContent = prefix + Math.round(value) + suffix;
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          el.textContent = prefix + target + suffix;
+        }
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // ===== KEYBOARD NAVIGATION =====
+  document.addEventListener('keydown', function (e) {
+    // Ignore if typing in an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    switch (e.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+      case 'PageDown':
+      case ' ':
+        e.preventDefault();
+        nextSlide();
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+      case 'PageUp':
+        e.preventDefault();
+        prevSlide();
+        break;
+      case 'Home':
+        e.preventDefault();
+        goToSlide(1);
+        break;
+      case 'End':
+        e.preventDefault();
+        goToSlide(totalSlides);
+        break;
+      case 'f':
+      case 'F':
+        e.preventDefault();
+        toggleFullscreen();
+        break;
+      case 'p':
+      case 'P':
+        e.preventDefault();
+        openPresenterWindow();
+        break;
+      case 'b':
+      case 'B':
+      case '.':
+        e.preventDefault();
+        toggleBlackScreen();
+        break;
+      case 'Escape':
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+        break;
+      default:
+        // Number keys 1-9 jump to slide
+        if (e.key >= '1' && e.key <= '9') {
+          const n = parseInt(e.key, 10);
+          if (n <= totalSlides) {
+            e.preventDefault();
+            goToSlide(n);
+          }
+        }
+    }
+  });
+
+  // ===== TOUCH / SWIPE =====
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  document.addEventListener('touchstart', function (e) {
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function (e) {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+
+    // Only trigger if horizontal swipe > 50px and more horizontal than vertical
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) nextSlide();  // swipe left = next
+      else prevSlide();          // swipe right = prev
+    }
+  }, { passive: true });
+
+  // ===== CLICK NAVIGATION =====
+  if (navPrev) navPrev.addEventListener('click', prevSlide);
+  if (navNext) navNext.addEventListener('click', nextSlide);
+
+  // ===== FULLSCREEN =====
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function () {});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  document.addEventListener('fullscreenchange', function () {
+    setTimeout(updateScale, 100);
+  });
+
+  // ===== BLACK SCREEN =====
+  function toggleBlackScreen() {
+    isBlackScreen = !isBlackScreen;
+    document.body.classList.toggle('black-screen', isBlackScreen);
+    if (presenterChannel) {
+      presenterChannel.postMessage({
+        type: 'black-screen',
+        active: isBlackScreen
+      });
+    }
+  }
+
+  // ===== PRESENTER MODE =====
+  let presenterChannel = null;
+
+  try {
+    presenterChannel = new BroadcastChannel('nextslide-presenter');
+    presenterChannel.onmessage = function (event) {
+      if (event.data.type === 'navigate') {
+        goToSlide(event.data.slide);
+      }
+    };
+  } catch (e) {
+    // BroadcastChannel not supported
+  }
+
+  function syncPresenter() {
+    if (!presenterChannel) return;
+    presenterChannel.postMessage({
+      type: 'slide-change',
+      slide: currentSlide,
+      total: totalSlides,
+      notes: getNotesForSlide(currentSlide)
+    });
+  }
+
+  function getNotesForSlide(n) {
+    const slide = document.querySelector('[data-slide="' + n + '"]');
+    if (!slide) return '';
+    const notes = slide.querySelector('.notes');
+    return notes ? notes.textContent.trim() : '';
+  }
+
+  function openPresenterWindow() {
+    const title = document.title || 'Presentation';
+    const presenterHTML = generatePresenterHTML(title);
+    const pw = window.open('', 'nextslide-presenter',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
+    if (!pw) {
+      alert('Popup blocked. Allow popups and try again.');
+      return;
+    }
+    pw.document.write(presenterHTML);
+    pw.document.close();
+
+    // Send initial state
+    setTimeout(function () {
+      if (presenterChannel) {
+        presenterChannel.postMessage({
+          type: 'init',
+          slide: currentSlide,
+          total: totalSlides,
+          notes: getNotesForSlide(currentSlide)
+        });
+      }
+    }, 500);
+  }
+
+  function generatePresenterHTML(title) {
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
+      '<title>Presenter — ' + title + '</title>' +
+      '<style>' +
+      '*{margin:0;padding:0;box-sizing:border-box}' +
+      'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#1a1a2e;color:#e0e0e0;height:100vh;overflow:hidden}' +
+      '.p-layout{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr auto;height:100vh;gap:12px;padding:12px}' +
+      '.p-current{background:#000;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}' +
+      '.p-current-label,.p-next-label{position:absolute;top:8px;left:12px;font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em}' +
+      '.p-right{display:flex;flex-direction:column;gap:12px}' +
+      '.p-next{background:#000;border-radius:8px;flex:0 0 180px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}' +
+      '.p-notes{flex:1;background:#16213e;border-radius:8px;padding:16px;overflow-y:auto}' +
+      '.p-notes h3{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-bottom:12px}' +
+      '.p-notes-content{font-size:18px;line-height:1.6;white-space:pre-wrap}' +
+      '.p-bar{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:#16213e;border-radius:8px}' +
+      '.p-timer{font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;color:#60a5fa}' +
+      '.p-clock{font-size:16px;color:rgba(255,255,255,.4);margin-left:16px}' +
+      '.p-counter{font-size:24px;font-weight:600;color:rgba(255,255,255,.6)}' +
+      '.p-controls{display:flex;gap:8px}' +
+      '.p-controls button{background:rgba(255,255,255,.1);border:none;color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px}' +
+      '.p-controls button:hover{background:rgba(255,255,255,.2)}' +
+      '.p-slide-num{font-size:48px;font-weight:700;color:rgba(255,255,255,.15)}' +
+      '</style></head><body>' +
+      '<div class="p-layout">' +
+      '<div class="p-current"><span class="p-current-label">Current Slide</span><span class="p-slide-num" id="p-cur-num">1</span></div>' +
+      '<div class="p-right">' +
+      '<div class="p-next"><span class="p-next-label">Next</span><span class="p-slide-num" id="p-next-num">2</span></div>' +
+      '<div class="p-notes"><h3>Speaker Notes</h3><div class="p-notes-content" id="p-notes">No notes for this slide.</div></div>' +
+      '</div>' +
+      '<div class="p-bar">' +
+      '<div><span class="p-timer" id="p-timer">00:00:00</span><span class="p-clock" id="p-clock"></span></div>' +
+      '<span class="p-counter" id="p-counter">1 / 1</span>' +
+      '<div class="p-controls">' +
+      '<button id="p-reset">Reset Timer</button>' +
+      '<button id="p-prev">← Prev</button>' +
+      '<button id="p-next-btn">Next →</button>' +
+      '</div></div></div>' +
+      '<script>' +
+      'var ch=new BroadcastChannel("nextslide-presenter");' +
+      'var cur=1,tot=1,start=Date.now();' +
+      'ch.onmessage=function(e){' +
+      'if(e.data.type==="init"||e.data.type==="slide-change"){' +
+      'cur=e.data.slide;tot=e.data.total;' +
+      'document.getElementById("p-cur-num").textContent=cur;' +
+      'document.getElementById("p-next-num").textContent=cur<tot?cur+1:"End";' +
+      'document.getElementById("p-notes").textContent=e.data.notes||"No notes for this slide.";' +
+      'document.getElementById("p-counter").textContent=cur+" / "+tot;' +
+      '}};' +
+      'document.getElementById("p-prev").onclick=function(){ch.postMessage({type:"navigate",slide:cur-1})};' +
+      'document.getElementById("p-next-btn").onclick=function(){ch.postMessage({type:"navigate",slide:cur+1})};' +
+      'document.getElementById("p-reset").onclick=function(){start=Date.now()};' +
+      'function tick(){' +
+      'var e=Date.now()-start,h=Math.floor(e/36e5),m=Math.floor(e%36e5/6e4),s=Math.floor(e%6e4/1e3);' +
+      'document.getElementById("p-timer").textContent=' +
+      'String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");' +
+      'var n=new Date;document.getElementById("p-clock").textContent=n.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});' +
+      'requestAnimationFrame(tick)}tick();' +
+      'document.addEventListener("keydown",function(e){' +
+      'if(e.key==="ArrowRight"||e.key===" "){e.preventDefault();ch.postMessage({type:"navigate",slide:cur+1})}' +
+      'if(e.key==="ArrowLeft"){e.preventDefault();ch.postMessage({type:"navigate",slide:cur-1})}' +
+      '});' +
+      '<\/script></body></html>';
+  }
+
+  // ===== INIT =====
+  function init() {
+    const startSlide = readHash();
+    if (counterTotal) counterTotal.textContent = totalSlides;
+    if (startSlide === 1) { updateProgressBar(); updateCounter(); }
+    goToSlide(startSlide);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+
+</body>
+</html>
