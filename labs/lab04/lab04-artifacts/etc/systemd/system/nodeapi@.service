@@ -1,0 +1,12 @@
+[Unit]
+Description=Node API on port %i
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /opt/api/app.js %i
+Restart=always
+User=apache
+WorkingDirectory=/opt/api
+
+[Install]
+WantedBy=multi-user.target
