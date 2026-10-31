@@ -259,6 +259,11 @@ def build_outline(source: Path) -> Site:
 
     docs.append(Doc("seminar/index.html", "Seminar topics", "Seminar", 0, "~/seminar"))
 
+    # A standalone seminar presentation ships outside the Markdown shell, but it
+    # still needs to be reachable from the sidebar rather than only by URL.
+    if (source / "seminar" / "SwarmPresentation.html").is_file():
+        docs.append(Doc("seminar/SwarmPresentation.html", "Docker Swarm deck", "Seminar", 1, "~/seminar"))
+
     slides = sorted(
         (p for p in (source / "slides").glob("*.html")),
         key=lambda p: _slide_order(p.stem),
@@ -890,6 +895,7 @@ STANDALONE_PAGES = [
     "labs/lab01/linux_lab_1.html",
     "labs/lab02/linux_lab_2.html",
     "labs/lab03/linux_lab_3.html",
+    "seminar/SwarmPresentation.html",
 ]
 
 BACK_LINK_CLASS = "back-to-course"
