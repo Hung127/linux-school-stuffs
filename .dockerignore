@@ -13,7 +13,10 @@ books/
 # Byte-compiled test artifacts, regenerated on every test run.
 __pycache__/
 
-# NOTE: `docker/` is deliberately NOT excluded. The build step lives at
-# docker/build_site.py and the builder stage has to COPY it in. The script drops
-# the whole docker/ directory from the *finished site*, so the Dockerfile and
-# this file never reach the published output.
+# Submission archives and credentials that labs reference but must never ship.
+*.zip
+*.tar.gz
+*.key
+*.pem
+
+lab04-artifacts/

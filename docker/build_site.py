@@ -50,6 +50,10 @@ from theme import stylesheet
 MARKDOWN_PAGES = [
     ("README.md", "index.html"),
     ("labs/lab01/report.md", "labs/lab01/index.html"),
+    ("labs/lab02/report.md", "labs/lab02/index.html"),
+    ("labs/lab03/report.md", "labs/lab03/index.html"),
+    ("labs/lab04/report.md", "labs/lab04/index.html"),
+    ("labs/lab05/web01-ops/REPORT.md", "labs/lab05/web01-ops/index.html"),
     ("seminar/de_tai_seminar.md", "seminar/index.html"),
 ]
 
@@ -213,29 +217,43 @@ def build_outline(source: Path) -> Site:
         Doc("syllabus.html", "Syllabus", "Course", 1, "syllabus.html"),
     ]
 
-    # The assignment sheet is the front door for a lab: it is what a reader
-    # opens first, and it is the only page a lab without a report has. A report
-    # nests under it rather than replacing it, so both are reachable and the
-    # ordering reads the way someone actually works through a lab.
+    # Every lab gets a top-level entry from whatever kind of assignment
+    # materials it actually has: an HTML sheet, or (when there is no sheet)
+    # the rendered report itself. Some labs keep their report outside the
+    # canonical `report.md` name (Lab 05 stores it as `web01-ops/REPORT.md`),
+    # so check those locations too rather than assuming a fixed layout.
     for order, lab_dir in enumerate(sorted((source / "labs").glob("lab*"))):
         if not lab_dir.is_dir():
             continue
         label = lab_dir.name.replace("lab", "Lab ")
+
+        # Resolve the rendered-report destination, if one exists.
+        report_source = None
+        for candidate in (lab_dir / "report.md", lab_dir / "REPORT.md"):
+            if candidate.is_file():
+                report_source = candidate
+                break
+        if report_source is None:
+            for candidate in sorted(lab_dir.glob("*/REPORT.md")):
+                report_source = candidate
+                break
+        report_output = (
+            report_source.relative_to(source).with_name("index.html").as_posix()
+            if report_source is not None else None
+        )
+
         sheets = sorted(lab_dir.glob("*.html"))
         if not sheets:
-            # No sheet means nothing to link to; a report alone still gets an
-            # entry so the lab is reachable.
-            if (lab_dir / "report.md").is_file():
-                docs.append(Doc(f"labs/{lab_dir.name}/index.html", label, "Labs",
-                                order, f"~/labs/{lab_dir.name}"))
+            if report_output is not None:
+                docs.append(Doc(report_output, label, "Labs", order, f"~/labs/{lab_dir.name}"))
             continue
 
         sheet = Doc(f"labs/{lab_dir.name}/{sheets[0].name}", label, "Labs", order,
                     f"~/labs/{lab_dir.name}")
-        if (lab_dir / "report.md").is_file():
+        if report_output is not None:
             sheet.children.append(
-                Doc(f"labs/{lab_dir.name}/index.html", "Report", "Labs", order,
-                    "report.md", parent=sheet.url_label)
+                Doc(report_output, "Report", "Labs", order,
+                    report_source.name, parent=sheet.url_label)
             )
         docs.append(sheet)
 
@@ -871,6 +889,7 @@ STANDALONE_PAGES = [
     "syllabus.html",
     "labs/lab01/linux_lab_1.html",
     "labs/lab02/linux_lab_2.html",
+    "labs/lab03/linux_lab_3.html",
 ]
 
 BACK_LINK_CLASS = "back-to-course"
@@ -958,6 +977,15 @@ def copy_static(source: Path, out: Path, rendered: set[str]) -> None:
                 continue
             if full.is_file() and full.relative_to(source).as_posix() in rendered:
                 skip.add(name)
+                continue
+            # Lab submission archives and credential files are build-only
+            # artifacts; they do not belong on the public site.
+            if full.is_file() and name.endswith((".zip", ".tar.gz", ".key", ".pem")):
+                skip.add(name)
+                continue
+            if full.is_dir() and (name == "lab04-artifacts" or name.endswith("_artifacts")):
+                skip.add(name)
+                continue
         return skip
 
     shutil.copytree(source, out, ignore=ignore, dirs_exist_ok=True)
