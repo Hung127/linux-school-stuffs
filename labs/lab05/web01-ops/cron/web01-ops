@@ -1,0 +1,4 @@
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# phút giờ ngày tháng thứ user lệnh
+*/5 * * * * root /home/lab/web01-ops/health-check.sh >> /var/log/web01-health.log 2>&1
+0 2 * * * root /home/lab/web01-ops/backup.sh >> /var/log/web01-backup.log 2>&1
