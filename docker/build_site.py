@@ -1064,6 +1064,7 @@ def build(source: Path, out: Path) -> None:
 
     site = build_outline(source)
     generated: list[Doc] = []
+    generated_dests: set[str] = set()
 
     # Every file actually published, so a filename mentioned in a table can be
     # resolved to where it really is rather than assumed to be a sibling.
@@ -1074,6 +1075,9 @@ def build(source: Path, out: Path) -> None:
     }
 
     for source_name, dest_name in MARKDOWN_PAGES:
+        if not (source / source_name).is_file():
+            # Do not fail the whole build because an optional report is absent.
+            continue
         body, title, headings = render_page(source, source_name, dest_name, published)
         doc = site.by_path(dest_name)
         doc.body = body
@@ -1081,12 +1085,15 @@ def build(source: Path, out: Path) -> None:
         if source_name == "README.md":
             doc.title = title
         generated.append(doc)
+        generated_dests.add(dest_name)
 
     # The search index needs every page's text, so it is built after the
     # bodies exist and then written into each page.
     index = build_search_index(generated)
 
     for source_name, dest_name in MARKDOWN_PAGES:
+        if dest_name not in generated_dests:
+            continue
         doc = site.by_path(dest_name)
         (out / dest_name).write_text(
             document(site, doc, doc.body, index), encoding="utf-8"

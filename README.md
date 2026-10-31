@@ -35,14 +35,12 @@ but *why* each flag is there.
 
 ## What's in here
 
-- **4 interactive slide decks** covering Sessions 01–04 — self-contained HTML, just
+- **7 interactive slide decks** covering Sessions 01–07 — self-contained HTML, just
   open them in a browser.
-- **1 complete lab report** (Lab 01) with a written explanation for every single
-  command, plus the dataset it was written against.
+- **5 complete lab reports** (Lab 01 – Lab 05) in `labs/`, with written explanations,
+  evidence and screenshots.
 - **A command cheat-sheet** — the reusable pipelines from those labs, distilled and
   copy-pasteable.
-- **A list of 13 seminar topics** with the infrastructure each one needs, so you can
-  pick a topic and know the scope before committing to it.
 - **A browsable web version** of all of it, in one container — see
   [The web version](#the-web-version).
 
@@ -55,7 +53,12 @@ but *why* each flag is there.
 | `syllabus.html` | Full course syllabus — 5 modules, 11 sessions, assessment breakdown, capstone tracks |
 | `slides/` | Interactive HTML slide decks, one file per session |
 | `labs/lab01/` | Lab 01 — assignment sheet, dataset, report and screenshots |
-| `seminar/` | Seminar topic list with per-topic infrastructure requirements |
+| `labs/lab02/` | Lab 02 — users, groups and permissions |
+| `labs/lab03/` | Lab 03 — web and backup VM automation |
+| `labs/lab04/` | Lab 04 — Apache web server deployment and hardening |
+| `labs/lab05/` | Lab 05 — Bash automation, test scripts and reports |
+| `seminar/` | Seminar topic list and Docker Swarm presentation HTML |
+| `docker/` | Build tooling — the site generator and its tests, see [The web version](#the-web-version) |
 | `books/` | Reference books — **not in the repo**, see [Books](#books) |
 | `docker/` | Build tooling — the site generator and its tests, see [The web version](#the-web-version) |
 | `Dockerfile` | Builds and serves the site in one container |
@@ -201,6 +204,9 @@ file directly in a browser.
 | 02 | [CLI & Text Processing](slides/2_cli-text-processing.html) | Navigation, redirection, pipes, `xargs`, and the text tools — `grep`, `sed`, `awk`, `sort`, `uniq` |
 | 03 | [Users, Permissions & Processes](slides/3_users-permissions.html) | `useradd`/`usermod`, `/etc/passwd`/`shadow`/`group`, `chmod`, SUID/SGID/sticky, ACLs, process management |
 | 04 | [Software, Storage & Tasks](slides/4-software-storage-tasks.html) | `apt`/`dpkg`, PPAs, building from source, partitioning and `fstab`, LVM, cron, systemd timers |
+| 05 | [Network Config & SSH](slides/5_network-ssh-light.html) | Network configuration, routing, SSH access and hardening |
+| 06 | [Firewall & System Hardening](slides/6_firewall-hardening-with-firewalld.html) | firewalld zones, services, nftables, PAM and logging |
+| 07 | [Web Servers on Linux](slides/7_web-servers.html) | Apache httpd, vhosts, SELinux and TLS on CentOS/AlmaLinux |
 
 The decks are clickable rather than slide-by-slide — use the navigation on each page
 to move between sections.
@@ -212,6 +218,11 @@ to move between sections.
 ### Lab 01 — CLI & text processing
 
 Everything for this lab lives in [`labs/lab01/`](labs/lab01/).
+
+Additional reports in `labs/lab02/` … `labs/lab05/` follow the same shape: command,
+explanation, and screenshots. Lab 05 publishes its guide, homework notes and scripts
+under `labs/lab05/web01-ops/`, and the Docker Swarm seminar deck lives in
+[`seminar/SwarmPresentation.html`](seminar/SwarmPresentation.html).
 
 | File | What it is |
 |---|---|
@@ -243,11 +254,10 @@ URL, `$9` the status code, `$10` the response size.
 ## The web version
 
 The notes are a static site, so serving them needs no application server — `slides/`,
-`syllabus.html` and the screenshots are already HTML. The only thing that is not
-already a web page is this repository's three Markdown files. `docker/build_site.py`
-renders those to HTML **at the same relative paths**, which is the whole trick: because
-`README.md` becomes `index.html` and `report.md` becomes `labs/lab01/index.html`, every
-relative link in this file keeps working once it is served.
+`syllabus.html`, `seminar/SwarmPresentation.html` and the screenshots are already HTML.
+The only thing that is not already a web page is this repository's Markdown files.
+`docker/build_site.py` renders those to HTML **at the same relative paths**,
+so the README is the landing page rather than a raw file.
 
 | Source | Becomes | Served at |
 |---|---|---|
@@ -285,9 +295,10 @@ interface by default, which on shared Wi-Fi hands the whole repository to the ne
 | Published | Not published | Why |
 |---|---|---|
 | `index.html`, `syllabus.html`, `slides/` | `books/` | 22 MB of copyrighted textbooks |
-| `labs/lab01/` — report, screenshots, `report.pdf` | `docker/`, `Dockerfile` | build inputs, not course notes |
-| `labs/lab01/access.log` — 18 MB | `.git/`, `.venv`, `.gitignore` | tooling and metadata |
-| `seminar/index.html` | the raw `.md` sources | rendered instead, so a page is one file, not two |
+| `labs/lab01/` … `labs/lab05/` — reports, screenshots, `report.pdf` | `docker/`, `Dockerfile` | build inputs, not course notes |
+| `labs/lab01/access.log` — about 18 MB | `.git/`, `.venv`, `.gitignore` | tooling and metadata |
+| `seminar/`, including `SwarmPresentation.html` | `*.zip`, `*.tar.gz`, `*.key`, `*.pem`, lab artifact folders | submission files and credentials stay private |
+| `seminar/index.html`, and the rendered `.md` pages | the raw `.md` sources | rendered instead, so a page is one file, not two |
 
 `access.log` is 18 MB and ships on purpose. Every command in the report is written
 against it, so serving it is what lets a classmate reproduce a result without a second
@@ -385,6 +396,10 @@ to learn and what you can spin up.
 | 11 | **ELK Stack (Centralized Logging)** — Filebeat → Elasticsearch → Kibana, the inverted index, parsing unstructured logs into structured fields | 1 VM (3 GB) |
 | 12 | **BorgBackup (Deduplicated Backup)** — full/incremental/differential, deduplication, the 3-2-1 rule, RPO/RTO, `--append-only` against ransomware | 2 VMs (512 MB each) |
 | 13 | **BIND9 Domain Name System** — recursive vs authoritative DNS, record types, forward and reverse zones, zone transfer (AXFR/IXFR) | 2 VMs (512 MB each) |
+
+The Docker Swarm presentation is available as
+[`seminar/SwarmPresentation.html`](seminar/SwarmPresentation.html) and is listed in the web
+navigation under Seminar.
 
 The original topic descriptions — including the theory outline and the required demos
 for each — are in [`seminar/de_tai_seminar.md`](seminar/de_tai_seminar.md) (Vietnamese).
